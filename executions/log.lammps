@@ -22,20 +22,20 @@ Created orthogonal box = (-25 -25 -25) to (25 25 25)
 
 lattice		bcc 2.8665
 Lattice spacing in x,y,z = 2.8665 2.8665 2.8665
-region ns sphere 0 0 0 15 units box
+region ns cylinder x 0 0 15 -10.0 10.0 units box
 create_atoms	1 region ns
-Created 1243 atoms
+Created 1151 atoms
   using lattice units in orthogonal box = (-25 -25 -25) to (25 25 25)
-  create_atoms CPU = 0.000 seconds
+  create_atoms CPU = 0.001 seconds
 group		Fe type 1
-1243 atoms in group Fe
+1151 atoms in group Fe
 
 set group Fe type/ratio 2 0.35 250
 Setting atom values ...
-  435 settings made for type/ratio
+  402 settings made for type/ratio
 
 group		Ni type 2
-435 atoms in group Ni
+402 atoms in group Ni
 
 
 mass		1 55.845 #Fe
@@ -44,11 +44,11 @@ mass		2 58.693 #Ni
 set 		group Fe spin 2.2 0 0 1 #Fe
 Setting atom values ...
 WARNING: Set attribute spin is deprecated. Please use spin/atom instead. (src/set.cpp:280)
-  1243 settings made for spin
+  1151 settings made for spin
 set		group Ni spin 0.61 0 0 1 #Ni
 Setting atom values ...
 WARNING: Set attribute spin is deprecated. Please use spin/atom instead. (src/set.cpp:280)
-  435 settings made for spin
+  402 settings made for spin
 
 pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
 pair_coeff 	* * eam/alloy ../FeCuNi.eam.alloy Fe Ni
@@ -80,9 +80,9 @@ Neighbor list info ...
       pair build: full/bin/atomonly
       stencil: full/bin/3d
       bin: standard
- rebalancing time: 0.002 seconds
+ rebalancing time: 0.004 seconds
   iteration count = 0
-  initial/final maximal load/proc = 1243 1243
+  initial/final maximal load/proc = 1151 1151
   initial/final imbalance factor  = 1 1
 
 timestep 0.001
@@ -138,12 +138,12 @@ doi={10.1016/j.jcp.2018.06.042}
 
 CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
 
-Per MPI rank memory allocation (min/avg/max) = 6.07 | 6.07 | 6.07 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 6.067 | 6.067 | 6.067 Mbytes
    Step          Temp          v_tmag         v_magx         v_magy         v_magz       v_magnorm        KinEng         PotEng         TotEng         Press     
-         0   0              0              0              0              1              1              0             -4900.085      -4900.085      -11719.629    
-Loop time of 8.62e-07 on 1 procs for 0 steps with 1243 atoms
+         0   0              0              0              0              1              1              0             -4486.7908     -4486.7908     -11722.72     
+Loop time of 1.152e-06 on 1 procs for 0 steps with 1151 atoms
 
-116.0% CPU use with 1 MPI tasks x 1 OpenMP threads
+260.4% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
@@ -153,19 +153,19 @@ Neigh   | 0          | 0          | 0          |   0.0 |  0.00
 Comm    | 0          | 0          | 0          |   0.0 |  0.00
 Output  | 0          | 0          | 0          |   0.0 |  0.00
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Other   |            | 8.62e-07   |            |       |100.00
+Other   |            | 1.152e-06  |            |       |100.00
 
-Nlocal:           1243 ave        1243 max        1243 min
+Nlocal:           1151 ave        1151 max        1151 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 Nghost:              0 ave           0 max           0 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
-Neighs:          31445 ave       31445 max       31445 min
+Neighs:          28173 ave       28173 max       28173 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
-FullNghs:        27084 ave       27084 max       27084 min
+FullNghs:        24468 ave       24468 max       24468 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 
-Total # of neighbors = 31445
-Ave neighs/atom = 25.297667
+Total # of neighbors = 28173
+Ave neighs/atom = 24.476977
 Neighbor list builds = 0
 Dangerous builds = 0
 Total wall time: 0:00:00
