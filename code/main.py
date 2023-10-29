@@ -43,9 +43,14 @@ def get_template():
 
 def main():
 	test()
-	atoms_cyl1 = count_atoms_in_region(s.Cylinder(10, 45, 'x', (0, 0, 0)).get_region())
-	atoms_cyl2 = count_atoms_in_region(s.Cylinder(15, 20, 'x', (0, 0, 0)).get_region())
-	atoms_sph = count_atoms_in_region(s.Sphere(15, (0, 0, 0)).get_region())
+	sphere0 = s.Sphere(15, (0, 0, 0))
+	base_volume = sphere0.get_volume()
+	cyl1 = s.Cylinder.from_volume_and_radius(base_volume, 10, 'x', (0, 0, 0))
+	cyl2 = s.Cylinder.from_volume_and_radius(base_volume, 15, 'x', (0, 0, 0))
+	print(f"{sphere0} {base_volume=}\n{cyl1} {cyl1.get_volume()=}\n{cyl2} {cyl2.get_volume()=}")
+	atoms_cyl1 = count_atoms_in_region(cyl1.get_region())
+	atoms_cyl2 = count_atoms_in_region(cyl2.get_region())
+	atoms_sph = count_atoms_in_region(sphere0.get_region())
 	print(f"{atoms_cyl1=} {atoms_cyl2=} {atoms_sph=}")
 
 

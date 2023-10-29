@@ -26,7 +26,7 @@ region ns sphere 0 0 0 15 units box
 create_atoms	1 region ns
 Created 1243 atoms
   using lattice units in orthogonal box = (-25 -25 -25) to (25 25 25)
-  create_atoms CPU = 0.001 seconds
+  create_atoms CPU = 0.000 seconds
 group		Fe type 1
 1243 atoms in group Fe
 
@@ -141,9 +141,9 @@ CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
 Per MPI rank memory allocation (min/avg/max) = 6.07 | 6.07 | 6.07 Mbytes
    Step          Temp          v_tmag         v_magx         v_magy         v_magz       v_magnorm        KinEng         PotEng         TotEng         Press     
          0   0              0              0              0              1              1              0             -4900.085      -4900.085      -11719.629    
-Loop time of 5.01e-07 on 1 procs for 0 steps with 1243 atoms
+Loop time of 8.62e-07 on 1 procs for 0 steps with 1243 atoms
 
-199.6% CPU use with 1 MPI tasks x 1 OpenMP threads
+116.0% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
@@ -153,7 +153,7 @@ Neigh   | 0          | 0          | 0          |   0.0 |  0.00
 Comm    | 0          | 0          | 0          |   0.0 |  0.00
 Output  | 0          | 0          | 0          |   0.0 |  0.00
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Other   |            | 5.01e-07   |            |       |100.00
+Other   |            | 8.62e-07   |            |       |100.00
 
 Nlocal:           1243 ave        1243 max        1243 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
