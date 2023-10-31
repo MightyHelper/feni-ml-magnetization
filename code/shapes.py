@@ -36,6 +36,9 @@ class Sphere(Shape):
 	def from_radius(radius: float, center: tuple) -> 'Sphere':
 		return Sphere(radius, center)
 
+	def __str__(self):
+		return f"Sphere_{self.radius}_{self.center})"
+
 
 @dataclass
 class Cylinder(Shape):
@@ -79,3 +82,6 @@ class Cylinder(Shape):
 	@staticmethod
 	def from_radius_and_length(radius: float, length: float, axis: str, center: tuple) -> 'Cylinder':
 		return Cylinder(radius, length, axis, center)
+
+	def __str__(self):
+		return f"Cylinder_{self.radius}_{self.length}_{self.axis}_{self.center}"

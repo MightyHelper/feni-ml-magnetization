@@ -56,7 +56,7 @@ def main():
 	cyl2 = s.Cylinder.from_volume_and_radius(base_volume, 15, 'x', (0, 0, 0))
 	print(f"{sphere0} {base_volume=}\n{cyl1} {cyl1.get_volume()=}\n{cyl2} {cyl2.get_volume()=}")
 	cyl_np = nanoparticle.Nanoparticle(cyl1)
-	cyl_np.execute(cwd="../executions", test_run=False)
+	cyl_np.execute(test_run=False)
 	print(cyl_np.run.dumps[0]["number_of_atoms"])
 
 

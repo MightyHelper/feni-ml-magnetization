@@ -11,11 +11,11 @@ def generate_random_filename():
 
 
 class MpiLammpsRun:
-	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None):
+	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
 		self.output = ""
 		self.code = code
 		self.sim_params = sim_params
-		self.random_name = generate_random_filename()
+		self.file_name = f'/tmp/in.{generate_random_filename()}.lammps' if file_name is None else file_name
 		self.expect_dumps = [] if expect_dumps is None else expect_dumps
 		if 'cwd' in sim_params and sim_params['cwd'] is not None:
 			self.expect_dumps = [f"{sim_params['cwd']}/{dump}" for dump in self.expect_dumps]
@@ -24,7 +24,7 @@ class MpiLammpsRun:
 		self.dumps = []
 
 	def execute(self) -> 'MpiLammpsRun':
-		MpiLammpsWrapper.gen_and_sim(self.code, self.sim_params, file_to_use=f'/tmp/in.{self.random_name}.lammps')
+		MpiLammpsWrapper.gen_and_sim(self.code, self.sim_params, file_to_use=self.file_name)
 		self.dumps = self._parse_dumps()
 		return self
 

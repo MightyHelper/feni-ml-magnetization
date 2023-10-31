@@ -77,6 +77,7 @@ class MpiLammpsWrapper:
 					f"\nERROR: {repr(omp)=} ",
 					f"\nERROR: {in_toko=}",
 					f"\nERROR: {cwd=}",
+					f"\nERROR: {''.join(cmd)=}",
 					f"\nERROR: {lammps_executable=}",
 				)
 				raise e

@@ -1,9 +1,6 @@
-import ovito
-
-from ovito.io import import_file, export_file
-from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, \
-	VoronoiAnalysisModifier, ExpressionSelectionModifier
 import numpy
+from ovito.io import import_file, export_file
+from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, ExpressionSelectionModifier
 
 data = import_file('iron.300000.dump')
 datatemp = data.compute()
@@ -11,38 +8,30 @@ natoms = datatemp.particles.count
 export_file(data, "XYZ.xyz", "xyz", columns=['Particle Type', 'Position.X', 'Position.Y', 'Position.Z'])
 data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=100, partial=False))
 datasave = data.compute()
-numpy.savetxt('g(r).txt', datasave.tables['coordination-rdf'].xy(),
-              header="Radial distribution function:\n \"Pair separation distance\" g(r)")
+numpy.savetxt('g(r).txt', datasave.tables['coordination-rdf'].xy(), header="Radial distribution function:\n \"Pair separation distance\" g(r)")
 
 data = import_file('iron.300000.dump')
 data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=100, partial=True))
 datasave = data.compute()
-numpy.savetxt('Partial_g(r).txt', datasave.tables['coordination-rdf'].xy(),
-              header="Radial distribution function:\n \"Pair separation distance\" 1-1 1-2 2-2")
+numpy.savetxt('Partial_g(r).txt', datasave.tables['coordination-rdf'].xy(), header="Radial distribution function:\n \"Pair separation distance\" 1-1 1-2 2-2")
 
 data = import_file('iron.300000.dump')
 data.modifiers.append(CoordinationAnalysisModifier(cutoff=2.7, number_of_bins=100))
-data.modifiers.append(
-	HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10))
+data.modifiers.append(HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10))
 export_file(data, "Coordination_Histogram.txt", "txt/series", key="histogram[Coordination]")
-data.modifiers.append(
-	HistogramModifier(bin_count=100, property='c_peatom', fix_xrange=True, xrange_start=-5.0, xrange_end=-2.0))
+data.modifiers.append(HistogramModifier(bin_count=100, property='c_peatom', fix_xrange=True, xrange_start=-5.0, xrange_end=-2.0))
 export_file(data, "PotentialEnergy_Histogram.txt", "txt/series", key="histogram[c_peatom]")
 
 data = import_file('iron.300000.dump')
 data.modifiers.append(SelectTypeModifier(types={1}))
 data.modifiers.append(CoordinationAnalysisModifier(cutoff=2.7, number_of_bins=100))
-data.modifiers.append(
-	HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10,
-	                  only_selected=True))
+data.modifiers.append(HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10, only_selected=True))
 export_file(data, "Coordination_Histogram_Fe.txt", "txt/series", key="histogram[Coordination]")
 
 data = import_file('iron.300000.dump')
 data.modifiers.append(SelectTypeModifier(types={2}))
 data.modifiers.append(CoordinationAnalysisModifier(cutoff=2.7, number_of_bins=100))
-data.modifiers.append(
-	HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10,
-	                  only_selected=True))
+data.modifiers.append(HistogramModifier(bin_count=100, property='Coordination', fix_xrange=True, xrange_start=0.0, xrange_end=10, only_selected=True))
 export_file(data, "Coordination_Histogram_Ni.txt", "txt/series", key="histogram[Coordination]")
 
 data = import_file('iron.300000.dump')
@@ -85,8 +74,7 @@ data = numpy.char.add(data, str(round(nFeCore / natoms, 3)))
 data = numpy.char.add(data, "   ")
 data = numpy.char.add(data, str(round(nNiCore / natoms, 3)))
 data = numpy.array([data, " "])
-numpy.savetxt("Surface_atoms.txt", data, fmt='%s',
-              header="Ntotal N_Fe_surf / Ntotal N_Ni_surf / Ntotal N_Fe_core / Ntotal N_Ni_core / Ntotal")
+numpy.savetxt("Surface_atoms.txt", data, fmt='%s', header="Ntotal N_Fe_surf / Ntotal N_Ni_surf / Ntotal N_Fe_core / Ntotal N_Ni_core / Ntotal")
 
 data = import_file('iron.300000.dump')
 data.modifiers.append(SelectTypeModifier(types={1}))
