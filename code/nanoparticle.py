@@ -6,6 +6,7 @@ import mpilammpsrun as mpilr
 import mpilammpswrapper as mpilw
 import template
 import feni_mag
+import feni_ovito
 
 
 def realpath(path):
@@ -16,6 +17,7 @@ class Nanoparticle:
 	"""Represents a nanoparticle"""
 	shape: shapes.Shape
 	run: mpilr.MpiLammpsRun
+	magnetism: tuple[float, float]
 
 	def __init__(self, shape: shapes.Shape, extra_replacements: dict = None):
 		self.shape = shape
@@ -43,6 +45,16 @@ class Nanoparticle:
 			file_name=self.path + "nanoparticle.in"
 		).execute()
 		feni_mag.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
+		self.magnetism = self.get_magnetism()
+		feni_ovito.parse(filenames={'base_path': self.path})
+
+
 
 	def get_identifier(self):
 		return f"simulation_{time.time()}"
+
+	def get_magnetism(self):
+		with open(self.path + "/magnetism.txt", "r") as f:
+			lines = f.readlines()
+		result = [float(x) for x in lines[1].split(" ")]
+		return result[0], result[1]
