@@ -1,18 +1,7 @@
 import mpilammpsrun as mpilr
 import shapes as s
-
-LAMMPS_EXECUTABLE = "/home/federico/sistemas_complejos/lammps/lammps/build6/lmp"
-TEMPLATE_PATH = "../lammps.template"
-
-
-def replace_template(name: str, value: str, base: str) -> str:
-	return base.replace(f"{{{{{name}}}}}", value)
-
-
-def replace_templates(replacements: dict, base: str) -> str:
-	for key, value in replacements.items():
-		base = replace_template(key, value, base)
-	return base
+from template import LAMMPS_EXECUTABLE, replace_templates, get_template
+import nanoparticle
 
 
 def test():
@@ -26,22 +15,17 @@ def test():
 def count_atoms_in_region(region: str) -> int:
 	folder = "../executions"
 	lammps_run = mpilr.MpiLammpsRun(
-		replace_templates({
+		replace_templates(get_template(), {
 			"region": region,
 			"run_steps": str(0)
-		}, get_template()),
+		}),
 		{
 			"lammps_executable": LAMMPS_EXECUTABLE,
 			"cwd": folder
 		},
-		[folder + "/iron.0.dump"]
-	)
+		["iron.0.dump"]
+	).execute()
 	return lammps_run.dumps[0]["number_of_atoms"]
-
-
-def get_template():
-	template = open(TEMPLATE_PATH, "r")
-	return template.read()
 
 
 def plot_output(code: str):
@@ -52,16 +36,16 @@ def plot_output(code: str):
 			"lammps_executable": LAMMPS_EXECUTABLE,
 			"cwd": folder
 		},
-		[folder + "/iron.0.dump"]
-	)
+		["iron.0.dump"]
+	).execute()
 	lammps_run.plot(lammps_run.dumps[0])
 
 
 def plot_region(region: str):
-	plot_output(replace_templates({
+	plot_output(replace_templates(get_template(), {
 		"region": region,
 		"run_steps": str(0)
-	}, get_template()))
+	}))
 
 
 def main():
@@ -71,13 +55,18 @@ def main():
 	cyl1 = s.Cylinder.from_volume_and_radius(base_volume, 10, 'x', (0, 0, 0))
 	cyl2 = s.Cylinder.from_volume_and_radius(base_volume, 15, 'x', (0, 0, 0))
 	print(f"{sphere0} {base_volume=}\n{cyl1} {cyl1.get_volume()=}\n{cyl2} {cyl2.get_volume()=}")
-	atoms_cyl1 = count_atoms_in_region(cyl1.get_region())
-	atoms_cyl2 = count_atoms_in_region(cyl2.get_region())
-	atoms_sph = count_atoms_in_region(sphere0.get_region())
-	print(f"{atoms_cyl1=} {atoms_cyl2=} {atoms_sph=}")
-	plot_region(region=sphere0.get_region())
-	plot_region(region=cyl1.get_region())
-	plot_region(region=cyl2.get_region())
+	cyl_np = nanoparticle.Nanoparticle(cyl1)
+	cyl_np.execute(cwd="../executions", test_run=False)
+	print(cyl_np.run.dumps[0]["number_of_atoms"])
+
+
+# atoms_cyl1 = count_atoms_in_region(cyl1.get_region())
+# atoms_cyl2 = count_atoms_in_region(cyl2.get_region())
+# atoms_sph = count_atoms_in_region(sphere0.get_region())
+# print(f"{atoms_cyl1=} {atoms_cyl2=} {atoms_sph=}")
+# plot_region(region=sphere0.get_region())
+# plot_region(region=cyl1.get_region())
+# plot_region(region=cyl2.get_region())
 
 
 if __name__ == "__main__":

@@ -15,6 +15,9 @@ class MPIOpt:
 	def __str__(self):
 		return f"mpirun -n {self.n_threads} {'--use-hwthread-cpus' if self.hw_threads else ''} " if self.use else ""
 
+	def __repr__(self):
+		return f"MPIOpt(use={self.use}, hw_threads={self.hw_threads}, n_threads={self.n_threads})"
+
 
 class GPUOpt:
 	use: bool = False
@@ -24,6 +27,9 @@ class GPUOpt:
 
 	def __str__(self):
 		return "-sf gpu -pk gpu 1" if self.use else ""
+
+	def __repr__(self):
+		return f"GPUOpt(use={self.use})"
 
 
 class OMPOpt:
@@ -36,6 +42,9 @@ class OMPOpt:
 
 	def __str__(self):
 		return f"-sf omp -pk omp {self.n_threads}" if self.use else ""
+
+	def __repr__(self):
+		return f"OMPOpt(use={self.use}, n_threads={self.n_threads})"
 
 
 class MpiLammpsWrapper:
@@ -60,14 +69,15 @@ class MpiLammpsWrapper:
 				return subprocess.check_output(cmd.split(" "), cwd=cwd)
 			except subprocess.CalledProcessError as e:
 				print(
-					"Error occurred",
+					"ERROR:",
 					e,
-					f"{input_file=}",
-					f"{gpu=} ",
-					f"{mpi=} ",
-					f"{in_toko=}",
-					f"{cwd=}",
-					f"{lammps_executable=}",
+					f"\nERROR: {input_file=}",
+					f"\nERROR: {repr(gpu)=} ",
+					f"\nERROR: {repr(mpi)=} ",
+					f"\nERROR: {repr(omp)=} ",
+					f"\nERROR: {in_toko=}",
+					f"\nERROR: {cwd=}",
+					f"\nERROR: {lammps_executable=}",
 				)
 				raise e
 		return print("TODO: TOKO not implemented yet :c")
