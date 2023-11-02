@@ -57,16 +57,8 @@ def main():
 	print(f"{sphere0} {base_volume=}\n{cyl1} {cyl1.get_volume()=}\n{cyl2} {cyl2.get_volume()=}")
 	cyl_np = nanoparticle.Nanoparticle(cyl1)
 	cyl_np.execute(test_run=False)
-	print(cyl_np.run.dumps[0]["number_of_atoms"])
-
-
-# atoms_cyl1 = count_atoms_in_region(cyl1.get_region())
-# atoms_cyl2 = count_atoms_in_region(cyl2.get_region())
-# atoms_sph = count_atoms_in_region(sphere0.get_region())
-# print(f"{atoms_cyl1=} {atoms_cyl2=} {atoms_sph=}")
-# plot_region(region=sphere0.get_region())
-# plot_region(region=cyl1.get_region())
-# plot_region(region=cyl2.get_region())
+	print(f"Number of atoms: {cyl_np.run.dumps[0]['number_of_atoms']}")
+	print(f"Magnetism: {cyl_np.magnetism}")
 
 
 if __name__ == "__main__":
