@@ -5,6 +5,20 @@ from matplotlib import pyplot as plt
 
 from mpilammpswrapper import MpiLammpsWrapper
 
+DUMP_ATOM_TYPE = 0
+DUMP_ATOM_ID = 1
+DUMP_ATOM_X = 2
+DUMP_ATOM_Y = 3
+DUMP_ATOM_Z = 4
+DUMP_ATOM_VX = 5
+DUMP_ATOM_VY = 6
+DUMP_ATOM_VZ = 7
+DUMP_ATOM_C1 = 8
+DUMP_ATOM_C2 = 9
+DUMP_ATOM_C3 = 10
+DUMP_ATOM_PE = 11
+DUMP_ATOM_KE = 12
+
 
 def generate_random_filename():
 	return base64.b32encode(random.randbytes(5)).decode("ascii")
@@ -54,10 +68,10 @@ class MpiLammpsRun:
 			}
 
 	def plot(self, dump):
-		t = dump['atoms'][:, 0]
-		x = dump['atoms'][:, 2]
-		y = dump['atoms'][:, 3]
-		z = dump['atoms'][:, 4]
+		t = dump['atoms'][:, DUMP_ATOM_TYPE]
+		x = dump['atoms'][:, DUMP_ATOM_X]
+		y = dump['atoms'][:, DUMP_ATOM_Y]
+		z = dump['atoms'][:, DUMP_ATOM_Z]
 		fig = plt.figure()
 		ax = fig.add_subplot(111, projection='3d')
 		ax.scatter(x, y, z, c=t, marker='.', cmap='coolwarm')

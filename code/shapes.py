@@ -11,7 +11,7 @@ class Shape(ABC):
 		pass
 
 	@abstractmethod
-	def get_region(self) -> str:
+	def get_region(self, name: str) -> str:
 		pass
 
 
@@ -24,8 +24,8 @@ class Sphere(Shape):
 	def get_volume(self) -> float:
 		return 4.0 / 3.0 * pi * self.radius ** 3
 
-	def get_region(self) -> str:
-		return f"region ns sphere {self.center[0]} {self.center[1]} {self.center[2]} {self.radius} units box"
+	def get_region(self, name: str) -> str:
+		return f"region {name} sphere {self.center[0]} {self.center[1]} {self.center[2]} {self.radius} units box"
 
 	@staticmethod
 	def from_volume(volume: float, center: tuple) -> 'Sphere':
@@ -51,7 +51,7 @@ class Cylinder(Shape):
 	def get_volume(self) -> float:
 		return pi * self.radius ** 2 * self.length
 
-	def get_region(self) -> str:
+	def get_region(self, name: str) -> str:
 		a = 0
 		b = 0
 		c = 0
@@ -67,7 +67,7 @@ class Cylinder(Shape):
 			a = self.center[0]
 			b = self.center[1]
 			c = self.center[2]
-		return f"region ns cylinder {self.axis} {a} {b} {self.radius} {c - self.length / 2.0} {c + self.length / 2.0} units box"
+		return f"region {name} cylinder {self.axis} {a} {b} {self.radius} {c - self.length / 2.0} {c + self.length / 2.0} units box"
 
 	@staticmethod
 	def from_volume_and_radius(volume: float, radius: float, axis: str, center: tuple) -> 'Cylinder':

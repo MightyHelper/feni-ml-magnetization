@@ -1,11 +1,12 @@
 import numpy
-from ovito.io import import_file, export_file
-from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, ExpressionSelectionModifier
+from multiprocessing import Process
 
 
-def parse(
+def parse_worker(
 	filenames=None
 ):
+	from ovito.io import import_file, export_file
+	from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, ExpressionSelectionModifier
 	filenames = {
 		'dump': 'iron.300000.dump',
 		'xyz': "XYZ.xyz",
@@ -121,6 +122,15 @@ def parse(
 	data = numpy.char.add(data, str(round(nNi / natoms, 3)))
 	data = numpy.array([data, " "])
 	numpy.savetxt(proportion, data, fmt='%s', header="N_Fe / Ntotal N_Ni / Ntotal")
+
+
+def parse(filenames=None):
+	filenames = {} if filenames is None else filenames
+	p = Process(target=parse_worker, args=(filenames,))
+	p.start()
+	print("waitinng...")
+	p.join()  # this blocks until the process terminates
+	print("Done")
 
 
 if __name__ == '__main__':
