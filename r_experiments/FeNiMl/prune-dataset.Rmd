@@ -43,7 +43,7 @@ names(coordc) <- c('coordc')
 names(coordc_fe) <- c('coordc_fe')
 names(coordc_ni) <- c('coordc_ni')
 names(coordc_pec) <- c('coordc_pec')
-important_columns <- cbind(psd, coordc, coordc_fe, coordc_ni, coordc_pec)
+important_columns <- cbind(psd, psd11, psd12, psd22, coordc, coordc_fe, coordc_ni, coordc_pec)
 ```
 
 ```{r}
@@ -79,6 +79,9 @@ coordc_fe_hist_mini <- extract_non_zero_cols(coordc_fe_hist)
 coordc_ni_hist_mini <- extract_non_zero_cols(coordc_ni_hist)
 coordc_pec_hist_mini <- extract_non_zero_cols(coordc_pec_hist)
 dim(psd_hist_mini)
+dim(psd11_hist_mini)
+dim(psd12_hist_mini)
+dim(psd22_hist_mini)
 dim(coordc_hist_mini)
 dim(coordc_fe_hist_mini)
 dim(coordc_ni_hist_mini)
@@ -86,8 +89,8 @@ dim(coordc_pec_hist_mini)
 ```
 
 ```{r}
-# names(data)
-psd_hist
+psd_hist_mini
+# data
 ```
 
 ```{r}

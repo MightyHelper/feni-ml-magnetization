@@ -1,0 +1,96 @@
+---
+title: "Regression Model using Ranger for FeNi"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Reading the dataset
+```{r}
+library(readr)
+dataset <- read_csv("dataset.csv")
+head(dataset)
+
+```
+## 2. Splitting the dataset
+We will split the dataset into a training set (70%) and a testing set (30%).
+```{r}
+set.seed(123) # for reproducibility
+sample_index <- sample(1:nrow(dataset), 0.7*nrow(dataset))
+train_data <- dataset[sample_index, ]
+test_data <- dataset[-sample_index, ]
+
+```
+
+## 3. Creating a regression model
+Using the ranger package, we'll predict the `tmg` feature and using permutation
+
+```{r}
+library(ranger)
+model_per <- ranger(tmg ~ ., data = train_data, importance = 'permutation')
+model_per
+```
+
+
+## 4. Calculate importance with permutation
+
+```{r}
+library(dplyr)
+library(ggplot2)
+plot_perm <-importance(model_per) |> as.data.frame() |> add_rownames("predictor") |> mutate(importance=`importance(model_per)`) |> select(predictor,importance)|> arrange(desc(importance)) |> head(20) |> mutate(predictor = factor(predictor, levels = rev(unique(predictor))))  |>
+  ggplot()+
+  geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
+  ggtitle("Top 20 predictor importance using permutation")+
+  theme_minimal()
+
+```
+
+
+## 5. calculate importante with impurity
+```{r}
+library(ranger)
+model_imp <- ranger(tmg ~ ., data = train_data, importance = 'impurity')
+model_imp
+```
+
+```{r}
+plot_imp<-importance(model_imp) |> as.data.frame() |> add_rownames("predictor") |> mutate(importance=`importance(model_imp)`) |> select(predictor,importance)|> arrange(desc(importance)) |> head(20) |> mutate(predictor = factor(predictor, levels = rev(unique(predictor))))  |>
+  ggplot()+
+  geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
+  ggtitle("Top 20 predictor importance using impurity")+
+  theme_minimal()
+```
+
+## Permutation vs. Impurity
+```{r}
+library(gridExtra)
+gridExtra::grid.arrange(plot_imp,plot_perm, ncol=2)
+
+```
+## 5. Evaluate results on test dataset
+```{r}
+predictions <- predict(model_per, data = test_data)$predictions
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - test_data$tmg)^2))
+RMSE
+
+```
+## 6. Plot: Predicted vs Reference values
+```{r}
+library(ggplot2)
+
+results <- data.frame(Reference = test_data$tmg, Predicted = predictions)
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  #geom_smooth(method = 'lm', color = 'red') +
+  geom_abline(intercept = 0,slope =1,color='red')+
+  ggtitle("Predicted vs Reference values") +
+  #ylim(0,1)+
+  xlab("Reference Values") +
+  ylab("Predicted Values")+
+  theme_bw()
+
+```
+

@@ -31,9 +31,9 @@ library(caret) # framework de machine learning
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 dataset <- readr::read_csv("dataset.csv")
-# dataset <- dataset %>% mutate(Date= lubridate::ym(Date))
-# dataset <- dataset %>% select(-Agr.Item,-Date, -prev_date, -`...1`)
-dataset
+selected_columns <- dataset[, grepl("psd([0-9]{2})?_(50|58)|coordc.*|pec.*|tmg", names(dataset))]
+dataset <- selected_columns
+names(dataset)
 ```
 
 ```{r}
@@ -61,12 +61,41 @@ test
 ## Modelo para predecir next_consume
 
 ```{r}
-rf_model1 <- ranger(tmg ~ . ,data=train)
+rf_model1 <- ranger(tmg ~ . ,data=train, splitrule = "maxstat")
 rf_model1
+```
+```{r}
+testThing <- function(splitrule) {
+  rf_model1 <- ranger(tmg ~ . ,data=train, splitrule = splitrule)
+  predictions_test <- predict(rf_model1, data = test)$predictions
+  RMSE_test <- sqrt(mean((predictions_test - test$tmg)^2))
+  predictions_train <- predict(rf_model1, data = train)$predictions
+  RMSE_train <- sqrt(mean((predictions_train - train$tmg)^2))
+  return(c(RMSE_train, RMSE_test))
+}
+testNTimes <- function(splitrule, n) {
+  results <- matrix(0, n, 2)
+  for (i in 1:n) {
+    result <- testThing(splitrule)
+    results[i, ] <- result
+  }
+  avg_RMSE_train <- mean(results[, 1])
+  avg_RMSE_test <- mean(results[, 2])
+  return(c(avg_RMSE_train, avg_RMSE_test))
+}
+testNTimes("variance", 100)
+testNTimes("extratrees", 100)
+testNTimes("maxstat", 100)
 ```
 
 ```{r}
-rf_model1$prediction.error
+# rf_model1$prediction.error
+predictions <- predict(rf_model1, data = test)$predictions
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - test$tmg)^2))
+
+print(rf_model1$prediction.error)
+print(RMSE)
 ```
 
 ### Entrenamiento
