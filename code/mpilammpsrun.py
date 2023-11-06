@@ -24,6 +24,51 @@ def generate_random_filename():
 	return base64.b32encode(random.randbytes(5)).decode("ascii")
 
 
+def get_index(lines, section):
+	return [i for i, l in enumerate(lines) if l.startswith("ITEM: " + section)][0]
+
+
+class MPILammpsDump:
+	def __init__(self, path):
+		self.path = path
+		self.dump = self._parse()
+
+	def _parse(self):
+		with open(self.path, "r") as f:
+			lines = f.readlines()
+			timestep_index = get_index(lines, "TIMESTEP")
+			number_of_atoms_index = get_index(lines, "NUMBER OF ATOMS")
+			box_bounds_index = get_index(lines, "BOX BOUNDS")
+			atoms_index = get_index(lines, "ATOMS")
+			timestep = int(lines[timestep_index + 1])
+			number_of_atoms = int(lines[number_of_atoms_index + 1])
+			box_bounds = np.array([[float(x) for x in line.split(" ") if x != ""] for line in lines[box_bounds_index + 1:box_bounds_index + 4]])
+			atoms = np.array([[float(x) for x in line.split(" ") if x != ""] for line in lines[atoms_index + 1:]])
+			return {
+				"timestep": timestep,
+				"number_of_atoms": number_of_atoms,
+				"box_bounds": box_bounds,
+				"atoms": atoms
+			}
+
+	def plot(self):
+		t = self.dump['atoms'][:, DUMP_ATOM_TYPE]
+		x = self.dump['atoms'][:, DUMP_ATOM_X]
+		y = self.dump['atoms'][:, DUMP_ATOM_Y]
+		z = self.dump['atoms'][:, DUMP_ATOM_Z]
+		fig = plt.figure()
+		ax = fig.add_subplot(111, projection='3d')
+		ax.scatter(x, y, z, c=t, marker='.', cmap='coolwarm')
+		ax.set_box_aspect((1, 1, 1))
+		ax.set_xlim(self.dump['box_bounds'][0][0], self.dump['box_bounds'][0][1])
+		ax.set_ylim(self.dump['box_bounds'][1][0], self.dump['box_bounds'][1][1])
+		ax.set_zlim(self.dump['box_bounds'][2][0], self.dump['box_bounds'][2][1])
+		ax.set_xlabel('X')
+		ax.set_ylabel('Y')
+		ax.set_zlabel('Z')
+		plt.show()
+
+
 class MpiLammpsRun:
 	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
 		self.output = ""
@@ -35,7 +80,7 @@ class MpiLammpsRun:
 			self.expect_dumps = [f"{sim_params['cwd']}/{dump}" for dump in self.expect_dumps]
 		else:
 			print("WARN: No CWD!")
-		self.dumps = []
+		self.dumps: list[MPILammpsDump] = []
 
 	def execute(self) -> 'MpiLammpsRun':
 		MpiLammpsWrapper.gen_and_sim(self.code, self.sim_params, file_to_use=self.file_name)
@@ -45,44 +90,6 @@ class MpiLammpsRun:
 	def _parse_dumps(self):
 		dumps = {}
 		for dump in self.expect_dumps:
-			result = self._parse_dump(dump)
-			dumps[result['timestep']] = result
+			result = MPILammpsDump(dump)
+			dumps[result.dump['timestep']] = result
 		return dumps
-
-	def _parse_dump(self, dump):
-		with open(dump, "r") as f:
-			lines = f.readlines()
-			timestep_index = self.get_index(lines, "TIMESTEP")
-			number_of_atoms_index = self.get_index(lines, "NUMBER OF ATOMS")
-			box_bounds_index = self.get_index(lines, "BOX BOUNDS")
-			atoms_index = self.get_index(lines, "ATOMS")
-			timestep = int(lines[timestep_index + 1])
-			number_of_atoms = int(lines[number_of_atoms_index + 1])
-			box_bounds = np.array([[float(x) for x in line.split(" ") if x != ""] for line in lines[box_bounds_index + 1:box_bounds_index + 4]])
-			atoms = np.array([[float(x) for x in line.split(" ") if x != ""] for line in lines[atoms_index + 1:-1]])
-			return {
-				"timestep": timestep,
-				"number_of_atoms": number_of_atoms,
-				"box_bounds": box_bounds,
-				"atoms": atoms
-			}
-
-	def plot(self, dump):
-		t = dump['atoms'][:, DUMP_ATOM_TYPE]
-		x = dump['atoms'][:, DUMP_ATOM_X]
-		y = dump['atoms'][:, DUMP_ATOM_Y]
-		z = dump['atoms'][:, DUMP_ATOM_Z]
-		fig = plt.figure()
-		ax = fig.add_subplot(111, projection='3d')
-		ax.scatter(x, y, z, c=t, marker='.', cmap='coolwarm')
-		ax.set_box_aspect((1, 1, 1))
-		ax.set_xlim(dump['box_bounds'][0][0], dump['box_bounds'][0][1])
-		ax.set_ylim(dump['box_bounds'][1][0], dump['box_bounds'][1][1])
-		ax.set_zlim(dump['box_bounds'][2][0], dump['box_bounds'][2][1])
-		ax.set_xlabel('X')
-		ax.set_ylabel('Y')
-		ax.set_zlabel('Z')
-		plt.show()
-
-	def get_index(self, lines, section):
-		return [i for i, l in enumerate(lines) if l.startswith("ITEM: " + section)][0]

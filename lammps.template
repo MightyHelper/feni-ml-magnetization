@@ -17,8 +17,6 @@ lattice		bcc 2.8665
 
 {{region}}
 
-# set group Fe type/ratio 2 0.35 250
-
 group		Fe type 1
 group		Ni type 2
 

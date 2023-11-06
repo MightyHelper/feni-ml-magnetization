@@ -128,7 +128,7 @@ def parse(filenames=None):
 	filenames = {} if filenames is None else filenames
 	p = Process(target=parse_worker, args=(filenames,))
 	p.start()
-	print("waitinng...")
+	print("Waiting for OVITO...")
 	p.join()  # this blocks until the process terminates
 	print("Done")
 
