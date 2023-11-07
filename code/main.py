@@ -53,7 +53,8 @@ def plot_region(region: str):
 def main():
 	test()
 	particle_factory = nanoparticle.AbstractParticleFactory.by_atom_count(1243)
-	cyl_np = particle_factory.core_shell_cylinder(12, 9)
+	# cyl_np = particle_factory.core_shell_cylinder(12, 9)
+	cyl_np = particle_factory.onion_cylinder((12.5, 30), (9, 26), (6, 22), (3, 18))
 	cyl_np.execute(test_run=True)
 	fe_count = cyl_np.count_atoms_of_type(nanoparticle.FE_ATOM)
 	ni_count = cyl_np.count_atoms_of_type(nanoparticle.NI_ATOM)

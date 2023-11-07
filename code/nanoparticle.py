@@ -114,6 +114,20 @@ class AbstractParticleFactory(abc.ABC):
 		return nano
 
 	@staticmethod
+	def onion_cylinder(c1, c2, c3, c4):
+		# onion_cylinder((12.5, 30), (9, 26), (6, 22), (3, 18))
+		nano = Nanoparticle()
+		size_4 = shapes.Cylinder(c1[0], c1[1], 'x', (0, 0, 0), True)
+		size_3 = shapes.Cylinder(c2[0], c2[1], 'x', (0, 0, 0), True)
+		size_2 = shapes.Cylinder(c3[0], c3[1], 'x', (0, 0, 0), True)
+		size_1 = shapes.Cylinder(c4[0], c4[1], 'x', (0, 0, 0), True)
+		nano.add_shape(size_4, atom_type=FE_ATOM, action='create')
+		nano.add_shape(size_3, atom_type=NI_ATOM, action='update')
+		nano.add_shape(size_2, atom_type=FE_ATOM, action='update')
+		nano.add_shape(size_1, atom_type=NI_ATOM, action='update')
+		return nano
+
+	@staticmethod
 	def by_volume(base_volume: float) -> 'AbstractParticleFactory':
 		return VolumeParticleFactory(base_volume)
 
@@ -188,7 +202,7 @@ class AtomParticleFactory(AbstractParticleFactory):
 		assert outer_cylinder.radius > inner_cylinder.radius, "Inner cylinder radius is greater than outer cylinder radius"
 		assert outer_cylinder.length > inner_cylinder.length, "Inner cylinder length is greater than outer cylinder length"
 		assert (olc + ilc) - self.base_atom_count < 50, f"Volumes are not right ({outer_cylinder.get_lattice_point_count()} {inner_cylinder.get_lattice_point_count()}) {(olc + ilc) - self.base_atom_count}"
-		assert ilc/(olc+ilc) - ratio < 0.1, f"Volumes are not right ({(olc+ilc)/ilc}!={ratio})"
+		assert ilc / (olc + ilc) - ratio < 0.1, f"Volumes are not right ({(olc + ilc) / ilc}!={ratio})"
 		nano.add_shape(outer_cylinder, atom_type=FE_ATOM, action='create')
 		nano.add_shape(inner_cylinder, atom_type=NI_ATOM, action='update')
 		return nano
