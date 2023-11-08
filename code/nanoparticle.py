@@ -25,6 +25,7 @@ class Nanoparticle:
 	regions: list[shapes.Shape]
 	atom_manipulation: list[str]
 	run: mpilr.MpiLammpsRun
+	region_name_map: dict[str, int] = {}
 	magnetism: tuple[float, float]
 
 	def __init__(self, extra_replacements: dict = None):
@@ -38,7 +39,7 @@ class Nanoparticle:
 		region_index = len(self.regions)
 		self.regions.append(shape)
 		if action == 'create':
-			self.atom_manipulation.append(f"create_atoms {atom_type} region reg{region_index}")
+			self.add_create_atoms(atom_type, region_index)
 		elif action == 'delete':
 			self.atom_manipulation.append(f"delete_atoms {atom_type} region reg{region_index}")
 		elif action == 'update':
@@ -103,6 +104,52 @@ class Nanoparticle:
 
 	def total_atoms(self, dump_idx=0):
 		return self.run.dumps[dump_idx].dump['number_of_atoms']
+
+	def add_named_shape(self, shape, region_name):
+		self.region_name_map[region_name] = len(self.regions)
+		self.regions.append(shape)
+
+	def get_region_id_by_name(self, region_name):
+		return self.region_name_map[region_name]
+
+	def add_create_atoms(self, atom_type, region_name):
+		if isinstance(region_name, str):
+			region_name = self.get_region_id_by_name(region_name)
+		region_name = int(region_name)
+		command = f"create_atoms {atom_type} region reg{region_name}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_region(self, atom_type, region_name):
+		if isinstance(region_name, str):
+			region_name = self.get_region_id_by_name(region_name)
+		region_name = int(region_name)
+		command = f"set region reg{region_name} type {atom_type}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_subset_region(self, atom_type, region_name, count, seed):
+		if isinstance(region_name, str):
+			region_name = self.get_region_id_by_name(region_name)
+		region_name = int(region_name)
+		command = f"set region reg{region_name} type/subset {atom_type} {count} {seed}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_group(self, atom_type, group_name):
+		command = f"set group {group_name} type {atom_type}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_subset_group(self, atom_type, group_name, count, seed):
+		command = f"set group {group_name} type/subset {atom_type} {count} {seed}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_ratio_group(self, atom_type, group_name, ratio, seed):
+		command = f"set group {group_name} type/ratio {atom_type} {ratio} {seed}"
+		self.atom_manipulation.append(command)
+		return command
 
 
 class AbstractParticleFactory(abc.ABC):

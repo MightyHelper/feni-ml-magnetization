@@ -114,6 +114,29 @@ def __str__(self):
 
 
 @dataclass
+class Plane(Shape):
+	""" Represents a plane """
+	point: tuple
+	normal: tuple
+
+	def __init__(self, point: tuple, normal: tuple):
+		self.point = point
+		self.normal = normal
+
+	def get_volume(self) -> float:
+		return 0.0
+
+	def get_region(self, name: str) -> str:
+		return f"region {name} plane {self.point[0]} {self.point[1]} {self.point[2]} {self.normal[0]} {self.normal[1]} {self.normal[2]} units box"
+
+	def get_lattice_point_count(self) -> int:
+		return 0
+
+	def __str__(self):
+		return f"Plane_{self.point}_{self.normal}"
+
+
+@dataclass
 class Cylinder(Shape):
 	""" Represents a cylinder """
 	radius: float
