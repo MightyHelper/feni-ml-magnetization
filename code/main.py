@@ -1,10 +1,7 @@
-from subprocess import CalledProcessError
-
+import executor as ex
 import mpilammpsrun as mpilr
 import shapes as s
 from template import LAMMPS_EXECUTABLE, replace_templates, get_template
-import nanoparticle
-import poorly_coded_parser as parser
 
 
 def test():
@@ -52,32 +49,7 @@ def plot_region(region: str):
 
 
 def main():
-	ignore = [
-		# "X-Jannus_Cylinder",
-		# "Y-Jannus_Cylinder",
-		# "Mix05_PPP-CornerJanus_Cylinder",
-		# "Mix10_PPP-CornerJanus_Cylinder",
-	]
-	# test()
-	ok_particles = []
-	not_ok_particles = []
-	nanoparticles = parser.load_shapes("../Shapes/Cylinder", ignore)
-	for key, nanoparticle in nanoparticles.items():
-		print(f"\033[32m{key}\033[0m")
-		if not any([section in key for section in ignore]):
-			try:
-				nanoparticle.execute(test_run=True)
-				ok_particles.append(key)
-			except CalledProcessError:
-				print("\033[31mFailed to execute\033[0m")
-				not_ok_particles.append(key)
-			# nanoparticle.plot()
-
-	for key in ok_particles:
-		print(f"\033[32m{key}\033[0m")
-
-	for key in not_ok_particles:
-		print(f"\033[31m{key}\033[0m")
+	ex.execute_all_nanoparticles_in("../Shapes/Cylinder")
 
 
 if __name__ == "__main__":

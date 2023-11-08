@@ -160,6 +160,19 @@ def parse_set(line, nano):
 		raise ValueError(f"Unknown selector type: {set_type}")
 
 
+def parse_group(line, nano):
+	# group		Ni type 2
+	line = split_command(line)
+	group_name = line[1]
+	prop = line[2]
+	if prop == "type":
+		value = line[3]
+		result = nano.add_group_type(value, group_name)
+		assert assert_correct_parsing(line, result), f"Group type {group_name} is not parsed correctly: \n{result} != \n{line}"
+		log_output(">>" + result)
+		return
+
+
 def parse_line(line, nano):
 	if line.startswith("#"):
 		log_output(f"\033[34m{line}\033[0m")
@@ -175,7 +188,7 @@ def parse_line(line, nano):
 		parse_set(line, nano)
 	elif line.startswith("group"):
 		log_output(f"\033[2;37m{line}\033[0m")
-	# Ignore
+		parse_group(line, nano)
 	else:
 		raise ValueError(f"Unknown line: {line}")
 

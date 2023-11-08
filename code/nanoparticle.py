@@ -151,6 +151,11 @@ class Nanoparticle:
 		self.atom_manipulation.append(command)
 		return command
 
+	def add_group_type(self, atom_type, group_name):
+		command = f"group {group_name} type {atom_type}"
+		self.atom_manipulation.append(command)
+		return command
+
 
 class AbstractParticleFactory(abc.ABC):
 	@staticmethod
