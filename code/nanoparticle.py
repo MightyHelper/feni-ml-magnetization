@@ -15,6 +15,8 @@ import feni_ovito
 FE_ATOM = 1
 NI_ATOM = 2
 
+FULL_RUN_DURATION = 300000
+
 
 def realpath(path):
 	return subprocess.check_output(["realpath", path]).decode("ascii").strip()
@@ -57,7 +59,7 @@ class Nanoparticle:
 	def execute(self, test_run: bool = True, **kwargs):
 		code = template.replace_templates(template.get_template(), {
 			"region": self.get_region(),
-			"run_steps": str(0 if test_run else 300000),
+			"run_steps": str(0 if test_run else FULL_RUN_DURATION),
 			"title": f"{self.title}",
 			**self.extra_replacements
 		})
@@ -71,7 +73,7 @@ class Nanoparticle:
 				"cwd": self.path,
 				**kwargs
 			},
-			dumps := [f"iron.{i}.dump" for i in ([0] if test_run else [0, 100000, 200000, 300000])],
+			dumps := [f"iron.{i}.dump" for i in ([0] if test_run else [*range(0, FULL_RUN_DURATION + 1, 100000)])],
 			file_name=self.path + "nanoparticle.in"
 		).execute()
 		feni_mag.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)

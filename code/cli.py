@@ -15,6 +15,7 @@ from rich.highlighter import ReprHighlighter
 import executor
 import poorly_coded_parser as parser
 import template
+from code import nanoparticle
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -76,8 +77,41 @@ def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True)
 	console.print(table, highlight=True)
 
 
+def parse_execution_info(folder):
+	out = {
+		'real_date': None,
+		'title': None,
+		'mag': None
+	}
+	if "_" in folder:
+		sim, date = folder.split("_")
+		out['real_date'] = datetime.datetime.utcfromtimestamp(float(date))
+	out['title'] = get_execution_title(folder)
+	out['mag'] = get_magnetism(folder)
+	return out
+
+
+def get_execution_title(folder):
+	try:
+		with open("../executions/" + folder + "/nanoparticle.in", "r") as f:
+			lines = f.readlines()
+			return lines[0][2:].strip()
+	except FileNotFoundError:
+		pass
+	return "Unknown"
+
+def get_magnetism(folder):
+	try:
+		with open("../executions/" + folder + "/magnetism.txt", "r") as f:
+			lines = f.readlines()
+			return lines[1].strip()
+	except FileNotFoundError:
+		pass
+	return "Unknown"
+
+
 @executions.command()
-def list():
+def ls():
 	"""
 	List all executions that were done
 	"""
@@ -85,13 +119,18 @@ def list():
 	table.add_column("Index", justify="right", footer="Total")
 	table.add_column("Folder Name", footer=str(len(os.listdir("../executions"))))
 	table.add_column("Simulation Date")
-	for i, folder in enumerate(os.listdir("../executions")):
-		real_date = None
-		if "_" in folder:
-			sim, date = folder.split("_")
-			# load date from unix timestamp
-			real_date = datetime.datetime.utcfromtimestamp(float(date))
-		table.add_row(f"[green]{i}[/green]", f"[blue]{folder}[/blue]", f"[bold]{real_date}[/bold]")
+	table.add_column("Title")
+	table.add_column("Magnetism")
+
+	for i, folder in enumerate(sorted(os.listdir("../executions"))):
+		info = parse_execution_info(folder)
+		table.add_row(
+			f"[green]{i}[/green]",
+			f"[blue]{folder}[/blue]",
+			f"[bold]{info['real_date']}[/bold]",
+			f"[magenta]{info['title']}[/magenta]",
+			f"[bold green]{info['mag']}[/bold green]" if info['mag'] != "Unknown" else f"[bold red]{info['mag']}[/bold red]"
+		)
 	console.print(table, highlight=True)
 
 
@@ -128,6 +167,7 @@ def get_current_step(lammps_log):
 	except FileNotFoundError:
 		pass
 	return step
+
 
 def get_title(path):
 	title = "Unknown"
@@ -173,7 +213,7 @@ def live():
 		try:
 			while True:
 				for folder, step, title in running:
-					progress.update(tasks[folder], completed=step, total=None if step == -1 else 300000)
+					progress.update(tasks[folder], completed=step, total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
 				progress.refresh()
 				time.sleep(0.2)
 				running = [*get_running_executions()]
@@ -197,7 +237,7 @@ def live():
 
 def add_task(folder, progress: Progress, step, tasks, title):
 	rprint(f"Found running execution: {folder} ({step})")
-	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else 300000)
+	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
 
 
 if __name__ == "__main__":
