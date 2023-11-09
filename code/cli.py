@@ -1,18 +1,20 @@
 import datetime
-import os
 import multiprocessing
+import os
+import re
+import time
 
+from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
 
-import rich.table
 import rich.repr
+import rich.table
 import typer
-from rich.highlighter import Highlighter, ReprHighlighter, RegexHighlighter
-from rich.pretty import pprint
-
-import poorly_coded_parser as parser
 from rich import print as rprint
+from rich.highlighter import ReprHighlighter
 
 import executor
+import poorly_coded_parser as parser
+import template
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -108,6 +110,66 @@ def clean():
 		rprint(f"[red]No executions to remove[/red].")
 	else:
 		rprint(f"Removed [green]{total}[/green] executions.")
+
+
+def get_current_step(lammps_log):
+	"""
+	Get the current step of a lammps log file
+	"""
+	with open(lammps_log, "r") as f:
+		lines = f.readlines()
+		split = re.split(r" +", lines[-1].strip())
+		try:
+			return int(split[0])
+		except Exception:
+			return -1
+
+
+def get_running_executions():
+	ps_result = os.popen("ps -ef | grep " + template.LAMMPS_EXECUTABLE).readlines()
+	for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
+		parts = execution.split("/")
+		foldername = '/'.join(parts[:-1])
+		step = get_current_step(foldername + "/log.lammps")
+		yield foldername, step
+
+
+@executions.command()
+def live():
+	"""
+		Find live executions
+	"""
+	# Run ps -ef | grep lmp
+	with Progress(
+		SpinnerColumn(),
+		*Progress.get_default_columns(),
+		MofNCompleteColumn(),
+		TimeElapsedColumn(),
+		expand=True
+	) as progress:
+		running = [*get_running_executions()]
+		tasks = {}
+		for folder, step in running:
+			add_task(folder, progress, step, tasks)
+		while len(running) > 0:
+			for folder, step in running:
+				progress.update(tasks[folder], completed=step)
+			progress.refresh()
+			time.sleep(0.2)
+			running = [*get_running_executions()]
+			for folder, step in running:
+				if folder not in tasks:
+					add_task(folder, progress, step, tasks)
+			for folder in tasks.keys():
+				if folder not in [x for x, _ in running]:
+					rprint(f"Execution {folder} ({step}) has finished")
+					progress.remove_task(tasks[folder])
+		rprint("No running executions")
+
+
+def add_task(folder, progress: Progress, step, tasks):
+	rprint(f"Found running execution: {folder} ({step})")
+	tasks[folder] = progress.add_task(f"{folder}", total=None if step == -1 else 300000)
 
 
 if __name__ == "__main__":
