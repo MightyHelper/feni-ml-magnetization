@@ -116,13 +116,28 @@ def get_current_step(lammps_log):
 	"""
 	Get the current step of a lammps log file
 	"""
-	with open(lammps_log, "r") as f:
-		lines = f.readlines()
-		split = re.split(r" +", lines[-1].strip())
-		try:
-			return int(split[0])
-		except Exception:
-			return -1
+	step = -1
+	try:
+		with open(lammps_log, "r") as f:
+			lines = f.readlines()
+			try:
+				split = re.split(r" +", lines[-1].strip())
+				step = int(split[0])
+			except Exception:
+				pass
+	except FileNotFoundError:
+		pass
+	return step
+
+def get_title(path):
+	title = "Unknown"
+	try:
+		with open(path, "r") as f:
+			lines = f.readlines()
+			title = lines[0][2:].strip()
+	except FileNotFoundError:
+		pass
+	return title
 
 
 def get_running_executions():
@@ -131,7 +146,8 @@ def get_running_executions():
 		parts = execution.split("/")
 		foldername = '/'.join(parts[:-1])
 		step = get_current_step(foldername + "/log.lammps")
-		yield foldername, step
+		title = get_title(foldername + "/nanoparticle.in")
+		yield foldername, step, title
 
 
 @executions.command()
@@ -149,27 +165,39 @@ def live():
 	) as progress:
 		running = [*get_running_executions()]
 		tasks = {}
-		for folder, step in running:
-			add_task(folder, progress, step, tasks)
-		while len(running) > 0:
-			for folder, step in running:
-				progress.update(tasks[folder], completed=step)
-			progress.refresh()
-			time.sleep(0.2)
-			running = [*get_running_executions()]
-			for folder, step in running:
-				if folder not in tasks:
-					add_task(folder, progress, step, tasks)
-			for folder in tasks.keys():
-				if folder not in [x for x, _ in running]:
-					rprint(f"Execution {folder} ({step}) has finished")
-					progress.remove_task(tasks[folder])
-		rprint("No running executions")
+		for folder, step, title in running:
+			add_task(folder, progress, step, tasks, title)
+		if len(running) == 0:
+			rprint("[red]No running executions found[/red]")
+			return
+		try:
+			while True:
+				for folder, step, title in running:
+					progress.update(tasks[folder], completed=step, total=None if step == -1 else 300000)
+				progress.refresh()
+				time.sleep(0.2)
+				running = [*get_running_executions()]
+				for folder, step, title in running:
+					if folder not in tasks:
+						add_task(folder, progress, step, tasks, title)
+				keys_to_remove = []
+				for folder in tasks.keys():
+					if folder not in [x for x, _, _ in running]:
+						rprint(f"Execution {folder} ({step}) has finished")
+						try:
+							progress.remove_task(tasks[folder])
+							keys_to_remove.append(folder)
+						except KeyError:
+							pass
+				for key in keys_to_remove:
+					del tasks[key]
+		except KeyboardInterrupt:
+			rprint("[yellow]Exiting...[/yellow]")
 
 
-def add_task(folder, progress: Progress, step, tasks):
+def add_task(folder, progress: Progress, step, tasks, title):
 	rprint(f"Found running execution: {folder} ({step})")
-	tasks[folder] = progress.add_task(f"{folder}", total=None if step == -1 else 300000)
+	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else 300000)
 
 
 if __name__ == "__main__":

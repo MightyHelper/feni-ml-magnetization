@@ -1,5 +1,6 @@
 # Execute nanoparticle simulations in batch
 import multiprocessing
+import multiprocessing.dummy
 import poorly_coded_parser as parser
 import nanoparticle
 import pandas as pd
@@ -8,8 +9,11 @@ from subprocess import CalledProcessError
 
 def execute_all_nanoparticles_in(path, threads, ignore, test=True):
 	nanoparticles = parser.load_shapes(path, ignore)
-	with multiprocessing.Pool(threads) as p:
-		particles = p.starmap(_process_nanoparticle, [(ignore, key, np, test) for key, np in nanoparticles])
+	if threads == 1:
+		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
+	else:
+		with multiprocessing.dummy.Pool(threads) as p:
+			particles = p.starmap(_process_nanoparticle, [(ignore, key, np, test) for key, np in nanoparticles])
 	return pd.DataFrame(particles)
 
 

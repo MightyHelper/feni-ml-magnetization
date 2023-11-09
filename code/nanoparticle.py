@@ -58,6 +58,7 @@ class Nanoparticle:
 		code = template.replace_templates(template.get_template(), {
 			"region": self.get_region(),
 			"run_steps": str(0 if test_run else 300000),
+			"title": f"{self.title}",
 			**self.extra_replacements
 		})
 		os.mkdir(self.path)
@@ -65,8 +66,8 @@ class Nanoparticle:
 			code,
 			{
 				"lammps_executable": template.LAMMPS_EXECUTABLE,
-				"omp": mpilw.OMPOpt(use=True, n_threads=2),
-				"mpi": mpilw.MPIOpt(use=True, hw_threads=False, n_threads=4),
+				"omp": mpilw.OMPOpt(use=False, n_threads=2),
+				"mpi": mpilw.MPIOpt(use=False, hw_threads=False, n_threads=4),
 				"cwd": self.path,
 				**kwargs
 			},
