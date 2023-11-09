@@ -3,16 +3,16 @@ import re
 import nanoparticle
 
 import shapes as s
-DO_PARSER_LOGGING = True
+
+DO_PARSER_LOGGING = False
+
 
 def recursive_input_search(path):
-	output = []
 	for file in os.listdir(path):
 		if os.path.isdir(f"{path}/{file}"):
-			output += recursive_input_search(f"{path}/{file}")
+			yield from recursive_input_search(f"{path}/{file}")
 		elif file.endswith(".in"):
-			output.append(f"{path}/{file}")
-	return output
+			yield f"{path}/{file}"
 
 
 def parse_region(line, nano):
@@ -67,8 +67,48 @@ def parse_region(line, nano):
 		nano.add_named_shape(shape, region_name)
 		log_output(shape)
 		return shape
+	elif region_type == "cone":
+		# region_args = ['z', '0.0', '0.0', '18', '1', '-21', '21', 'units', 'box']
+		axis = region_args[0]
+		coord_a = float(region_args[1])
+		coord_b = float(region_args[2])
+		radlo = float(region_args[3])
+		radhi = float(region_args[4])
+		lo = float(region_args[5])
+		hi = float(region_args[6])
+		shape = s.Cone(axis, coord_a, coord_b, radlo, radhi, lo, hi)
+		assert assert_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
+		nano.add_named_shape(shape, region_name)
+		log_output(shape)
+		return shape
+	elif region_type == "prism":
+		# region 		sq prism -20 20 -3 3 -16 16 0 0 0 units box
+		xlo = float(region_args[0])
+		xhi = float(region_args[1])
+		ylo = float(region_args[2])
+		yhi = float(region_args[3])
+		zlo = float(region_args[4])
+		zhi = float(region_args[5])
+		xy = float(region_args[6])
+		xz = float(region_args[7])
+		yz = float(region_args[8])
+		shape = s.Prism(xlo, xhi, ylo, yhi, zlo, zhi, xy, xz, yz)
+		assert assert_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
+		nano.add_named_shape(shape, region_name)
+		log_output(shape)
+		return shape
+	elif region_type == "intersect":
+		# intersect args = N reg-ID1 reg-ID2 ...
+		#   N = # of regions to follow, must be 2 or greater
+		#   reg-ID1,reg-ID2, ... = IDs of regions to intersect
+
+		#  region_args = ['2', 'sq', 'ce', 'units', 'box']
+		n = int(region_args[0])
+		reg_ids = region_args[1:1+n]
+		nano.add_intersect(reg_ids, region_name)
 	else:
 		log_output("\033[31mUnknown region type\033[0m")
+		raise ValueError(f"Unknown region type: {region_type}")
 
 
 def assert_correct_parsing(line, command):
@@ -199,18 +239,24 @@ def parse_shape(lines, nano):
 
 
 def load_shapes(path, ignore) -> dict[str, nanoparticle.Nanoparticle]:
-	input_files = recursive_input_search(path)
-	out_shapes = {}
-	for shape in input_files:
-		if any([section in shape for section in ignore]): # Ignore
+	for shape in recursive_input_search(path):
+		if any([section in shape for section in ignore]):  # Ignore
 			continue
 		with open(shape, "r") as f:
 			log_output(f"\033[33m=== {shape} ===\033[0m")
-			nano = nanoparticle.Nanoparticle()
+			nano = nanoparticle.Nanoparticle({'title': shape})
 			lines = f.readlines()
-			start = [i for i, l in enumerate(lines) if l.startswith("lattice")][0] + 1
-			end = [i for i, l in enumerate(lines) if l.startswith("# setting")][0]
+			start = first_index_that_startswith(lines, "lattice") + 1
+			try:
+				end = first_index_that_startswith(lines, "# setting")
+			except AssertionError:
+				end = first_index_that_startswith(lines, "mass")
 			lines = [ll.strip() for l in lines[start:end] if (ll := l.strip()) != ""]
 			parse_shape(lines, nano)
-			out_shapes[shape] = nano
-	return out_shapes
+			yield shape, nano
+
+
+def first_index_that_startswith(lines, start):
+	out = [i for i, l in enumerate(lines) if l.startswith(start)]
+	assert len(out) > 0, f"Could not find line that starts with {start}"
+	return out[0]

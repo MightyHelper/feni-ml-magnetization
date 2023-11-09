@@ -32,12 +32,15 @@ class Nanoparticle:
 		self.regions = []
 		self.atom_manipulation = []
 		self.extra_replacements = {} if extra_replacements is None else extra_replacements
+		self.title = self.extra_replacements.get("title", "Nanoparticle")
 		self.path = realpath("../executions/" + self.get_identifier()) + "/"
-		print(f"Path: {self.path}")
+
+	# print(f"Path: {self.path}")
 
 	def add_shape(self, shape: shapes.Shape, action: str = 'create', atom_type: int = 1):
 		region_index = len(self.regions)
 		self.regions.append(shape)
+		self.atom_manipulation.append(shape.get_region(f"reg{region_index}"))
 		if action == 'create':
 			self.add_create_atoms(atom_type, region_index)
 		elif action == 'delete':
@@ -86,11 +89,14 @@ class Nanoparticle:
 
 	def get_region(self):
 		out = ""
-		for i in range(max(len(self.regions), len(self.atom_manipulation))):
-			if i < len(self.regions):
-				out += self.regions[i].get_region(f"reg{i}") + "\n"
-			if i < len(self.atom_manipulation):
-				out += self.atom_manipulation[i] + "\n"
+		for i in self.atom_manipulation:
+			if isinstance(i, str):
+				out += i + "\n"
+			elif isinstance(i, shapes.Shape):
+				out += i.get_region(f"reg{self.regions.index(i)}") + "\n"
+				raise Exception("Shapes are supported but not allowed")
+			else:
+				raise Exception(f"Unknown type: {type(i)}")
 		return out
 
 	def plot(self):
@@ -106,8 +112,13 @@ class Nanoparticle:
 		return self.run.dumps[dump_idx].dump['number_of_atoms']
 
 	def add_named_shape(self, shape, region_name):
-		self.region_name_map[region_name] = len(self.regions)
+		region_id = self.register_region_name(region_name)
 		self.regions.append(shape)
+		self.atom_manipulation.append(shape.get_region(f"reg{region_id}"))
+
+	def register_region_name(self, region_name):
+		self.region_name_map[region_name] = len(self.regions)
+		return self.region_name_map[region_name]
 
 	def get_region_id_by_name(self, region_name):
 		return self.region_name_map[region_name]
@@ -153,6 +164,20 @@ class Nanoparticle:
 
 	def add_group_type(self, atom_type, group_name):
 		command = f"group {group_name} type {atom_type}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def __str__(self):
+		return f"Nanoparticle(regions={len(self.regions)}, atom_manipulation={len(self.atom_manipulation)}, title={self.title})"
+
+	def __repr__(self):
+		return self.__str__()
+
+	def add_intersect(self, regions: list[str], region_name: str):
+		region_indices = [self.get_region_id_by_name(region) for region in regions]
+		region_indices = [f"reg{i}" for i in region_indices]
+		new_region_id = self.register_region_name(region_name)
+		command = f"region reg{new_region_id} intersect {len(regions)} {' '.join(region_indices)} units box"
 		self.atom_manipulation.append(command)
 		return command
 

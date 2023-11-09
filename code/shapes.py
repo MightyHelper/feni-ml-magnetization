@@ -221,3 +221,76 @@ class Cylinder(Shape):
 		assert (-BOX_SIZE <= center[0] - radius <= BOX_SIZE and -BOX_SIZE <= center[1] - radius <= BOX_SIZE and -BOX_SIZE <= center[2] - radius <= BOX_SIZE), f"Cylinder {self} too much radius"
 		assert (-BOX_SIZE <= center[0] + length / 2 <= BOX_SIZE and -BOX_SIZE <= center[1] + length / 2 <= BOX_SIZE and -BOX_SIZE <= center[2] + length / 2 <= BOX_SIZE), f"Cylinder {self} too long"
 		assert (-BOX_SIZE <= center[0] - length / 2 <= BOX_SIZE and -BOX_SIZE <= center[1] - length / 2 <= BOX_SIZE and -BOX_SIZE <= center[2] - length / 2 <= BOX_SIZE), f"Cylinder {self} too long"
+
+
+class Cone(Shape):
+	""" Represents a cone.
+	cone args = dim c1 c2 radlo radhi lo hi
+  dim = x or y or z = axis of cone
+  c1,c2 = coords of cone axis in other 2 dimensions (distance units)
+  radlo,radhi = cone radii at lo and hi end (distance units)
+  lo,hi = bounds of cone in dim (distance units)
+	"""
+	axis: str
+	c1: float
+	c2: float
+	radlo: float
+	radhi: float
+	lo: float
+	hi: float
+
+	def __init__(self, axis: str, c1: float, c2: float, radlo: float, radhi: float, lo: float, hi: float):
+		self.axis = axis
+		self.c1 = c1
+		self.c2 = c2
+		self.radlo = radlo
+		self.radhi = radhi
+		self.lo = lo
+		self.hi = hi
+
+	def get_volume(self) -> float:
+		return 0.0
+
+	def get_region(self, name: str) -> str:
+		return f"region {name} cone {self.axis} {self.c1} {self.c2} {self.radlo} {self.radhi} {self.lo} {self.hi} units box"
+
+	def get_lattice_point_count(self) -> int:
+		return 0
+
+class Prism(Shape):
+	"""Represents a prism
+	prism args = xlo xhi ylo yhi zlo zhi xy xz yz
+  xlo,xhi,ylo,yhi,zlo,zhi = bounds of untilted prism (distance units)
+  xy = distance to tilt y in x direction (distance units)
+  xz = distance to tilt z in x direction (distance units)
+  yz = distance to tilt z in y direction (distance units)
+	"""
+	xlo: float
+	xhi: float
+	ylo: float
+	yhi: float
+	zlo: float
+	zhi: float
+	xy: float
+	xz: float
+	yz: float
+
+	def __init__(self, xlo: float, xhi: float, ylo: float, yhi: float, zlo: float, zhi: float, xy: float, xz: float, yz: float):
+		self.xlo = xlo
+		self.xhi = xhi
+		self.ylo = ylo
+		self.yhi = yhi
+		self.zlo = zlo
+		self.zhi = zhi
+		self.xy = xy
+		self.xz = xz
+		self.yz = yz
+
+	def get_volume(self) -> float:
+		return 0.0
+
+	def get_region(self, name: str) -> str:
+		return f"region {name} prism {self.xlo} {self.xhi} {self.ylo} {self.yhi} {self.zlo} {self.zhi} {self.xy} {self.xz} {self.yz} units box"
+
+	def get_lattice_point_count(self) -> int:
+		return 0

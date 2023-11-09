@@ -6,27 +6,18 @@ import pandas as pd
 from subprocess import CalledProcessError
 
 
-def execute_all_nanoparticles_in(path):
-	ignore = [
-		# "X-Jannus_Cylinder",
-		# "Y-Jannus_Cylinder",
-		# "Mix05_PPP-CornerJanus_Cylinder",
-		# "Mix10_PPP-CornerJanus_Cylinder",
-	]
+def execute_all_nanoparticles_in(path, threads, ignore, test=True):
 	nanoparticles = parser.load_shapes(path, ignore)
-	with multiprocessing.Pool() as p:
-		particles = p.starmap(_process_nanoparticle, [(ignore, key, np) for key, np in nanoparticles.items()])
-	df = pd.DataFrame(particles)
-	df.drop(columns=["np"], inplace=True)
-	print(df.to_string())
-	df.to_csv("results.csv")
+	with multiprocessing.Pool(threads) as p:
+		particles = p.starmap(_process_nanoparticle, [(ignore, key, np, test) for key, np in nanoparticles])
+	return pd.DataFrame(particles)
 
 
-def _process_nanoparticle(ignore, key, np):
+def _process_nanoparticle(ignore, key, np, test=True):
 	print(f"\033[32m{key}\033[0m")
 	if not any([section in key for section in ignore]):
 		try:
-			np.execute(test_run=True)
+			np.execute(test_run=test)
 			fe = np.count_atoms_of_type(nanoparticle.FE_ATOM)
 			ni = np.count_atoms_of_type(nanoparticle.NI_ATOM)
 			return {
