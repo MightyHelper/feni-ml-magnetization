@@ -6,15 +6,13 @@ Run a template lammps simulation using a particular region of atoms.
 
 Change LAMMPS_EXECUTABLE in [template.py](code/template.py).
 
-Execute `python3 main.py` from `/code`.
+Execute `python3 cli.py` from `/code`.
 
-In the basic example, it will:
+Read the help.
 
-1. Generate a sphere with radius 15
-2. Calculate the volume of the sphere
-3. Create a core-shell cylinder with an inner and outer radius, with the appropriate height to have the same atom count as requested
-4. It will also count the number of atoms in the core and shell
-5. It will then plot the atoms.
+## Requirements
 
-NOTE: The lattice is causing the atoms to be placed in a grid, so the cylinders are not perfect and the atom ratios are
-not exact.
+Install all requirements with
+```bash
+pip3 install -r requirements.txt
+```
