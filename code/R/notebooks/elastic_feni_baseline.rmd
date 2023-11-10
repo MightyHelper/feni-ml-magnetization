@@ -1,0 +1,144 @@
+---
+title: "Regression Model using Elastic Net for FeNi"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+## 1. Reading the dataset
+
+```{r}
+library(readr)
+dataset <- read_csv("/home/harpo/Dropbox/ongoing-work/git-repos/complex-systems-2023-final/datasets/results-1511/dataset.csv")
+head(dataset)
+```
+
+## 1.1 remove predictor with zero variance
+
+```{r}
+library(caret)
+nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
+dataset <- dataset[, -nzv]
+```
+
+
+## 2. Splitting the dataset
+We will split the dataset into a training set (70%) and a testing set (30%).
+
+```{r}
+set.seed(123) # for reproducibility
+sample_index <- sample(1:nrow(dataset), 0.7*nrow(dataset))
+train_data <- dataset[sample_index, ]
+test_data <- dataset[-sample_index, ]
+```
+
+## 3. Creating a regression model
+Using the glmnet package, we'll predict the `tmg` feature
+
+```{r}
+library(glmnet)
+y <- train_data$tmg
+x <- train_data %>% select(-name,-tmg) %>% as.matrix()
+```
+
+### Normalize the data
+
+Standardization (Z-score normalization): This method transforms each feature to have a mean of 0 and a standard deviation of 1. It's particularly useful when your features have different units or very different scales.
+```{r}
+library(caret)
+scaled_x <- preProcess(x, method = c("center", "scale"))
+x <- predict(scaled_x, x)
+```
+
+In the context of Elastic Net regression, the `alpha` parameter is a crucial component that balances the mix between Lasso (L1) and Ridge (L2) regularization methods. Elastic Net is a regularization technique that combines both L1 and L2 penalties, which are used to prevent overfitting by adding a penalty to the model's loss function.
+
+Here's a breakdown of the `alpha` parameter:
+
+1. **Range**: `alpha` can take on any value between 0 and 1 (inclusive). 
+   - `alpha = 1`: The penalty is entirely Lasso (L1 regularization).
+   - `alpha = 0`: The penalty is entirely Ridge (L2 regularization).
+   - `alpha` between 0 and 1: A combination of Lasso and Ridge.
+
+2. **Effect of L1 (Lasso) Regularization**: L1 regularization adds a penalty equal to the absolute value of the magnitude of coefficients. This can lead to some coefficients being exactly zero, which is useful for feature selection if you have a large number of features.
+
+3. **Effect of L2 (Ridge) Regularization**: L2 regularization adds a penalty equal to the square of the magnitude of coefficients. This tends to shrink the coefficients but does not set them to zero, which is useful when you have correlated features.
+
+4. **Choosing `alpha`**: 
+   - If you have a lot of features that you suspect are not all useful, a value closer to 1 (more Lasso) might be more appropriate as it will perform feature selection.
+   - If all your features are believed to be important, or you have a small number of features, a value closer to 0 (more Ridge) might work better.
+   - Often, the best way to choose an `alpha` value is through cross-validation, trying different values and selecting the one that minimizes prediction error.
+
+5. **Interaction with `lambda`**: The `lambda` parameter in Elastic Net controls the overall strength of the penalty. So, the effect of `alpha` is in conjunction with `lambda`. A grid search over both `alpha` and `lambda` is a common practice to find the best combination that minimizes cross-validation error.
+
+In summary, the `alpha` parameter in Elastic Net allows you to balance the type of regularization applied to your model, providing the flexibility to choose between Lasso, Ridge, or a mix of both based on your data and the specific requirements of your problem.
+
+```{r}
+# Elastic Net model
+set.seed(123)
+cv_model <- cv.glmnet(x, y, alpha = 0.5) # alpha=0.5 indicates Elastic Net
+best_lambda <- cv_model$lambda.min
+model_en <- glmnet(x, y, alpha = 0.5, lambda = best_lambda)
+print(model_en)
+```
+## 4. Calculate importance using elasticnet coeficients
+
+```{r}
+# The variable importance is inferred from the coefficients
+c <- coef(model_en)
+predictor <- c  %>% rownames()
+importance <- c %>% as.matrix()
+importance <- data.frame(predictor,importance)
+rownames(importance) <- NULL
+names(importance)[2] <- "importance"
+importance<-importance[-1,] # Exclude intercept
+importance <- importance[order(-importance$importance), ]
+importance <- head(importance, 20)
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+plot_perm <-importance  %>%  mutate(predictor = factor(predictor, levels = rev(unique(predictor)))) %>%
+  ggplot()+
+  geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
+  ggtitle("Top 20 predictor importance using glmnet")+
+  theme_minimal()
+plot_perm
+```
+## 5. Evaluate results on test dataset
+
+```{r}
+x_test <- test_data %>% select(-name,-tmg) %>% as.matrix()
+y_test <- test_data$tmg
+
+x_test <-predict(scaled_x, x_test)
+
+predictions <- predict(model_en, s = best_lambda, newx = x_test)
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - y_test)^2))
+print(RMSE)
+```
+
+## 6. Plot: Predicted vs Reference values
+
+```{r}
+
+results <- data.frame(Reference = y_test, Predicted = as.vector(predictions))
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  geom_abline(intercept = 0, slope = 1, color='red') +
+  ggtitle("Predicted vs Reference values") +
+  xlab("Reference Values") +
+  ylab("Predicted Values") +
+  theme_bw()
+
+```
+
