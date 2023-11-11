@@ -193,20 +193,28 @@ calculate_top_importance <- function(model, top_n){
   importance<-importance[-1,] # Exclude intercept
   importance <- importance[order(-importance$importance), ]
   importance <- head(importance, top_n)
+  return(importance)
 }
-top <- calculate_top_importance()
+alpha0 <- cv.glmnet(x, y, foldid = foldid, alpha = 0.00)
+alpha1 <- cv.glmnet(x, y, foldid = foldid, alpha = 1.00)
+top0 <- calculate_top_importance(alpha0, 20)
+top1 <- calculate_top_importance(alpha1, 20)
 ```
 
 
 ```{r}
 library(dplyr)
 library(ggplot2)
-plot_perm <-importance  %>%  mutate(predictor = factor(predictor, levels = rev(unique(predictor)))) %>%
-  ggplot()+
-  geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
-  ggtitle("Top 20 predictor importance using glmnet")+
-  theme_minimal()
-plot_perm
+plot_importance <- function(importance){
+  plot_perm <-importance  %>%  mutate(predictor = factor(predictor, levels = rev(unique(predictor)))) %>%
+    ggplot()+
+    geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
+    ggtitle("Top 20 predictor importance using glmnet")+
+    theme_minimal()
+  return(plot_perm)
+}
+plot_importance(top0)
+plot_importance(top1)
 ```
 ## 5. Evaluate results on test dataset
 
