@@ -132,24 +132,69 @@ points(log(cv0.75$lambda), cv0.75$cvm, pch = 19, col = "green")
 points(log(cv0.50$lambda), cv0.50$cvm, pch = 19, col = "grey")
 points(log(cv0.25$lambda), cv0.25$cvm, pch = 19, col = "orange")
 points(log(cv0.00$lambda), cv0.00$cvm, pch = 19, col = "blue")
-legend("topleft", legend = c("alpha=1.00", "alpha=0.75", "alpha=0.50", "alpha=0.25", "alpha=0.00"), pch = 19, col = c("red","green","grey","orange","blue"))
-
+alphas = c("alpha=1.00", "alpha=0.75", "alpha=0.50", "alpha=0.25", "alpha=0.00")
+legend("topleft", legend = alphas, pch = 19, col = c("red","green","grey","orange","blue"))
+cvm=c(min(cv1.00$cvm), min(cv0.75$cvm), min(cv0.50$cvm), min(cv0.25$cvm), min(cv0.00$cvm))
+loglambda=c(log(cv1.00$lambda[which.min(cv1.00$cvm)]),log(cv0.75$lambda[which.min(cv0.75$cvm)]), log(cv0.50$lambda[which.min(cv0.50$cvm)]), log(cv0.25$lambda[which.min(cv0.25$cvm)]), log(cv0.00$lambda[which.min(cv0.00$cvm)]))
+data.frame(alphas=alphas, CVM=cvm, minCVMLogLambda=loglambda)
 ```
+
+```{r}
+install.packages("parallel")
+library(parallel)
 ```
 
+```{r}
+foldid <- sample(1:10, size = length(y), replace = TRUE)
+test_alpha <- function(alpha){
+  net <- cv.glmnet(x, y, foldid = foldid, alpha = alpha)
+  per05 <- apply(cbind(a=net$cvm, b=log(net$lambda)), 2, quantile, probs = 0.05)
+  per10 <- apply(cbind(a=net$cvm, b=log(net$lambda)), 2, quantile, probs = 0.10)
+  per15 <- apply(cbind(a=net$cvm, b=log(net$lambda)), 2, quantile, probs = 0.15)
+  per20 <- apply(cbind(a=net$cvm, b=log(net$lambda)), 2, quantile, probs = 0.20)
+  
+  return(data.frame(
+    alpha=alpha,
+    minCVM=min(net$cvm),
+    bestLambda=log(net$lambda[which.min(net$cvm)]),
+    per05CVM=per05[1],
+    per10CVM=per10[1],
+    per15CVM=per15[1],
+    per20CVM=per20[1]
+  ))
+}
+test_alphas <- seq(from = 0, to = 1, length.out = 1000)
+test_results <- bind_rows(mclapply(test_alphas, test_alpha, mc.cores=32))
+# test_results <- bind_rows(lapply(test_alphas, test_alpha))
+```
+
+```{r}
+print(test_results)
+test_results
+# par(mfrow = c(2, 1))
+plot(x=test_results$alpha, y=test_results$bestLambda, ylab="bestLambda")
+plot(x=test_results$alpha, y=test_results$minCVM, ylab="00 percentile")
+# plot(x=test_results$alpha, y=test_results$per05CVM, ylab="05 percentile")
+# plot(x=test_results$alpha, y=test_results$per10CVM, ylab="10 percentile")
+# plot(x=test_results$alpha, y=test_results$per15CVM, ylab="15 percentile")
+# plot(x=test_results$alpha, y=test_results$per20CVM, ylab="20 percentile")
+```
 ## 4. Calculate importance using elasticnet coeficients
 
 ```{r}
 # The variable importance is inferred from the coefficients
-c <- coef(model_en)
-predictor <- c  %>% rownames()
-importance <- c %>% as.matrix()
-importance <- data.frame(predictor,importance)
-rownames(importance) <- NULL
-names(importance)[2] <- "importance"
-importance<-importance[-1,] # Exclude intercept
-importance <- importance[order(-importance$importance), ]
-importance <- head(importance, 20)
+calculate_top_importance <- function(model, top_n){
+  c <- coef(model)
+  predictor <- c  %>% rownames()
+  importance <- c %>% as.matrix()
+  importance <- data.frame(predictor,importance)
+  rownames(importance) <- NULL
+  names(importance)[2] <- "importance"
+  importance<-importance[-1,] # Exclude intercept
+  importance <- importance[order(-importance$importance), ]
+  importance <- head(importance, top_n)
+}
+top <- calculate_top_importance()
 ```
 
 

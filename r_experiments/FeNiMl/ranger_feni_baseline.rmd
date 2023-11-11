@@ -39,12 +39,13 @@ model_per
 ```{r}
 library(dplyr)
 library(ggplot2)
-plot_perm <-importance(model_per) |> as.data.frame() |> add_rownames("predictor") |> mutate(importance=`importance(model_per)`) |> select(predictor,importance)|> arrange(desc(importance)) |> head(20) |> mutate(predictor = factor(predictor, levels = rev(unique(predictor))))  |>
+
+plot_perm <- importance(model_per) |> as.data.frame() |> add_rownames("predictor") |> mutate(importance=`importance(model_per)`) |> select(predictor,importance)|> arrange(desc(importance)) |> head(20) |> mutate(predictor = factor(predictor, levels = rev(unique(predictor))))  |>
   ggplot()+
   geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
   ggtitle("Top 20 predictor importance using permutation")+
   theme_minimal()
-
+plot_perm
 ```
 
 
