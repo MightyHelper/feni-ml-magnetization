@@ -1,5 +1,4 @@
 import abc
-import subprocess
 import time
 import os
 
@@ -19,7 +18,7 @@ FULL_RUN_DURATION = 300000
 
 
 def realpath(path):
-	return subprocess.check_output(["realpath", path]).decode("ascii").strip()
+	return os.path.realpath(path)
 
 
 class Nanoparticle:
