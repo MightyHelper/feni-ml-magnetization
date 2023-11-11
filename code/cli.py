@@ -15,7 +15,7 @@ from rich.highlighter import ReprHighlighter
 import executor
 import poorly_coded_parser as parser
 import template
-from code import nanoparticle
+import nanoparticle
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
