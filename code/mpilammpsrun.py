@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import random
 import base64
@@ -68,6 +70,9 @@ class MPILammpsDump:
 		ax.set_zlabel('Z')
 		plt.show()
 
+	def count_atoms_of_type(self, atom_type):
+		return np.count_nonzero(self.dump['atoms'][:, DUMP_ATOM_TYPE] == atom_type)
+
 
 class MpiLammpsRun:
 	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
@@ -79,7 +84,7 @@ class MpiLammpsRun:
 		if 'cwd' in sim_params and sim_params['cwd'] is not None:
 			self.expect_dumps = [f"{sim_params['cwd']}/{dump}" for dump in self.expect_dumps]
 		else:
-			print("WARN: No CWD!")
+			logging.warning("No CWD passed to sim_params!")
 		self.dumps: list[MPILammpsDump] = []
 
 	def execute(self) -> 'MpiLammpsRun':

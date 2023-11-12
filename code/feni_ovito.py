@@ -1,3 +1,5 @@
+import logging
+
 import numpy
 from multiprocessing import Process
 
@@ -128,9 +130,9 @@ def parse(filenames=None):
 	filenames = {} if filenames is None else filenames
 	p = Process(target=parse_worker, args=(filenames,))
 	p.start()
-	print("Waiting for OVITO...")
+	logging.info("Waiting for OVITO...")
 	p.join()  # this blocks until the process terminates
-	print("Done")
+	logging.info("Done")
 
 
 if __name__ == '__main__':

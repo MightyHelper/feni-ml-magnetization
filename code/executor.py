@@ -7,7 +7,7 @@ import pandas as pd
 from subprocess import CalledProcessError
 
 
-def execute_all_nanoparticles_in(path, threads, ignore, test=True):
+def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool=True):
 	nanoparticles = parser.load_shapes(path, ignore)
 	if threads == 1:
 		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
@@ -17,7 +17,7 @@ def execute_all_nanoparticles_in(path, threads, ignore, test=True):
 	return pd.DataFrame(particles)
 
 
-def _process_nanoparticle(ignore, key, np: nanoparticle.Nanoparticle, test=True):
+def _process_nanoparticle(ignore: list[str], key: str, np: nanoparticle.Nanoparticle, test: bool=True):
 	print(f"\033[32m{key}\033[0m")
 	if not any([section in key for section in ignore]):
 		try:
@@ -39,7 +39,7 @@ def _process_nanoparticle(ignore, key, np: nanoparticle.Nanoparticle, test=True)
 			}
 
 
-def parse_ok_execution_results(key, np, was_test):
+def parse_ok_execution_results(key: str, np: nanoparticle.Nanoparticle, was_test: bool):
 	fe = np.count_atoms_of_type(nanoparticle.FE_ATOM)
 	ni = np.count_atoms_of_type(nanoparticle.NI_ATOM)
 	# np.plot()

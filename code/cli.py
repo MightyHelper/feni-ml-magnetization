@@ -3,20 +3,29 @@ import multiprocessing
 import os
 import re
 import time
-
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
-
+import platform
 import rich.repr
 import rich.table
 import typer
-from rich import print as rprint
-from rich.highlighter import ReprHighlighter
-
 import executor
 import poorly_coded_parser as parser
 import template
 import nanoparticle
-import mpilammpswrapper as mpilw
+import logging
+from rich import print as rprint
+from rich.highlighter import ReprHighlighter
+from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
+from rich.logging import RichHandler
+
+logging.basicConfig(
+	level="NOTSET",
+	format="%(message)s",
+	datefmt="[%X]",
+	handlers=[RichHandler(rich_tracebacks=True)]
+)
+
+log = logging.getLogger("rich")
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -183,7 +192,28 @@ def get_title(path):
 	return title
 
 
+def get_runninng_windows():
+	# wmic.exe process where "name='python.exe'" get commandline
+	result = os.popen("wmic.exe process where \"name='python.exe'\" get commandline").readlines()
+	print(result)
+	for execution in {x for result in result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
+		parts = execution.split("/")
+		foldername = '/'.join(parts[:-1])
+		step = get_current_step(foldername + "/log.lammps")
+		title = get_title(foldername + "/nanoparticle.in")
+		yield foldername, step, title
+
+
 def get_running_executions():
+	if platform.system() == "Windows":
+		yield from get_runninng_windows()
+	elif platform.system() == "Linux":
+		yield from get_runninng_linux()
+	else:
+		raise Exception(f"Unknown system: {platform.system()}")
+
+
+def get_runninng_linux():
 	ps_result = os.popen("ps -ef | grep " + template.LAMMPS_EXECUTABLE).readlines()
 	for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
 		parts = execution.split("/")
@@ -211,7 +241,7 @@ def live():
 		for folder, step, title in running:
 			add_task(folder, progress, step, tasks, title)
 		if len(running) == 0:
-			rprint("[red]No running executions found[/red]")
+			logging.error("[red]No running executions found[/red]", extra={"markup": True})
 			return
 		try:
 			while True:
@@ -226,7 +256,7 @@ def live():
 				keys_to_remove = []
 				for folder in tasks.keys():
 					if folder not in [x for x, _, _ in running]:
-						rprint(f"Execution {folder} ({step}) has finished")
+						logging.info(f"Execution {folder} ({step}) has finished")
 						try:
 							progress.remove_task(tasks[folder])
 							keys_to_remove.append(folder)
@@ -235,7 +265,7 @@ def live():
 				for key in keys_to_remove:
 					del tasks[key]
 		except KeyboardInterrupt:
-			rprint("[yellow]Exiting...[/yellow]")
+			logging.info("[yellow]Exiting...[/yellow]")
 
 
 @executions.command()
@@ -244,6 +274,7 @@ def execute(path: str, plot: bool = False, test: bool = True):
 	Execute a nanoparticle simulation
 	"""
 	_, nano = parser.parse_single_shape(path)
+	nano = nano.build()
 	nano.execute(test_run=test)
 	rprint(executor.parse_ok_execution_results(path, nano, test))
 	if plot:
@@ -251,7 +282,7 @@ def execute(path: str, plot: bool = False, test: bool = True):
 
 
 def add_task(folder, progress: Progress, step, tasks, title):
-	rprint(f"Found running execution: {folder} ({step})")
+	logging.info(f"Found running execution: {folder} ({step})")
 	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
 
 

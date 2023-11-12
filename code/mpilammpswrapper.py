@@ -1,5 +1,7 @@
 import subprocess
 import re
+import logging
+import time
 
 
 class MPIOpt:
@@ -65,23 +67,31 @@ class MpiLammpsWrapper:
 		cmd = re.sub(r' +', " ", cmd).strip()
 		if not in_toko:
 			try:
-				print(f"Running {cmd} in {cwd}")
+				logging.info(f"Running [bold yellow]{cmd}[/bold yellow] in [cyan]{cwd}[/cyan]", extra={"markup": True, "highlighter": None})
 				return subprocess.check_output(cmd.split(" "), cwd=cwd)
 			except subprocess.CalledProcessError as e:
-				print(
-					"ERROR:",
-					e,
-					f"\nERROR: {input_file=}",
-					f"\nERROR: {repr(gpu)=} ",
-					f"\nERROR: {repr(mpi)=} ",
-					f"\nERROR: {repr(omp)=} ",
-					f"\nERROR: {in_toko=}",
-					f"\nERROR: {cwd=}",
-					f"\nERROR: {''.join(cmd)=}",
-					f"\nERROR: {lammps_executable=}",
-				)
+				MpiLammpsWrapper.print_error(cmd, cwd, e, gpu, in_toko, input_file, lammps_executable, mpi, omp)
 				raise e
+			except OSError as e:
+				MpiLammpsWrapper.print_error(cmd, cwd, e, gpu, in_toko, input_file, lammps_executable, mpi, omp)
+				raise ValueError(f"Is LAMMPS ({lammps_executable}) installed?") from e
 		return print("TODO: TOKO not implemented yet :c")
+
+	@staticmethod
+	def print_error(cmd, cwd, e, gpu, in_toko, input_file, lammps_executable, mpi, omp):
+		logging.error(
+			"ERROR:" +
+			str(e) +
+			f"\nERROR: {input_file=}" +
+			f"\nERROR: {repr(gpu)=} " +
+			f"\nERROR: {repr(mpi)=} " +
+			f"\nERROR: {repr(omp)=} " +
+			f"\nERROR: {in_toko=}" +
+			f"\nERROR: {cwd=}" +
+			f"\nERROR: {''.join(cmd)=}" +
+			f"\nERROR: {lammps_executable=}",
+			extra={"markup": True}
+		)
 
 	@staticmethod
 	def gen_and_sim(code: str, sim_params: dict = None, file_to_use: str = '/tmp/in.melt') -> str:
