@@ -1,3 +1,4 @@
+import platform
 import subprocess
 import re
 import logging
@@ -68,7 +69,7 @@ class MpiLammpsWrapper:
 		if not in_toko:
 			try:
 				logging.info(f"Running [bold yellow]{cmd}[/bold yellow] in [cyan]{cwd}[/cyan]", extra={"markup": True, "highlighter": None})
-				return subprocess.check_output(cmd.split(" "), cwd=cwd)
+				return subprocess.check_output(cmd.split(" "), cwd=cwd, shell=platform.system() == "Windows")
 			except subprocess.CalledProcessError as e:
 				MpiLammpsWrapper.print_error(cmd, cwd, e, gpu, in_toko, input_file, lammps_executable, mpi, omp)
 				raise e

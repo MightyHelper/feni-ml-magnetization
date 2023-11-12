@@ -2,6 +2,7 @@ import datetime
 import multiprocessing
 import os
 import re
+import subprocess
 import time
 import platform
 import rich.repr
@@ -192,11 +193,17 @@ def get_title(path):
 	return title
 
 
-def get_runninng_windows():
-	# wmic.exe process where "name='python.exe'" get commandline
-	result = os.popen("wmic.exe process where \"name='python.exe'\" get commandline").readlines()
-	print(result)
-	for execution in {x for result in result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
+def get_runninng_windows(from_windows: bool = True):
+	# wmic.exe process where "name='python.exe'" get commandline, disable stderr
+
+	if from_windows:
+		path = "wmic.exe"
+	else:
+		path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
+	result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"], stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
+	result = [x.strip() for x in result if x.strip() != ""]
+	for execution in {x for result in result if "-in" in result and (x := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
+		execution = execution.replace("\\", "/")
 		parts = execution.split("/")
 		foldername = '/'.join(parts[:-1])
 		step = get_current_step(foldername + "/log.lammps")
@@ -206,8 +213,9 @@ def get_runninng_windows():
 
 def get_running_executions():
 	if platform.system() == "Windows":
-		yield from get_runninng_windows()
+		yield from get_runninng_windows(True)
 	elif platform.system() == "Linux":
+		yield from get_runninng_windows(False)
 		yield from get_runninng_linux()
 	else:
 		raise Exception(f"Unknown system: {platform.system()}")
@@ -265,7 +273,7 @@ def live():
 				for key in keys_to_remove:
 					del tasks[key]
 		except KeyboardInterrupt:
-			logging.info("[yellow]Exiting...[/yellow]")
+			logging.info("[yellow]Exiting...[/yellow]", extra={"markup": True})
 
 
 @executions.command()
