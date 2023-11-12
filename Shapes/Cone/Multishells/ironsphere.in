@@ -17,7 +17,7 @@ lattice		bcc 2.8665
 region		ce cone z 0 0 20 1 -16 17 units box
 create_atoms	1 region ce
 
-region          core1 cone z 0.0 0.0 15 1 -15 16 units box
+region          core1 cone z 0.0 0.0 16 1 -15 16 units box
 set region      core1 type 2
 region          core2 cone z 0.0 0.0 13 1 -13 14 units box
 set region      core2 type 1

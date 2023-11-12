@@ -24,8 +24,8 @@ group		Ni type 2
 
 #Esquina aleatoria: si se comentan las dos líneas siguientes, el corte será perfecto y habrá Ni en la esquina y Fe en el resto del cilindro.
 #El 62 indica la cantidad de mezcla. 
-set group Fe type/subset 2 62 300
-set region esquina type/subset 1 62 300
+set group Fe type/subset 2 230 300
+set region esquina type/subset 1 1 300
 
 # setting mass, mag. moments, and interactions for bcc iron
 

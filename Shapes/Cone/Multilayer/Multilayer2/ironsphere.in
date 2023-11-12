@@ -17,7 +17,7 @@ lattice		bcc 2.8665
 region		ce cone z 0 0 20 1 -15 15 units box
 create_atoms	1 region ce
 
-region		capa1 cylinder z 0 0 15 -13.5 -11.0 units box
+region		capa1 cylinder z 0 0 14 -13.5 -11.0 units box
 set region      capa1 type 2
 region		capa2 cylinder z 0 0 13 -9.5 -8.0 units box
 set region      capa2 type 2

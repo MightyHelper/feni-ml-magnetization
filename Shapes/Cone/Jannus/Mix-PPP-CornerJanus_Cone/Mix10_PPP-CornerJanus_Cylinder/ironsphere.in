@@ -23,8 +23,8 @@ group		Fe type 1
 group		Ni type 2
 
 #Si no se comentan las dos líneas siguientes, la esquina tendrá una mezcla (indicada por el 124) de átomos de Fe en la esquina de Ni. 
-set group Fe type/subset 2 124 300
-set region esquina type/subset 1 124 300
+set group Fe type/subset 2 200 300
+set region esquina type/subset 1 2 300
 
 # setting mass, mag. moments, and interactions for bcc iron
 
