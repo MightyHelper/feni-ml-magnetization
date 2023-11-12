@@ -244,11 +244,7 @@ def execute(path: str, plot: bool = False, test: bool = True):
 	Execute a nanoparticle simulation
 	"""
 	_, nano = parser.parse_single_shape(path)
-	nano.execute(
-		test_run=test,
-		omp=mpilw.OMPOpt(use=True, n_threads=2),
-		mpi=mpilw.MPIOpt(use=True, hw_threads=False, n_threads=4),
-	)
+	nano.execute(test_run=test)
 	rprint(executor.parse_ok_execution_results(path, nano, test))
 	if plot:
 		nano.plot()
