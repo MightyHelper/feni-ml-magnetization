@@ -16,6 +16,7 @@ import executor
 import poorly_coded_parser as parser
 import template
 import nanoparticle
+import mpilammpswrapper as mpilw
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -100,6 +101,7 @@ def get_execution_title(folder):
 	except FileNotFoundError:
 		pass
 	return "Unknown"
+
 
 def get_magnetism(folder):
 	try:
@@ -234,6 +236,22 @@ def live():
 					del tasks[key]
 		except KeyboardInterrupt:
 			rprint("[yellow]Exiting...[/yellow]")
+
+
+@executions.command()
+def execute(path: str, plot: bool = False, test: bool = True):
+	"""
+	Execute a nanoparticle simulation
+	"""
+	_, nano = parser.parse_single_shape(path)
+	nano.execute(
+		test_run=test,
+		omp=mpilw.OMPOpt(use=True, n_threads=2),
+		mpi=mpilw.MPIOpt(use=True, hw_threads=False, n_threads=4),
+	)
+	rprint(executor.parse_ok_execution_results(path, nano, test))
+	if plot:
+		nano.plot()
 
 
 def add_task(folder, progress: Progress, step, tasks, title):

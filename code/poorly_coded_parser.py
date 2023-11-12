@@ -242,18 +242,22 @@ def load_shapes(path, ignore) -> dict[str, nanoparticle.Nanoparticle]:
 	for shape in recursive_input_search(path):
 		if any([section in shape for section in ignore]):  # Ignore
 			continue
-		with open(shape, "r") as f:
-			log_output(f"\033[33m=== {shape} ===\033[0m")
-			nano = nanoparticle.Nanoparticle({'title': shape})
-			lines = f.readlines()
-			start = first_index_that_startswith(lines, "lattice") + 1
-			try:
-				end = first_index_that_startswith(lines, "# setting")
-			except AssertionError:
-				end = first_index_that_startswith(lines, "mass")
-			lines = [ll.strip() for l in lines[start:end] if (ll := l.strip()) != ""]
-			parse_shape(lines, nano)
-			yield shape, nano
+		yield parse_single_shape(shape)
+
+
+def parse_single_shape(shape: str):
+	with open(shape, "r") as f:
+		log_output(f"\033[33m=== {shape} ===\033[0m")
+		nano = nanoparticle.Nanoparticle({'title': shape})
+		lines = f.readlines()
+		start = first_index_that_startswith(lines, "lattice") + 1
+		try:
+			end = first_index_that_startswith(lines, "# setting")
+		except AssertionError:
+			end = first_index_that_startswith(lines, "mass")
+		lines = [ll.strip() for l in lines[start:end] if (ll := l.strip()) != ""]
+		parse_shape(lines, nano)
+		return shape, nano
 
 
 def first_index_that_startswith(lines, start):
