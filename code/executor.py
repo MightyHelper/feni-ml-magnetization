@@ -24,6 +24,7 @@ def _process_nanoparticle(ignore, key, np, test=True):
 			np.execute(test_run=test)
 			fe = np.count_atoms_of_type(nanoparticle.FE_ATOM)
 			ni = np.count_atoms_of_type(nanoparticle.NI_ATOM)
+			# np.plot()
 			return {
 				"ok": True,
 				"key": key,

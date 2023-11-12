@@ -84,7 +84,8 @@ def parse_execution_info(folder):
 		'mag': None
 	}
 	if "_" in folder:
-		sim, date = folder.split("_")
+		parts = folder.split("_")
+		sim, date = parts[0], parts[1]
 		out['real_date'] = datetime.datetime.utcfromtimestamp(float(date))
 	out['title'] = get_execution_title(folder)
 	out['mag'] = get_magnetism(folder)

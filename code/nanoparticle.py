@@ -10,6 +10,7 @@ import shapes
 import template
 import feni_mag
 import feni_ovito
+import random
 
 FE_ATOM = 1
 NI_ATOM = 2
@@ -33,6 +34,7 @@ class Nanoparticle:
 		self.regions = []
 		self.atom_manipulation = []
 		self.extra_replacements = {} if extra_replacements is None else extra_replacements
+		self.rid = random.randint(0, 10000)
 		self.title = self.extra_replacements.get("title", "Nanoparticle")
 		self.path = realpath("../executions/" + self.get_identifier()) + "/"
 
@@ -75,13 +77,13 @@ class Nanoparticle:
 			dumps := [f"iron.{i}.dump" for i in ([0] if test_run else [*range(0, FULL_RUN_DURATION + 1, 100000)])],
 			file_name=self.path + "nanoparticle.in"
 		).execute()
-		feni_mag.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
-		self.magnetism = self.get_magnetism()
 		if not test_run:
+			feni_mag.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
+			self.magnetism = self.get_magnetism()
 			feni_ovito.parse(filenames={'base_path': self.path, 'dump': dumps[-1]})
 
 	def get_identifier(self):
-		return f"simulation_{time.time()}"
+		return f"simulation_{time.time()}_{self.rid}"
 
 	def get_magnetism(self):
 		with open(self.path + "/magnetism.txt", "r") as f:
