@@ -3,6 +3,16 @@ import logging
 import numpy
 from multiprocessing import Process
 
+XYZ_FILENAME = "XYZ.xyz"
+G_R_FILENAME = 'g(r).txt'
+PARTIAL_G_R_FILENAME = 'Partial_g(r).txt'
+SURFACE_FILENAME = "Surface_atoms.txt"
+PROPORTION_FILENAME = "Type_proportion.txt"
+COORD_NI_FILENAME = "Coordination_Histogram_Ni.txt"
+COORD_FE_FILENAME = "Coordination_Histogram_Fe.txt"
+PEH_FILENAME = "PotentialEnergy_Histogram.txt"
+COORD_FILENAME = "Coordination_Histogram.txt"
+
 
 def parse_worker(
 	filenames=None
@@ -11,15 +21,15 @@ def parse_worker(
 	from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, ExpressionSelectionModifier
 	filenames = {
 		'dump': 'iron.300000.dump',
-		'xyz': "XYZ.xyz",
-		'gr': 'g(r).txt',
-		'grp': 'Partial_g(r).txt',
-		'coordh': "Coordination_Histogram.txt",
-		'peh': "PotentialEnergy_Histogram.txt",
-		'coordhfe': "Coordination_Histogram_Fe.txt",
-		'coordhni': "Coordination_Histogram_Ni.txt",
-		'proportion': "Type_proportion.txt",
-		'surface': "Surface_atoms.txt",
+		'xyz': XYZ_FILENAME,
+		'gr': G_R_FILENAME,
+		'grp': PARTIAL_G_R_FILENAME,
+		'coordh': COORD_FILENAME,
+		'peh': PEH_FILENAME,
+		'coordhfe': COORD_FE_FILENAME,
+		'coordhni': COORD_NI_FILENAME,
+		'proportion': PROPORTION_FILENAME,
+		'surface': SURFACE_FILENAME,
 		'base_path': "",
 		**filenames
 	}
@@ -39,7 +49,7 @@ def parse_worker(
 	datatemp = data.compute()
 	natoms = datatemp.particles.count
 	export_file(data, xyz, "xyz", columns=['Particle Type', 'Position.X', 'Position.Y', 'Position.Z'])
-	data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=1000, partial=False))
+	data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=100, partial=False))
 	datasave = data.compute()
 	numpy.savetxt(gr, datasave.tables['coordination-rdf'].xy(), header="Radial distribution function:\n \"Pair separation distance\" g(r)")
 

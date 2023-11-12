@@ -289,6 +289,32 @@ def execute(path: str, plot: bool = False, test: bool = True):
 		nano.plot()
 
 
+@executions.command()
+def inspect(path: str, plot: bool = False, csv: bool = False):
+	"""
+	Inspect a complete nanoparticle simulation
+	"""
+	nano = nanoparticle.Nanoparticle.from_executed(path)
+	rprint(f"{nano.title=}")
+	rprint(f"nano.psd=\n{nano.psd.to_string()}")
+	rprint(f"nano.psd_p=\n{nano.psd_p.to_string()}")
+	rprint(f"nano.pec=\n{nano.pec.to_string()}")
+	rprint(f"nano.coord=\n{nano.coord.to_string()}")
+	rprint(f"nano.coord_fe=\n{nano.coord_fe.to_string()}")
+	rprint(f"nano.coord_ni=\n{nano.coord_ni.to_string()}")
+	rprint(f"nano.magnetism={nano.magnetism}")
+	rprint(f"nano.total={nano.total}")
+	rprint(f"nano.fe_s={nano.fe_s}")
+	rprint(f"nano.ni_s={nano.ni_s}")
+	rprint(f"nano.fe_c={nano.fe_c}")
+	rprint(f"nano.ni_c={nano.ni_c}")
+	if csv:
+		data = nano.columns_for_dataset()
+		rprint("[bold]== CSV DATA ==[/bold]")
+		rprint(data.to_csv(index=False))
+	if plot:
+		nano.plot()
+
 def add_task(folder, progress: Progress, step, tasks, title):
 	logging.info(f"Found running execution: {folder} ({step})")
 	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)

@@ -226,7 +226,7 @@ def parse_shape(lines: list[str], nano: nanoparticlebuilder.NanoparticleBuilder)
 		parse_line(line, nano)
 
 
-def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticle.Nanoparticle]:
+def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticlebuilder.NanoparticleBuilder]:
 	for shape in recursive_input_search(path):
 		if any([section in shape for section in ignore]):  # Ignore
 			continue

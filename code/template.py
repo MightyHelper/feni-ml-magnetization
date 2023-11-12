@@ -1,5 +1,5 @@
 LAMMPS_EXECUTABLE = "/home/federico/sistemas_complejos/lammps/lammps/build6/lmp"
-# LAMMPS_EXECUTABLE = "python.exe -c \"import\ttime;time.sleep(100)\""
+# LAMMPS_EXECUTABLE = "C:\\Users\\feder\\AppData\\Local\\Programs\\Python\\Python310\\python.exe -c \"import\ttime;time.sleep(100)\""
 TEMPLATE_PATH = "../lammps.template"
 
 

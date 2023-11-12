@@ -9,6 +9,7 @@ from subprocess import CalledProcessError
 
 def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool=True):
 	nanoparticles = parser.load_shapes(path, ignore)
+	nanoparticles = [(key, np.build()) for key, np in nanoparticles]
 	if threads == 1:
 		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
 	else:

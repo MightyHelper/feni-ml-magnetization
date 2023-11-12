@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import random
@@ -98,3 +99,14 @@ class MpiLammpsRun:
 			result = MPILammpsDump(dump)
 			dumps[result.dump['timestep']] = result
 		return dumps
+
+	@staticmethod
+	def from_path(path):
+		files = os.listdir(path)
+		nano_in = [path + "/" + file for file in files if file.endswith(".in")][0]
+		with open(nano_in, "r") as f:
+			code = f.read()
+		dumps = [file for file in files if file.endswith(".dump")]
+		lr = MpiLammpsRun(code, {'cwd': path}, dumps, nano_in)
+		lr.dumps = lr._parse_dumps()
+		return lr
