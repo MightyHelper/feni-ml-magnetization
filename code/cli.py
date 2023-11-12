@@ -8,13 +8,18 @@ import platform
 import rich.repr
 import rich.table
 import typer
+from rich.theme import Theme
+
 import executor
 import poorly_coded_parser as parser
 import template
 import nanoparticle
 import logging
+from rich.columns import Columns
+from rich.panel import Panel
+from rich.console import Group
 from rich import print as rprint
-from rich.highlighter import ReprHighlighter
+from rich.highlighter import ReprHighlighter, RegexHighlighter
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
 from rich.logging import RichHandler
 
@@ -33,7 +38,13 @@ shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
 main.add_typer(shapefolder, name="shapefolder")
 main.add_typer(executions, name="executions")
-console = rich.console.Console()
+col = "#333333"
+console = rich.console.Console(theme=Theme({
+	"zero.zero": col,
+	"zero.zero_1": col,
+	"zero.zero_2": col,
+	"zero.zero_3": col,
+}))
 
 h = ReprHighlighter()
 
@@ -289,31 +300,47 @@ def execute(path: str, plot: bool = False, test: bool = True):
 		nano.plot()
 
 
+class ZeroHighlighter(RegexHighlighter):
+	"""Apply style to anything that looks like non zero."""
+	base_style = "zero."
+	highlights = [r"(^(?P<zero>0+(.0+)))|([^.\d](?P<zero_1>0+(.0+))$)|(^(?P<zero_2>0+(.0+))$)|([^.\d](?P<zero_3>0+(.0+))[^.\d])"]
+
+
 @executions.command()
 def inspect(path: str, plot: bool = False, csv: bool = False):
 	"""
 	Inspect a complete nanoparticle simulation
 	"""
 	nano = nanoparticle.Nanoparticle.from_executed(path)
-	rprint(f"{nano.title=}")
-	rprint(f"nano.psd=\n{nano.psd.to_string()}")
-	rprint(f"nano.psd_p=\n{nano.psd_p.to_string()}")
-	rprint(f"nano.pec=\n{nano.pec.to_string()}")
-	rprint(f"nano.coord=\n{nano.coord.to_string()}")
-	rprint(f"nano.coord_fe=\n{nano.coord_fe.to_string()}")
-	rprint(f"nano.coord_ni=\n{nano.coord_ni.to_string()}")
-	rprint(f"nano.magnetism={nano.magnetism}")
-	rprint(f"nano.total={nano.total}")
-	rprint(f"nano.fe_s={nano.fe_s}")
-	rprint(f"nano.ni_s={nano.ni_s}")
-	rprint(f"nano.fe_c={nano.fe_c}")
-	rprint(f"nano.ni_c={nano.ni_c}")
+
+	reh = ZeroHighlighter()
+	r = ReprHighlighter()
+	console.print(Panel.fit(Group(
+		Columns([
+			Panel.fit(reh(nano.psd.to_string()), title="Total g(r)", border_style="green"),
+			Panel.fit(reh(nano.psd_p.to_string()), title="Partial g(r)", border_style="green"),
+			Panel.fit(reh(nano.pec.to_string()), title="Potential energy", border_style="blue"),
+		], expand=False),
+		Columns([
+			Panel.fit(reh(nano.get_full_coord().to_string()), title="Coordination number", border_style="cyan"),
+			Panel.fit(
+				Group(
+					r(f"magnetism={nano.magnetism}"),
+					r(f"total={nano.total}"),
+					r(f"fe_s={nano.fe_s}"),
+					r(f"ni_s={nano.ni_s}"),
+					r(f"fe_c={nano.fe_c}"),
+					r(f"ni_c={nano.ni_c}")
+				), title="Nanoparticle data")
+		], expand=False)
+	), title=nano.title))
 	if csv:
 		data = nano.columns_for_dataset()
 		rprint("[bold]== CSV DATA ==[/bold]")
 		rprint(data.to_csv(index=False))
 	if plot:
 		nano.plot()
+
 
 def add_task(folder, progress: Progress, step, tasks, title):
 	logging.info(f"Found running execution: {folder} ({step})")

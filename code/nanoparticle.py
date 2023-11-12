@@ -263,3 +263,9 @@ class Nanoparticle:
 
 	def get_descriptor_name(self):
 		return "/".join(self.title.replace("../Shapes", "Descriptors").split("/")[:-1])
+
+	def get_full_coord(self):
+		out = self.coord.copy()
+		out["count_fe"] = self.coord_fe["count"]
+		out["count_ni"] = self.coord_ni["count"]
+		return out
