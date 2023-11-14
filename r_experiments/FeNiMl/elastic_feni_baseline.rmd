@@ -16,8 +16,8 @@ library(ggplot2)
 
 ```{r}
 library(readr)
-dataset <- read_csv("dataset.csv")
-head(dataset)
+dataset <- read_csv("new_dataset.csv")
+dataset
 ```
 
 ## 1.1 remove predictor with zero variance
