@@ -5,9 +5,12 @@ import re
 import subprocess
 import time
 import platform
+
+import pandas as pd
 import rich.repr
 import rich.table
 import typer
+from pathlib import Path
 from rich.theme import Theme
 
 import executor
@@ -15,6 +18,7 @@ import poorly_coded_parser as parser
 import template
 import nanoparticle
 import logging
+import sys
 from rich.columns import Columns
 from rich.panel import Panel
 from rich.console import Group
@@ -22,6 +26,11 @@ from rich import print as rprint
 from rich.highlighter import ReprHighlighter, RegexHighlighter
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
 from rich.logging import RichHandler
+import signal
+
+# Don't turn these signal into exceptions, just die.
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 logging.basicConfig(
 	level="NOTSET",
@@ -30,6 +39,8 @@ logging.basicConfig(
 	handlers=[RichHandler(rich_tracebacks=True)]
 )
 
+if not sys.stdout.isatty():
+	logging.disable(logging.DEBUG)  # Disable debug and info messages
 log = logging.getLogger("rich")
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
@@ -306,40 +317,77 @@ class ZeroHighlighter(RegexHighlighter):
 	highlights = [r"(^(?P<zero>0+(.0+)))|([^.\d](?P<zero_1>0+(.0+))$)|(^(?P<zero_2>0+(.0+))$)|([^.\d](?P<zero_3>0+(.0+))[^.\d])"]
 
 
+def filter_empty(l: list) -> list:
+	return [x for x in l if x != ""]
+
+
 @executions.command()
-def inspect(path: str, plot: bool = False, csv: bool = False):
+def inspect(
+	paths: list[Path],
+	plot: bool = False,
+	csv: bool = False,
+	g_r: bool = False,
+	pec: bool = False,
+	coord: bool = False,
+	np_data: bool = False
+):
 	"""
 	Inspect a complete nanoparticle simulation
 	"""
-	nano = nanoparticle.Nanoparticle.from_executed(path)
+	for path in paths:
+		if platform.system() == "Linux":
+			path = path.absolute().as_posix()
+		else:
+			path = path.absolute().as_uri()
+		nano = nanoparticle.Nanoparticle.from_executed(path)
 
-	reh = ZeroHighlighter()
-	r = ReprHighlighter()
-	console.print(Panel.fit(Group(
-		Columns([
-			Panel.fit(reh(nano.psd.to_string()), title="Total g(r)", border_style="green"),
-			Panel.fit(reh(nano.psd_p.to_string()), title="Partial g(r)", border_style="green"),
-			Panel.fit(reh(nano.pec.to_string()), title="Potential energy", border_style="blue"),
-		], expand=False),
-		Columns([
-			Panel.fit(reh(nano.get_full_coord().to_string()), title="Coordination number", border_style="cyan"),
-			Panel.fit(
-				Group(
-					r(f"magnetism={nano.magnetism}"),
-					r(f"total={nano.total}"),
-					r(f"fe_s={nano.fe_s}"),
-					r(f"ni_s={nano.ni_s}"),
-					r(f"fe_c={nano.fe_c}"),
-					r(f"ni_c={nano.ni_c}")
-				), title="Nanoparticle data")
-		], expand=False)
-	), title=nano.title))
-	if csv:
-		data = nano.columns_for_dataset()
-		rprint("[bold]== CSV DATA ==[/bold]")
-		rprint(data.to_csv(index=False))
-	if plot:
-		nano.plot()
+		reh = ZeroHighlighter()
+		r = ReprHighlighter()
+		if g_r or pec or coord or np_data:
+			console.print(Panel.fit(Group(
+				Columns([x for x in [
+					Panel.fit(reh(nano.psd.to_string()), title="Total g(r)", border_style="green") if g_r else "",
+					Panel.fit(reh(nano.psd_p.to_string()), title="Partial g(r)", border_style="green") if g_r else "",
+					Panel.fit(reh(nano.pec.to_string()), title="Potential energy", border_style="blue") if pec else "",
+				] if x != ""], expand=False),
+				Columns([
+					Panel.fit(reh(nano.get_full_coord().to_string()), title="Coordination number", border_style="cyan") if coord else "",
+					Panel.fit(
+						Group(
+							r(f"magnetism={nano.magnetism}"),
+							r(f"total={nano.total}"),
+							r(f"fe_s={nano.fe_s}"),
+							r(f"ni_s={nano.ni_s}"),
+							r(f"fe_c={nano.fe_c}"),
+							r(f"ni_c={nano.ni_c}")
+						), title="Nanoparticle data") if np_data else ""
+				], expand=False)
+			), title=nano.title))
+		if csv:
+			data = nano.columns_for_dataset()
+			print(data.to_csv(index=False))
+		if plot:
+			nano.plot()
+
+
+@executions.command()
+def csv(paths: list[Path], output_csv_format: Path):
+	my_csv = pd.read_csv(output_csv_format)
+	dfs = []
+	for path in paths:
+		if platform.system() == "Linux":
+			path = path.absolute().as_posix()
+		else:
+			path = path.absolute().as_uri()
+		nano = nanoparticle.Nanoparticle.from_executed(path)
+		dfs.append(nano.columns_for_dataset())
+	my_df = pd.concat(dfs)
+	# Sort my_df columns to be in the order of my_csv
+	my_df = my_df[my_csv.columns]
+	# Concat my_df and my_csv
+	my_df = pd.concat([my_csv, my_df])
+	# print without row index
+	print(my_df.to_csv(index=False))
 
 
 def add_task(folder, progress: Progress, step, tasks, title):

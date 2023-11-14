@@ -140,7 +140,7 @@ data.frame(alphas=alphas, CVM=cvm, minCVMLogLambda=loglambda)
 ```
 
 ```{r}
-install.packages("parallel")
+# install.packages("parallel")
 library(parallel)
 ```
 
@@ -245,3 +245,34 @@ ggplot(results, aes(x = Reference, y = Predicted)) +
 
 ```
 
+```{r}
+# install.packages("gridExtra")
+library(gridExtra)
+
+plot_column <- function(column, importance){
+  results <- data.frame(x = dataset$tmg, y = dataset[[column]])
+  plt <- ggplot(results, aes(x = x, y = y)) +
+    geom_point(color='blue') +
+    ggtitle(paste0("Importance:", importance)) +
+     xlab("") +
+    ylab(column) +
+    theme_bw()
+  return(plt)  
+}
+
+plot_important <- function(important, title, n_to_plot=6, columns=2) grid.arrange(top=title, grobs = mclapply(important$predictor[1:n_to_plot], plot_column, importance=important$importance[1:n_to_plot]), ncol = columns)
+
+# plot_list1 <- lapply(top1$predictor[1:6], plot_column)
+# grid.arrange(top="Alpha=1", grobs = plot_list1, ncol = 2)
+
+# plot_list0 <- lapply(top0$predictor[1:6], plot_column)
+# grid.arrange(top="Alpha=0", grobs = plot_list0, ncol = 2)
+top0
+pdf("combined_plot.pdf", width = 14, height = 20)
+plot_important(top0, n_to_plot=20, "Alpha=0")
+plot_important(top1, n_to_plot=20, "Alpha=1")
+dev.off()
+```
+```{r}
+dataset$coordc_ni_11
+```

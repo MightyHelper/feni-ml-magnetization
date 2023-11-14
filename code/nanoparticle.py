@@ -55,6 +55,9 @@ class Nanoparticle:
 		self.id = self._gen_identifier() if id_x is None else id_x
 		self.path = realpath("../executions/" + self.id) + "/"
 
+	def hardcoded_g_r_crop(self, g_r):
+		return g_r[0:60]
+
 	@staticmethod
 	def from_executed(path: str):
 		"""
@@ -79,8 +82,8 @@ class Nanoparticle:
 		n.coord = n.read_coordination(feni_ovito.COORD_FILENAME)
 		n.coord_fe = n.read_coordination(feni_ovito.COORD_FE_FILENAME)
 		n.coord_ni = n.read_coordination(feni_ovito.COORD_NI_FILENAME)
-		n.psd_p = n.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME)
-		n.psd = n.read_psd(feni_ovito.G_R_FILENAME)
+		n.psd_p = n.hardcoded_g_r_crop(n.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME))
+		n.psd = n.hardcoded_g_r_crop(n.read_psd(feni_ovito.G_R_FILENAME))
 		n.pec = n.read_peh(feni_ovito.PEH_FILENAME)
 		surf = n.read_surface_atoms(feni_ovito.SURFACE_FILENAME)
 		n.total = surf[0]
@@ -95,18 +98,17 @@ class Nanoparticle:
 		out = [
 			self._drop_index(pd.DataFrame([self.get_descriptor_name()], columns=["name"])),
 		]
-
-		for k, v in {
-			'psd': self.psd[['psd']].copy(),
-			'psd11': self.psd_p[['1-1']].copy(),
-			'psd12': self.psd_p[['1-2']].copy(),
-			'psd22': self.psd_p[['2-2']].copy(),
-			'coordc': self.coord[['count']].copy(),
-			'coordc_fe': self.coord_fe[['count']].copy(),
-			'coordc_ni': self.coord_ni[['count']].copy(),
-			'pec': self.pec[['count']].copy(),
+		for k, (v, count) in {
+			'psd': (self.psd[['psd']].copy(), 60),
+			'psd11': (self.psd_p[['1-1']].copy(), 60),
+			'psd12': (self.psd_p[['1-2']].copy(), 60),
+			'psd22': (self.psd_p[['2-2']].copy(), 60),
+			'coordc': (self.coord[['count']].copy(), 100),
+			'coordc_fe': (self.coord_fe[['count']].copy(), 100),
+			'coordc_ni': (self.coord_ni[['count']].copy(), 100),
+			'pec': (self.pec[['count']].copy(), 100),
 		}.items():
-			out += [self._get_pivoted_df(v, k)]
+			out += [self._get_pivoted_df(v, k, expected_row_count=count)]
 		for k, v in {
 			'fe_s': self._drop_index(pd.DataFrame([self.fe_s], columns=["fe_s"])),
 			'ni_s': self._drop_index(pd.DataFrame([self.ni_s], columns=["ni_s"])),
@@ -127,8 +129,19 @@ class Nanoparticle:
 
 	def _get_pivoted_df(self, df, name, expected_row_count=100):
 		row_count = df.shape[0]
-		df["index"] = df.index // (row_count / expected_row_count)
-		df = df.groupby("index").mean()
+		if row_count > expected_row_count:
+			logging.debug("Expanding " + name)
+			df["index"] = df.index // (row_count / expected_row_count)
+			df = df.groupby("index").mean()
+			df.reset_index(inplace=True)
+		if row_count < expected_row_count:
+			logging.debug("Filling " + name)
+			# Expand the range filling the gaps with 0
+			new_df = df.reindex(range(expected_row_count), fill_value=0)
+			for i in range(row_count):
+				new_df.iloc[i] = 0
+				new_df.iloc[int((float(expected_row_count) / float(row_count)) * i)] = df.iloc[i]
+			df = new_df
 		df = df.transpose()
 		df.columns = [f"{name}_{int(i) + 1}" for i in df.columns]
 		df.index = ["" for _ in df.index]
@@ -159,6 +172,11 @@ class Nanoparticle:
 			df = pd.read_csv(self.path + "/" + filename, delimiter=" ", skiprows=2, header=None)
 			df.columns = ["radius", "psd"]
 			df = df.astype({"radius": float, "psd": float})
+			if len(df) > 100:
+				df["index"] = df.index // (len(df) / 100)
+				df = df.groupby("index").mean()
+				df.reset_index(inplace=True)
+				df.drop(columns=["index"], inplace=True)
 		except FileNotFoundError:
 			df = pd.DataFrame(columns=["radius", "psd"])
 		return df
