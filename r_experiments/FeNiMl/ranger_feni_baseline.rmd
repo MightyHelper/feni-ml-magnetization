@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## 1. Reading the dataset
 ```{r}
 library(readr)
-dataset <- read_csv("dataset.csv")
+dataset <- read_csv("new_dataset.csv")
 head(dataset)
 
 ```
@@ -68,7 +68,8 @@ plot_imp<-importance(model_imp) |> as.data.frame() |> add_rownames("predictor") 
 ```{r}
 library(gridExtra)
 gridExtra::grid.arrange(plot_imp,plot_perm, ncol=2)
-
+plot_imp
+plot_perm
 ```
 ## 5. Evaluate results on test dataset
 ```{r}
@@ -76,13 +77,41 @@ predictions <- predict(model_per, data = test_data)$predictions
 # Compute the RMSE (Root Mean Square Error)
 RMSE <- sqrt(mean((predictions - test_data$tmg)^2))
 RMSE
-
+predictions <- predict(model_per, data = dataset)$predictions
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - dataset$tmg)^2))
+RMSE
 ```
 ## 6. Plot: Predicted vs Reference values
 ```{r}
 library(ggplot2)
 
+predictions <- predict(model_per, data = test_data)$predictions
 results <- data.frame(Reference = test_data$tmg, Predicted = predictions)
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  #geom_smooth(method = 'lm', color = 'red') +
+  geom_abline(intercept = 0,slope =1,color='red')+
+  ggtitle("Predicted vs Reference values") +
+  #ylim(0,1)+
+  xlab("Reference Values") +
+  ylab("Predicted Values")+
+  theme_bw()
+
+predictions <- predict(model_per, data = train_data)$predictions
+results <- data.frame(Reference = train_data$tmg, Predicted = predictions)
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  #geom_smooth(method = 'lm', color = 'red') +
+  geom_abline(intercept = 0,slope =1,color='red')+
+  ggtitle("Predicted vs Reference values") +
+  #ylim(0,1)+
+  xlab("Reference Values") +
+  ylab("Predicted Values")+
+  theme_bw()
+
+predictions <- predict(model_per, data = dataset)$predictions
+results <- data.frame(Reference = dataset$tmg, Predicted = predictions)
 ggplot(results, aes(x = Reference, y = Predicted)) +
   geom_point(color='blue') +
   #geom_smooth(method = 'lm', color = 'red') +
@@ -95,3 +124,144 @@ ggplot(results, aes(x = Reference, y = Predicted)) +
 
 ```
 
+
+```{r}
+# Install and load necessary packages
+# install.packages("ranger")
+# install.packages("caret")
+library(ranger)
+library(caret)
+library(readr)
+library(caret)
+library(ranger)
+library(caret)
+library(dplyr)
+
+
+
+```
+
+```{r}
+
+
+library(readr)
+library(caret)
+library(ranger)
+library(caret)
+library(dplyr)
+dataset <- read_csv("new_dataset.csv")
+nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
+dataset <- dataset[, -nzv]
+dataset$name <- NULL
+set.seed(123) # for reproducibility
+sample_index <- sample(1:nrow(dataset), 0.7*nrow(dataset))
+train_data <- dataset[sample_index, ]
+test_data <- dataset[-sample_index, ]
+# mod_2=rgcv(tmg ~ .,data = train_data, importance = 'permutation', cv.fold=10)
+model_per <- train(
+  tmg ~ .,
+  data = train_data,
+  method = "ranger",
+  trControl = trainControl(method = "cv", number = 10),
+  importance = "permutation"
+)
+# perm_imp <- permutationFeature(model_per, metric = "RMSE", trControl = ctrl)
+
+# model_per <- ranger(tmg ~ .,data = train_data, importance = 'permutation')
+
+do_plot <- function(data, type) {
+  predictions <- predict(model_per, data)
+  print(data)
+  print(predictions)
+  print(data$tmg)
+  RMSE <- sqrt(mean((predictions - data$tmg)^2))
+  results <- data.frame(Reference = data$tmg, Predicted = as.vector(predictions))
+  return(ggplot(results, aes(x = Reference, y = Predicted)) +
+    geom_point(color='blue') +
+    geom_abline(intercept = 0, slope = 1, color='red') +
+    ggtitle(paste(type, "Random Forest; RMSE:", RMSE)) +
+    xlab("Reference Values") +
+    ylab("Predicted Values") +
+    theme_bw())
+}
+do_plot(test_data, "Test")
+do_plot(train_data, "Train")
+do_plot(dataset, "Total")
+model_per
+```
+```{r}
+# Extract permutation importance measures
+perm_importance <- varImp(model_per)
+
+# Print the permutation importance measures
+print(perm_importance)
+
+# Plot permutation importance
+plot(perm_importance)
+
+model_imp <- data.frame(perm_importance$importance)
+model_imp$predictor <- rownames(model_imp)
+model_imp$importance <- model_imp$Overall
+model_imp
+model_imp <- model_imp |> select(predictor,importance)|> arrange(desc(importance))
+plot_imp <- model_imp |> head(20) |> mutate(predictor = factor(predictor, levels = rev(unique(predictor))))  |>
+  ggplot()+
+  geom_col(aes(y=predictor,x=importance),fill='darkblue', color='gray')+
+  ggtitle("Top 20 predictor importance using permutation")+
+  theme_minimal()
+dataset
+plot_imp
+```
+
+```{r}
+# install.packages("gridExtra")
+library(gridExtra)
+library(parallel)
+
+plot_column <- function(column, importance){
+  results <- data.frame(x = dataset$tmg, y = dataset[[column]])
+  plt <- ggplot(results, aes(x = x, y = y)) +
+    geom_point(color='blue') +
+     xlab("") +
+    ylab(column) +
+    theme_bw()
+  return(plt)  
+}
+
+plot_important <- function(important, title, n_to_plot=6, columns=2) grid.arrange(top=title, grobs = lapply(important$predictor[1:n_to_plot], plot_column, importance=important$importance[1:n_to_plot]), ncol = columns)
+
+# plot_list1 <- lapply(top1$predictor[1:6], plot_column)
+# grid.arrange(top="Alpha=1", grobs = plot_list1, ncol = 2)
+
+# plot_list0 <- lapply(top0$predictor[1:6], plot_column)
+# grid.arrange(top="Alpha=0", grobs = plot_list0, ncol = 2)
+top0 <- model_imp
+png("rf_permutation_improtance.png", width = 1000, height = 1200)
+plot_important(top0, n_to_plot=20, columns=4, "RF Permutation Importance")
+dev.off()
+```
+
+
+```{r}
+
+# Install and load necessary libraries
+# install.packages("ggplot2")
+library(ggplot2)
+
+# Your data
+data <- read.table(text = "  mtry  splitrule   RMSE        Rsquared   MAE       
+    2   variance    0.03663598  0.8118797  0.02423285
+    2   extratrees  0.03786082  0.8096785  0.02568269
+   54   variance    0.03310826  0.8322125  0.02154125
+   54   extratrees  0.03269921  0.8385388  0.02138579
+  106   variance    0.03410869  0.8203200  0.02174119
+  106   extratrees  0.03246248  0.8399941  0.02118672", header = TRUE)
+
+# Plotting using ggplot2
+ggplot(data, aes(x = factor(mtry), y = RMSE, fill = splitrule)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Random Forest RMSE by mtry and splitrule",
+       x = "mtry",
+       y = "RMSE") +
+  theme_minimal()
+```
