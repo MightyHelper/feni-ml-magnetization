@@ -27,8 +27,8 @@ nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
 dataset <- dataset[, -nzv]
 ```
 
-
 ## 2. Splitting the dataset
+
 We will split the dataset into a training set (70%) and a testing set (30%).
 
 ```{r}
@@ -39,6 +39,7 @@ test_data <- dataset[-sample_index, ]
 ```
 
 ## 3. Creating a regression model
+
 Using the glmnet package, we'll predict the `tmg` feature
 
 ```{r}
@@ -50,6 +51,7 @@ x <- train_data %>% select(-name,-tmg) %>% as.matrix()
 ### Normalize the data
 
 Standardization (Z-score normalization): This method transforms each feature to have a mean of 0 and a standard deviation of 1. It's particularly useful when your features have different units or very different scales.
+
 ```{r}
 library(caret)
 scaled_x <- preProcess(x, method = c("center", "scale"))
@@ -60,21 +62,23 @@ In the context of Elastic Net regression, the `alpha` parameter is a crucial com
 
 Here's a breakdown of the `alpha` parameter:
 
-1. **Range**: `alpha` can take on any value between 0 and 1 (inclusive). 
-   - `alpha = 1`: The penalty is entirely Lasso (L1 regularization).
-   - `alpha = 0`: The penalty is entirely Ridge (L2 regularization).
-   - `alpha` between 0 and 1: A combination of Lasso and Ridge.
+1.  **Range**: `alpha` can take on any value between 0 and 1 (inclusive).
 
-2. **Effect of L1 (Lasso) Regularization**: L1 regularization adds a penalty equal to the absolute value of the magnitude of coefficients. This can lead to some coefficients being exactly zero, which is useful for feature selection if you have a large number of features.
+    -   `alpha = 1`: The penalty is entirely Lasso (L1 regularization).
+    -   `alpha = 0`: The penalty is entirely Ridge (L2 regularization).
+    -   `alpha` between 0 and 1: A combination of Lasso and Ridge.
 
-3. **Effect of L2 (Ridge) Regularization**: L2 regularization adds a penalty equal to the square of the magnitude of coefficients. This tends to shrink the coefficients but does not set them to zero, which is useful when you have correlated features.
+2.  **Effect of L1 (Lasso) Regularization**: L1 regularization adds a penalty equal to the absolute value of the magnitude of coefficients. This can lead to some coefficients being exactly zero, which is useful for feature selection if you have a large number of features.
 
-4. **Choosing `alpha`**: 
-   - If you have a lot of features that you suspect are not all useful, a value closer to 1 (more Lasso) might be more appropriate as it will perform feature selection.
-   - If all your features are believed to be important, or you have a small number of features, a value closer to 0 (more Ridge) might work better.
-   - Often, the best way to choose an `alpha` value is through cross-validation, trying different values and selecting the one that minimizes prediction error.
+3.  **Effect of L2 (Ridge) Regularization**: L2 regularization adds a penalty equal to the square of the magnitude of coefficients. This tends to shrink the coefficients but does not set them to zero, which is useful when you have correlated features.
 
-5. **Interaction with `lambda`**: The `lambda` parameter in Elastic Net controls the overall strength of the penalty. So, the effect of `alpha` is in conjunction with `lambda`. A grid search over both `alpha` and `lambda` is a common practice to find the best combination that minimizes cross-validation error.
+4.  **Choosing `alpha`**:
+
+    -   If you have a lot of features that you suspect are not all useful, a value closer to 1 (more Lasso) might be more appropriate as it will perform feature selection.
+    -   If all your features are believed to be important, or you have a small number of features, a value closer to 0 (more Ridge) might work better.
+    -   Often, the best way to choose an `alpha` value is through cross-validation, trying different values and selecting the one that minimizes prediction error.
+
+5.  **Interaction with `lambda`**: The `lambda` parameter in Elastic Net controls the overall strength of the penalty. So, the effect of `alpha` is in conjunction with `lambda`. A grid search over both `alpha` and `lambda` is a common practice to find the best combination that minimizes cross-validation error.
 
 In summary, the `alpha` parameter in Elastic Net allows you to balance the type of regularization applied to your model, providing the flexibility to choose between Lasso, Ridge, or a mix of both based on your data and the specific requirements of your problem.
 
@@ -107,6 +111,7 @@ points(log(cv0$lambda) , cv0$cvm , pch = 19, col = "blue")
 legend("topleft", legend = c("alpha= 1", "alpha= .5", "alpha 0"), pch = 19, col = c("red","grey","blue"))
 
 ```
+
 ```{r}
 foldid <- sample(1:10, size = length(y), replace = TRUE)
 cv1.00 <- cv.glmnet(x, y, foldid = foldid, alpha = 1.00)
@@ -173,6 +178,7 @@ plot(x=test_results$alpha, y=test_results$minCVM, ylab="00 percentile")
 # plot(x=test_results$alpha, y=test_results$per15CVM, ylab="15 percentile")
 # plot(x=test_results$alpha, y=test_results$per20CVM, ylab="20 percentile")
 ```
+
 ## 4. Calculate importance using elasticnet coeficients
 
 ```{r}
@@ -195,7 +201,6 @@ top0 <- calculate_top_importance(alpha0, 20)
 top1 <- calculate_top_importance(alpha1, 20)
 ```
 
-
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -210,6 +215,7 @@ plot_importance <- function(importance){
 plot_importance(top0)
 plot_importance(top1)
 ```
+
 ## 5. Evaluate results on test dataset
 
 ```{r}
@@ -309,6 +315,7 @@ plot_important(top1, n_to_plot=20, columns=4, "Alpha=1")
 dev.off()
 
 ```
+
 ```{r}
 full_dataset <- read_csv("new_dataset.csv")
 full_dataset
