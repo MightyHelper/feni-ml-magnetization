@@ -1,8 +1,8 @@
 import abc
 
-from code import shapes
-from code.nanoparticle import Nanoparticle, FE_ATOM, NI_ATOM
-from code.nanoparticlebuilder import NanoparticleBuilder
+import shapes
+from nanoparticle import Nanoparticle, FE_ATOM, NI_ATOM
+from nanoparticlebuilder import NanoparticleBuilder
 import logging
 
 class AbstractParticleFactory(abc.ABC):

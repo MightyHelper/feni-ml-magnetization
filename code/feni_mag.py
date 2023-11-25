@@ -3,6 +3,8 @@ from io import StringIO
 
 import pandas as pd
 
+from config import LOCAL_EXECUTION_PATH
+
 DATA_START_PATTERN = re.compile("Step\\s+Temp")
 DATA_END_PATTERN = re.compile("Loop time")
 
@@ -31,4 +33,4 @@ def get_relevant_lines(lines):
 
 
 if __name__ == '__main__':
-	extract_magnetism("../executions/log.lammps")
+	extract_magnetism(LOCAL_EXECUTION_PATH + "/log.lammps")

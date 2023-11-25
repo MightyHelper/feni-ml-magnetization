@@ -13,9 +13,9 @@ import typer
 from pathlib import Path
 from rich.theme import Theme
 
+import config
 import executor
 import poorly_coded_parser as parser
-import template
 import nanoparticle
 import logging
 import sys
@@ -114,7 +114,8 @@ def parse_execution_info(folder):
 	out = {
 		'real_date': None,
 		'title': None,
-		'mag': None
+		'mag': None,
+		'toko': False
 	}
 	if "_" in folder:
 		parts = folder.split("_")
@@ -122,12 +123,13 @@ def parse_execution_info(folder):
 		out['real_date'] = datetime.datetime.utcfromtimestamp(float(date))
 	out['title'] = get_execution_title(folder)
 	out['mag'] = get_magnetism(folder)
+	out['toko'] = "slurm.sh" in os.listdir(config.LOCAL_EXECUTION_PATH + "/" + folder)
 	return out
 
 
 def get_execution_title(folder):
 	try:
-		with open("../executions/" + folder + "/nanoparticle.in", "r") as f:
+		with open(config.LOCAL_EXECUTION_PATH + "/" + folder + "/nanoparticle.in", "r") as f:
 			lines = f.readlines()
 			return lines[0][2:].strip()
 	except FileNotFoundError:
@@ -137,7 +139,7 @@ def get_execution_title(folder):
 
 def get_magnetism(folder):
 	try:
-		with open("../executions/" + folder + "/magnetism.txt", "r") as f:
+		with open(config.LOCAL_EXECUTION_PATH + "/" + folder + "/magnetism.txt", "r") as f:
 			lines = f.readlines()
 			return lines[1].strip()
 	except FileNotFoundError:
@@ -152,18 +154,21 @@ def ls():
 	"""
 	table = rich.table.Table(title="Executed simulations", show_footer=True)
 	table.add_column("Index", justify="right", footer="Total")
-	table.add_column("Folder Name", footer=str(len(os.listdir("../executions"))))
+	executions = os.listdir(config.LOCAL_EXECUTION_PATH)
+	table.add_column("Folder Name", footer=str(len(executions)))
 	table.add_column("Simulation Date")
 	table.add_column("Title")
+	table.add_column("InToko")
 	table.add_column("Magnetism")
 
-	for i, folder in enumerate(sorted(os.listdir("../executions"))):
+	for i, folder in enumerate(sorted(executions)):
 		info = parse_execution_info(folder)
 		table.add_row(
 			f"[green]{i}[/green]",
 			f"[blue]{folder}[/blue]",
 			f"[bold]{info['real_date']}[/bold]",
 			f"[magenta]{info['title']}[/magenta]",
+			f"[bold green]True[/bold green]" if info['toko'] else f"[bold red]False[/bold red]",
 			f"[bold green]{info['mag']}[/bold green]" if info['mag'] != "Unknown" else f"[bold red]{info['mag']}[/bold red]"
 		)
 	console.print(table, highlight=True)
@@ -175,10 +180,10 @@ def clean():
 	Clean all executions
 	"""
 	total = 0
-	for path in os.listdir("../executions"):
-		for sub_path in os.listdir("../executions/" + path):
-			os.remove("../executions/" + path + "/" + sub_path)
-		os.rmdir("../executions/" + path)
+	for path in os.listdir(config.LOCAL_EXECUTION_PATH):
+		for sub_path in os.listdir(config.LOCAL_EXECUTION_PATH + "/" + path):
+			os.remove(config.LOCAL_EXECUTION_PATH + "/" + path + "/" + sub_path)
+		os.rmdir(config.LOCAL_EXECUTION_PATH + "/" + path)
 		total += 1
 	if total == 0:
 		rprint(f"[red]No executions to remove[/red].")
@@ -244,7 +249,7 @@ def get_running_executions():
 
 
 def get_runninng_linux():
-	ps_result = os.popen("ps -ef | grep " + template.LAMMPS_EXECUTABLE).readlines()
+	ps_result = os.popen("ps -ef | grep " + config.LAMMPS_EXECUTABLE).readlines()
 	for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
 		parts = execution.split("/")
 		foldername = '/'.join(parts[:-1])

@@ -3,7 +3,8 @@ import platform
 import re
 import subprocess
 
-from template import get_slurm_template, replace_templates, LAMMPS_TOKO_EXECUTABLE, LAMMPS_EXECUTABLE
+from template import get_slurm_template, replace_templates
+from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE
 
 
 class MPIOpt:
@@ -147,13 +148,13 @@ class MpiLammpsWrapper:
 	@staticmethod
 	def write_toko_script(toko_nano_in, toko_sim_folder, local_sim_folder):
 		slurm_code = replace_templates(
-			get_slurm_template(),
-			{
+			get_slurm_template(), {
 				"lammps_exec": LAMMPS_TOKO_EXECUTABLE,
 				"tasks": "1",
 				"lammps_input": toko_nano_in,
 				"lammps_output": toko_sim_folder + "/log.lammps",
 				"cwd": toko_sim_folder,
+				"partition": "mini"
 			}
 		)
 		assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"

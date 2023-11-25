@@ -13,6 +13,8 @@ import feni_mag
 import feni_ovito
 import random
 
+from config import LOCAL_EXECUTION_PATH
+
 FE_ATOM = 1
 NI_ATOM = 2
 
@@ -53,7 +55,7 @@ class Nanoparticle:
 		self.rid = random.randint(0, 10000)
 		self.title = self.extra_replacements.get("title", "Nanoparticle")
 		self.id = self._gen_identifier() if id_x is None else id_x
-		self.path = realpath("../executions/" + self.id) + "/"
+		self.path = realpath(LOCAL_EXECUTION_PATH + "/" + self.id) + "/"
 
 	def hardcoded_g_r_crop(self, g_r):
 		return g_r[0:60]

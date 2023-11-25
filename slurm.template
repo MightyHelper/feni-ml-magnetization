@@ -1,9 +1,6 @@
 #!/bin/bash
-#
-##SBATCH --nodes=1
-##SBATCH --ntasks-per-node={{tasks}}
 #SBATCH --ntasks={{tasks}}
-#SBATCH --partition=mini
+#SBATCH --partition={{partition}}
 #SBATCH --time=00:45:00
 . /etc/profile
 module load openmpi-2.1.6 gcc-9.2.0

@@ -1,6 +1,7 @@
 import executor as ex
 import mpilammpsrun as mpilr
 import shapes as s
+from config import LOCAL_EXECUTION_PATH
 from template import replace_templates, get_lammps_template
 
 
@@ -13,14 +14,13 @@ def test():
 
 
 def count_atoms_in_region(region: str) -> int:
-	folder = "../executions"
 	lammps_run = mpilr.MpiLammpsRun(
 		replace_templates(get_lammps_template(), {
 			"region": region,
 			"run_steps": str(0)
 		}),
 		{
-			"cwd": folder
+			"cwd": LOCAL_EXECUTION_PATH
 		},
 		["iron.0.dump"]
 	).execute()
@@ -28,11 +28,10 @@ def count_atoms_in_region(region: str) -> int:
 
 
 def plot_output(code: str):
-	folder = "../executions"
 	lammps_run = mpilr.MpiLammpsRun(
 		code,
 		{
-			"cwd": folder
+			"cwd": LOCAL_EXECUTION_PATH
 		},
 		["iron.0.dump"]
 	).execute()
