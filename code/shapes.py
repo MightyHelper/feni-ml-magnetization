@@ -257,6 +257,9 @@ class Cone(Shape):
 	def get_lattice_point_count(self) -> int:
 		return 0
 
+	def __str__(self):
+		return f"Cone_{self.axis}_{self.c1}_{self.c2}_{self.radlo}_{self.radhi}_{self.lo}_{self.hi}"
+
 class Prism(Shape):
 	"""Represents a prism
 	prism args = xlo xhi ylo yhi zlo zhi xy xz yz
@@ -294,3 +297,6 @@ class Prism(Shape):
 
 	def get_lattice_point_count(self) -> int:
 		return 0
+
+	def __str__(self):
+		return f"Prism_{self.xlo}_{self.xhi}_{self.ylo}_{self.yhi}_{self.zlo}_{self.zhi}_{self.xy}_{self.xz}_{self.yz}"

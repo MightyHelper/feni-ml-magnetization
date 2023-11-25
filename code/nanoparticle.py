@@ -7,6 +7,7 @@ import pandas as pd
 
 import mpilammpsrun as mpilr
 import mpilammpswrapper as mpilw
+import opt
 import shapes
 import template
 import feni_mag
@@ -221,8 +222,8 @@ class Nanoparticle:
 	def _build_lammps_run(self, code, kwargs, test_run):
 		lammps_run = mpilr.MpiLammpsRun(
 			code, {
-				"omp": mpilw.OMPOpt(use=False, n_threads=2),
-				"mpi": mpilw.MPIOpt(use=False, hw_threads=False, n_threads=4),
+				"omp": opt.OMPOpt(use=False, n_threads=2),
+				"mpi": opt.MPIOpt(use=False, hw_threads=False, n_threads=4),
 				"cwd": self.path,
 				**kwargs
 			},

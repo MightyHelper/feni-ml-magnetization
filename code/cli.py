@@ -18,6 +18,8 @@ import executor
 import poorly_coded_parser as parser
 import nanoparticle
 import logging
+
+from config import LOG_LEVEL
 import sys
 from rich.columns import Columns
 from rich.panel import Panel
@@ -42,13 +44,14 @@ logging.basicConfig(
 if not sys.stdout.isatty():
 	logging.disable(logging.DEBUG)  # Disable debug and info messages
 log = logging.getLogger("rich")
+logging.getLogger("").setLevel(LOG_LEVEL)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
-shapefolder = typer.Typer(add_completion=False, no_args_is_help=True)
+shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
-main.add_typer(shapefolder, name="shapefolder")
-main.add_typer(executions, name="executions")
+main.add_typer(shapefolder, name="sf")
+main.add_typer(executions, name="exec")
 col = "#333333"
 console = rich.console.Console(theme=Theme({
 	"zero.zero": col,
@@ -110,6 +113,41 @@ def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True)
 	console.print(table, highlight=True)
 
 
+@shapefolder.command()
+def inspect(path: str):
+	"""
+	Inspect a nanoparticle
+	"""
+	_, nano = parser.parse_single_shape(path)
+	nano = nano.build()
+	region = nano.get_region()
+	rprint(nano)
+	rprint(region)
+
+
+def dot_dot(path: str):
+	return "/".join(path.split("/")[:-1])
+
+
+@shapefolder.command()
+def shrink():
+	"""
+	Shrink all nanoparticle shapes
+	"""
+	for path in parser.recursive_input_search("../Shapes"):
+		_, nano = parser.parse_single_shape(path)
+		nano = nano.build()
+		region = nano.get_region()
+		shrink_path = dot_dot(path) + "/nano.shrink"
+		with open(shrink_path, "w") as f:
+			f.write(region)
+		_, parsed = parser.parse_single_shape(shrink_path, True)
+		parsed = parsed.build()
+		parsed_region = parsed.get_region()
+		assert parsed_region == region, f"Regions are not equal:\n{parsed_region}\n{region}"
+		logging.info(f"Shrunk {path}")
+
+
 def parse_execution_info(folder):
 	out = {
 		'real_date': None,
@@ -154,14 +192,14 @@ def ls():
 	"""
 	table = rich.table.Table(title="Executed simulations", show_footer=True)
 	table.add_column("Index", justify="right", footer="Total")
-	executions = os.listdir(config.LOCAL_EXECUTION_PATH)
-	table.add_column("Folder Name", footer=str(len(executions)))
+	execs = os.listdir(config.LOCAL_EXECUTION_PATH)
+	table.add_column("Folder Name", footer=str(len(execs)))
 	table.add_column("Simulation Date")
 	table.add_column("Title")
 	table.add_column("InToko")
 	table.add_column("Magnetism")
 
-	for i, folder in enumerate(sorted(executions)):
+	for i, folder in enumerate(sorted(execs)):
 		info = parse_execution_info(folder)
 		table.add_row(
 			f"[green]{i}[/green]",

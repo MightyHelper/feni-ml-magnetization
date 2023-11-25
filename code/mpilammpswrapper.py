@@ -3,53 +3,9 @@ import platform
 import re
 import subprocess
 
+from opt import MPIOpt, GPUOpt, OMPOpt
 from template import get_slurm_template, replace_templates
-from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE
-
-
-class MPIOpt:
-	use: bool = False
-	hw_threads: bool = False
-	n_threads: int = 1
-
-	def __init__(self, use: bool = False, hw_threads: bool = False, n_threads: int = 1):
-		self.use = use
-		self.hw_threads = hw_threads
-		self.n_threads = n_threads
-
-	def __str__(self):
-		return f"mpirun -n {self.n_threads} {'--use-hwthread-cpus' if self.hw_threads else ''} " if self.use else ""
-
-	def __repr__(self):
-		return f"MPIOpt(use={self.use}, hw_threads={self.hw_threads}, n_threads={self.n_threads})"
-
-
-class GPUOpt:
-	use: bool = False
-
-	def __init__(self, use: bool = False):
-		self.use = use
-
-	def __str__(self):
-		return "-sf gpu -pk gpu 1" if self.use else ""
-
-	def __repr__(self):
-		return f"GPUOpt(use={self.use})"
-
-
-class OMPOpt:
-	use: bool = False
-	n_threads: int = 1
-
-	def __init__(self, use: bool = False, n_threads: int = 1):
-		self.use = use
-		self.n_threads = n_threads
-
-	def __str__(self):
-		return f"-sf omp -pk omp {self.n_threads}" if self.use else ""
-
-	def __repr__(self):
-		return f"OMPOpt(use={self.use}, n_threads={self.n_threads})"
+from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE
 
 
 def get_file_name(input_file):
@@ -71,7 +27,6 @@ class MpiLammpsWrapper:
 		if omp is None: omp = OMPOpt()
 		if not in_toko:
 			return MpiLammpsWrapper._simulate_in_local(gpu, mpi, omp, cwd, input_file)
-
 		return MpiLammpsWrapper._simulate_in_toko(input_file)
 
 	@staticmethod
@@ -91,7 +46,6 @@ class MpiLammpsWrapper:
 		MpiLammpsWrapper.wait_for_execution(jobid)
 		logging.info("Copying output files from toko to local machine...")
 		MpiLammpsWrapper.copy_file_from_toko(toko_sim_folder, "/".join(local_sim_folder.split("/")[:-1]))
-		logging.info(f"{code=}")
 
 	@staticmethod
 	def confirm(message):
@@ -154,7 +108,7 @@ class MpiLammpsWrapper:
 				"lammps_input": toko_nano_in,
 				"lammps_output": toko_sim_folder + "/log.lammps",
 				"cwd": toko_sim_folder,
-				"partition": "mini"
+				"partition": TOKO_PARTITION_TO_USE
 			}
 		)
 		assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"

@@ -43,7 +43,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 			shape = s.Cylinder(radius, full_length, axis, (coord_a, coord_b, coord_c), check_in_box=False)
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name)
-		logging.info(shape)
+		logging.debug(shape)
 		return shape
 	elif region_type == "sphere":
 		# region sphere 0 0 0 10 units box
@@ -54,7 +54,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		shape = s.Sphere(radius, (coord_a, coord_b, coord_c))
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name)
-		logging.info(shape)
+		logging.debug(shape)
 		return shape
 	elif region_type == "plane":
 		# region plane 0 0 0 0 0 1 units box
@@ -67,7 +67,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		shape = s.Plane((coord_a, coord_b, coord_c), (normal_a, normal_b, normal_c))
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name)
-		logging.info(shape)
+		logging.debug(shape)
 		return shape
 	elif region_type == "cone":
 		# region_args = ['z', '0.0', '0.0', '18', '1', '-21', '21', 'units', 'box']
@@ -81,7 +81,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		shape = s.Cone(axis, coord_a, coord_b, radlo, radhi, lo, hi)
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name)
-		logging.info(shape)
+		logging.debug(shape)
 		return shape
 	elif region_type == "prism":
 		# region 		sq prism -20 20 -3 3 -16 16 0 0 0 units box
@@ -97,7 +97,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		shape = s.Prism(xlo, xhi, ylo, yhi, zlo, zhi, xy, xz, yz)
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name)
-		logging.info(shape)
+		logging.debug(shape)
 		return shape
 	elif region_type == "intersect":
 		n = int(region_args[0])
@@ -115,7 +115,7 @@ def is_correct_parsing(line: list[str], command: str) -> bool:
 			and f"{parsed_command[x]}.0" != line[x]
 			and f"{line[x]}.0" != parsed_command[x]
 			and abs(float(parsed_command[x]) - float(line[x])) > 0.0001):
-			logging.info(f"[red]{parsed_command[x]} != {line[x]}[/red]")
+			logging.debug(f"[red]{parsed_command[x]} != {line[x]}[/red]")
 			return False
 	return True
 
@@ -204,18 +204,18 @@ def parse_group(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Non
 
 def parse_line(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> None:
 	if line.startswith("#"):
-		logging.info(f"[blue]{line}[/blue]", extra={"markup": True})
+		logging.debug(f"[blue]{line}[/blue]", extra={"markup": True})
 	elif line.startswith("region"):
-		logging.info(f"[green]{line}[/green]", extra={"markup": True})
+		logging.debug(f"[green]{line}[/green]", extra={"markup": True})
 		parse_region(line, nano)
 	elif line.startswith("create_atoms"):
-		logging.info(f"[magenta bold]{line}[/magenta bold]", extra={"markup": True})
+		logging.debug(f"[magenta bold]{line}[/magenta bold]", extra={"markup": True})
 		parse_create_atoms(line, nano)
 	elif line.startswith("set"):
-		logging.info(f"[magenta]{line}[/magenta]", extra={"markup": True})
+		logging.debug(f"[magenta]{line}[/magenta]", extra={"markup": True})
 		parse_set(line, nano)
 	elif line.startswith("group"):
-		logging.info(f"[grey]{line}[/grey]", extra={"markup": True})
+		logging.debug(f"[grey]{line}[/grey]", extra={"markup": True})
 		parse_group(line, nano)
 	else:
 		raise ValueError(f"Unknown line: {line}")
@@ -233,19 +233,31 @@ def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticlebuilder.N
 		yield parse_single_shape(shape)
 
 
-def parse_single_shape(shape: str) -> tuple[str, nanoparticlebuilder.NanoparticleBuilder]:
+def parse_single_shape(shape: str, full_file: bool = False) -> tuple[str, nanoparticlebuilder.NanoparticleBuilder]:
+	"""
+	Parses a single shape file
+	:param shape:  Path to shape file
+	:param full_file:  Whether to parse the full file or just the first region
+	:return:
+	"""
 	with open(shape, "r") as f:
 		logging.info(f"[yellow]=== {shape} ===[/yellow]", extra={"markup": True})
 		nano = nanoparticlebuilder.NanoparticleBuilder(title=shape)
 		lines = f.readlines()
-		start = first_index_that_startswith(lines, "lattice") + 1
-		try:
-			end = first_index_that_startswith(lines, "# setting")
-		except AssertionError:
-			end = first_index_that_startswith(lines, "mass")
-		lines = [ll.strip() for l in lines[start:end] if (ll := l.strip()) != ""]
+		if not full_file:
+			lines = locate_relevant_lines(lines)
+		lines = [ll.strip() for l in lines if (ll := l.strip()) != ""]
 		parse_shape(lines, nano)
 		return shape, nano
+
+
+def locate_relevant_lines(lines):
+	start = first_index_that_startswith(lines, "lattice") + 1
+	try:
+		end = first_index_that_startswith(lines, "# setting")
+	except AssertionError:
+		end = first_index_that_startswith(lines, "mass")
+	return lines[start:end]
 
 
 def first_index_that_startswith(lines: list[str], start: str) -> int:
