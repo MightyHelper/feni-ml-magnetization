@@ -219,7 +219,6 @@ class Nanoparticle:
 	def _build_lammps_run(self, code, kwargs, test_run):
 		lammps_run = mpilr.MpiLammpsRun(
 			code, {
-				"lammps_executable": template.LAMMPS_EXECUTABLE,
 				"omp": mpilw.OMPOpt(use=False, n_threads=2),
 				"mpi": mpilw.MPIOpt(use=False, hw_threads=False, n_threads=4),
 				"cwd": self.path,
@@ -231,7 +230,7 @@ class Nanoparticle:
 		return dumps, lammps_run
 
 	def _build_lammps_code(self, test_run):
-		return template.replace_templates(template.get_template(), {
+		return template.replace_templates(template.get_lammps_template(), {
 			"region": self.get_region(),
 			"run_steps": str(0 if test_run else FULL_RUN_DURATION),
 			"title": f"{self.title}",

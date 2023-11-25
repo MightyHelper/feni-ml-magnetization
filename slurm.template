@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node={{tasks}}
+#SBATCH --ntasks={{tasks}}
+#SBATCH --partition=mini
+#SBATCH --time=00:45:00
+. /etc/profile
+module load openmpi-2.1.6 gcc-9.2.0
+## /home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/src/lmp_g++_openmpi
+cd {{cwd}}
+mpirun -np {{tasks}} {{lammps_exec}} < {{lammps_input}} > {{lammps_output}}

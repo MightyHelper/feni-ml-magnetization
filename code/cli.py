@@ -299,13 +299,13 @@ def live():
 
 
 @executions.command()
-def execute(path: str, plot: bool = False, test: bool = True):
+def execute(path: str, plot: bool = False, test: bool = True, in_toko: bool = False):
 	"""
 	Execute a nanoparticle simulation
 	"""
 	_, nano = parser.parse_single_shape(path)
 	nano = nano.build()
-	nano.execute(test_run=test)
+	nano.execute(test_run=test, in_toko=in_toko)
 	rprint(executor.parse_ok_execution_results(path, nano, test))
 	if plot:
 		nano.plot()
