@@ -7,7 +7,6 @@ import pandas as pd
 
 import config
 import mpilammpsrun as mpilr
-import mpilammpswrapper as mpilw
 import opt
 import shapes
 import template
