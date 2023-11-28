@@ -1,0 +1,99 @@
+---
+title: "Remove zeroed columns"
+output: html_document
+---
+
+# Import Dataset
+
+```{r}
+install.packages("tibble")
+library(tidyr)
+library(foreach)
+library(tibble)
+library(ggplot2)
+```
+```{r}
+library(foreach)
+library(dplyr)
+
+data <- read.csv("dataset.csv")
+column_names <- names(data)
+parts <- c("psd", "psd11", "psd12", "psd22", "coordc", "coordc_fe", "coordc_ni", "pec")
+pattern <- "_\\d+"
+
+# Create a list of logical vectors indicating which columns match the patterns
+result <- foreach(i = parts) %do% {
+  grepl(paste0(i, pattern), column_names)
+}
+
+psd <- data.frame(result[1])
+psd11 <- data.frame(result[2])
+psd12 <- data.frame(result[3])
+psd22 <- data.frame(result[4])
+coordc <- data.frame(result[5])
+coordc_fe <- data.frame(result[6])
+coordc_ni <- data.frame(result[7])
+coordc_pec <- data.frame(result[8])
+# names(psd) <- c('psd')
+names(psd) <- c('psd')
+names(psd11) <- c('psd11')
+names(psd12) <- c('psd12')
+names(psd22) <- c('psd22')
+names(coordc) <- c('coordc')
+names(coordc_fe) <- c('coordc_fe')
+names(coordc_ni) <- c('coordc_ni')
+names(coordc_pec) <- c('coordc_pec')
+important_columns <- cbind(psd, psd11, psd12, psd22, coordc, coordc_fe, coordc_ni, coordc_pec)
+```
+
+```{r}
+psd_hist <- data[, important_columns$psd]
+psd11_hist <- data[, important_columns$psd11]
+psd12_hist <- data[, important_columns$psd12]
+psd22_hist <- data[, important_columns$psd22]
+coordc_hist <- data[, important_columns$coordc]
+coordc_fe_hist <- data[, important_columns$coordc_fe]
+coordc_ni_hist <- data[, important_columns$coordc_ni]
+coordc_pec_hist <- data[, important_columns$coordc_pec]
+```
+
+```{r}
+plot_hists <- function(hist){
+  foreach(x = 1:length(hist[,1])) %do% {
+    plot(t(hist[x,]))
+  }
+}
+# plot_hists(coordc_fe_hist)
+
+```
+
+```{r}
+extract_non_zero_cols <- function(hist) hist[apply(hist, 2, function(x) any(x != 0))]
+
+psd_hist_mini <- extract_non_zero_cols(psd_hist)
+psd11_hist_mini <- extract_non_zero_cols(psd11_hist)
+psd12_hist_mini <- extract_non_zero_cols(psd12_hist)
+psd22_hist_mini <- extract_non_zero_cols(psd22_hist)
+coordc_hist_mini <- extract_non_zero_cols(coordc_hist)
+coordc_fe_hist_mini <- extract_non_zero_cols(coordc_fe_hist)
+coordc_ni_hist_mini <- extract_non_zero_cols(coordc_ni_hist)
+coordc_pec_hist_mini <- extract_non_zero_cols(coordc_pec_hist)
+dim(psd_hist_mini)
+dim(psd11_hist_mini)
+dim(psd12_hist_mini)
+dim(psd22_hist_mini)
+dim(coordc_hist_mini)
+dim(coordc_fe_hist_mini)
+dim(coordc_ni_hist_mini)
+dim(coordc_pec_hist_mini)
+```
+
+```{r}
+psd_hist_mini
+# data
+```
+
+```{r}
+boxplot(select(data, n_fe, n_ni, fe_s, ni_s))
+#write.csv(file="a.csv", coordc_pec_hist[1,])
+```
