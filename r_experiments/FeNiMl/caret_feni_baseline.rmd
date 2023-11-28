@@ -1,0 +1,163 @@
+
+---
+title: "Regression Model using Elastic Net for FeNi"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Clean the environment
+```{r}
+rm(list = ls())
+cat("\014")  # clean the console
+```
+```{r}
+library(ranger)  # Random Forest
+library(glmnet)  # elastic net
+library(kernlab) # SVM
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+## 1. Reading the dataset
+
+```{r}
+library(readr)
+dataset <- read_csv("./new_dataset.csv")
+head(dataset)
+```
+
+## 1.1 remove predictor with zero variance
+
+```{r}
+library(caret)
+nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
+dataset <- dataset[, -nzv]
+```
+
+```{r}
+dataset <- dataset %>% select(-name)
+```
+
+## 2. Splitting the dataset
+We will split the dataset into a training set (70%) and a testing set (30%).
+
+```{r}
+set.seed(123) # for reproducibility
+splitIndex <- createDataPartition(dataset$tmg, p = 0.7, list = FALSE)
+train_data <- dataset[splitIndex, ]
+test_data <- dataset[-splitIndex, ]
+
+train_data <-train_data %>% as.data.frame()
+```
+
+## 3. Creating a model model
+Using the glmnet package, we'll predict the `tmg` feature
+
+
+```{r}
+# Define the control parameters for training
+ctrl <- trainControl(method = "cv", 
+                     number = 10, # 10-fold cross-validation
+                     returnResamp = 'final',
+                     savePredictions = 'final',
+                     verboseIter = F,
+                     allowParallel = T
+                     )
+```
+
+
+The caret's train function sometimes requires to be adapted to the algorithm used. For instance, the `ranger` packages requires to set the importance, while the `glmenet`does not!
+
+[info for range parameters](https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument)
+
+```{r}
+# Train the Elastic Net model with caret
+model <- train(
+  tmg ~ ., # Define the formula
+  
+  data = train_data,
+  #method = "ranger", # 
+  #method = "glmnet", # 
+  #method =  catboost.caret, # for catboost
+  method = "svmRadial", # for support vector machines install kernlab
+  trControl = ctrl,
+  #tuneGrid = expand.grid(alpha = 0.5, lambda = 0.1), # Elastic Net (alpha=0.5)
+  tuneGrid = expand.grid(C = c(0.1,0.25,0.5), sigma = c(0.007, 0.02, 0.1, 0.005)), # for SVM
+  #tunelength = 2,
+  preProcess = c("center", "scale") # Standardization
+  #importance = "permutation" #  parameter used for ranger
+)
+
+# Print the 
+print(model)
+```
+
+
+## CV results
+Note: This code should be adapted according to the hyperparameters used by the model. 
+
+```{r}
+
+hyperparameters_glmnet <- c("alpha","lambda")
+
+hyperparameters_ranger <- c("mtry","splitrule")
+
+hyperparameters_svm <- c("C","sigma")
+
+model$results %>% tidyr::unite(col= a_l, hyperparameters_svm,sep="_") %>%
+  ggplot(aes(x = a_l, y = RMSE)) +
+  geom_point(color = 'red') +
+  geom_errorbar(
+    aes(ymin = RMSE - RMSESD, ymax = RMSE + RMSESD),
+    width = .02,
+    color = 'orange'
+  ) +
+  theme_classic()+
+  # ggdark::dark_theme_bw() +
+  labs(title="Model: Mean and Standard deviation after hyper-parameter tuning")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+## 4. Calculate importance 
+Note: SVM does not have an intern Feature score procedure. Caret uses AUC for calculate it. More info here:
+https://topepo.github.io/caret/variable-importance.html#model-independent-metrics
+
+```{r fig.height=10, fig.width=10}
+varImp(model)
+importance_results <- varImp(model, scale = FALSE)
+plot(varImp(model),top = 20)
+```
+
+
+
+## 5. Evaluate results on test dataset
+
+```{r}
+predictions <- predict(model, test_data)
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - test_data$tmg)^2))
+print(RMSE)
+```
+
+## 6. Plot: Predicted vs Reference values
+
+```{r}
+
+results <- data.frame(Reference = test_data$tmg, Predicted = as.vector(predictions))
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  geom_abline(intercept = 0, slope = 1, color='red') +
+  ggtitle("Predicted vs Reference values") +
+  xlab("Reference Values") +
+  ylab("Predicted Values") +
+  theme_bw()
+
+```
+
