@@ -1,11 +1,13 @@
 import logging
 import os
+import re
 
 import numpy as np
 import random
 import base64
 from matplotlib import pyplot as plt
 
+import config
 from mpilammpswrapper import MpiLammpsWrapper
 
 DUMP_ATOM_TYPE = 0
@@ -32,6 +34,9 @@ def get_index(lines, section):
 
 
 class MPILammpsDump:
+	"""
+	Functions to parse a dump file
+	"""
 	def __init__(self, path):
 		self.path = path
 		self.dump = self._parse()
@@ -76,6 +81,9 @@ class MPILammpsDump:
 
 
 class MpiLammpsRun:
+	"""
+	Functions to execute a lammps run
+	"""
 	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
 		self.output = ""
 		self.code = code
@@ -88,6 +96,26 @@ class MpiLammpsRun:
 			logging.warning("No CWD passed to sim_params!")
 		self.dumps: list[MPILammpsDump] = []
 
+	def get_lammps_log_filename(self):
+		return self.sim_params['cwd'] + "/log.lammps"
+
+	def get_current_step(self):
+		"""
+		Get the current step of a lammps log file
+		"""
+		step = -1
+		try:
+			with open(self.get_lammps_log_filename(), "r") as f:
+				lines = f.readlines()
+				try:
+					split = re.split(r" +", lines[-1].strip())
+					step = int(split[0])
+				except Exception:
+					pass
+		except FileNotFoundError:
+			pass
+		return step
+
 	def execute(self) -> 'MpiLammpsRun':
 		MpiLammpsWrapper.gen_and_sim(self.code, self.sim_params, file_to_use=self.file_name)
 		self.dumps = self._parse_dumps()
@@ -99,6 +127,7 @@ class MpiLammpsRun:
 			result = MPILammpsDump(dump)
 			dumps[result.dump['timestep']] = result
 		return dumps
+
 
 	@staticmethod
 	def from_path(path):

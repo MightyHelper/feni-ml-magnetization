@@ -11,4 +11,5 @@ LOCAL_EXECUTION_PATH = "../executions"
 # Toko
 LAMMPS_TOKO_EXECUTABLE = "/home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/src/lmp_g++_openmpi"
 SLURM_TEMPLATE_PATH = "../slurm.template"
+SLURM_SH = "slurm.sh"
 TOKO_PARTITION_TO_USE = "mini"

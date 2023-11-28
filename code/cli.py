@@ -1,33 +1,32 @@
+import logging
 import multiprocessing
 import os
-import time
 import platform
+import signal
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import rich.repr
 import rich.table
 import typer
-from pathlib import Path
+from rich import print as rprint
+from rich.columns import Columns
+from rich.console import Group
+from rich.highlighter import ReprHighlighter
+from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
 from rich.theme import Theme
 
 import config
 import executor
-import poorly_coded_parser as parser
 import nanoparticle
-import logging
-
+import poorly_coded_parser as parser
 from config import LOG_LEVEL
-import sys
-from rich.columns import Columns
-from rich.panel import Panel
-from rich.console import Group
-from rich import print as rprint
-from rich.highlighter import ReprHighlighter
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn, MofNCompleteColumn
-from rich.logging import RichHandler
-import signal
-
-from utils import parse_execution_info, get_running_executions, ZeroHighlighter, parse_nanoparticle_name, add_task
+from utils import get_running_executions, ZeroHighlighter, parse_nanoparticle_name, add_task, dot_dot
 
 # Don't turn these signal into exceptions, just die.
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -116,10 +115,6 @@ def inspect(path: str):
 	rprint(region)
 
 
-def dot_dot(path: str):
-	return "/".join(path.split("/")[:-1])
-
-
 @shapefolder.command()
 def shrink():
 	"""
@@ -148,20 +143,21 @@ def ls():
 	table.add_column("Index", justify="right", footer="Total")
 	execs = os.listdir(config.LOCAL_EXECUTION_PATH)
 	table.add_column("Folder Name", footer=str(len(execs)))
-	table.add_column("Simulation Date")
 	table.add_column("Title")
-	table.add_column("InToko")
+	table.add_column("Date")
 	table.add_column("Magnetism")
+	table.add_column("In Toko")
 
 	for i, folder in enumerate(sorted(execs)):
-		info = parse_execution_info(folder)
+
+		info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
 		table.add_row(
 			f"[green]{i}[/green]",
-			f"[blue]{folder}[/blue]",
-			f"[bold]{info['real_date']}[/bold]",
-			f"[magenta]{info['title']}[/magenta]",
-			f"[bold green]True[/bold green]" if info['toko'] else f"[bold red]False[/bold red]",
-			f"[bold green]{info['mag']}[/bold green]" if info['mag'] != "Unknown" else f"[bold red]{info['mag']}[/bold red]"
+			f"[cyan]{folder}[/cyan]",
+			f"[blue]{info.title}[/blue]",
+			f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
+			f"[magenta]{info.magnetism}[/magenta]",
+			f"[red]{info.extra_replacements['in_toko']}[/red]"
 		)
 	console.print(table, highlight=True)
 

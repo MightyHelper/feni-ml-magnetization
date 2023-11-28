@@ -12,43 +12,6 @@ import config
 import nanoparticle
 
 
-def parse_execution_info(folder):
-	out = {
-		'real_date': None,
-		'title': None,
-		'mag': None,
-		'toko': False
-	}
-	if "_" in folder:
-		parts = folder.split("_")
-		sim, date = parts[0], parts[1]
-		out['real_date'] = datetime.datetime.utcfromtimestamp(float(date))
-	out['title'] = get_execution_title(folder)
-	out['mag'] = get_magnetism(folder)
-	out['toko'] = "slurm.sh" in os.listdir(config.LOCAL_EXECUTION_PATH + "/" + folder)
-	return out
-
-
-def get_execution_title(folder):
-	try:
-		with open(config.LOCAL_EXECUTION_PATH + "/" + folder + "/nanoparticle.in", "r") as f:
-			lines = f.readlines()
-			return lines[0][2:].strip()
-	except FileNotFoundError:
-		pass
-	return "Unknown"
-
-
-def get_magnetism(folder):
-	try:
-		with open(config.LOCAL_EXECUTION_PATH + "/" + folder + "/magnetism.txt", "r") as f:
-			lines = f.readlines()
-			return lines[1].strip()
-	except FileNotFoundError:
-		pass
-	return "Unknown"
-
-
 def get_current_step(lammps_log):
 	"""
 	Get the current step of a lammps log file
@@ -78,7 +41,7 @@ def get_title(path):
 	return title
 
 
-def get_runninng_windows(from_windows: bool = True):
+def get_running_windows(from_windows: bool = True):
 	# wmic.exe process where "name='python.exe'" get commandline, disable stderr
 
 	if from_windows:
@@ -88,32 +51,27 @@ def get_runninng_windows(from_windows: bool = True):
 	result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"], stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
 	result = [x.strip() for x in result if x.strip() != ""]
 	for execution in {x for result in result if "-in" in result and (x := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
-		execution = execution.replace("\\", "/")
-		parts = execution.split("/")
-		foldername = '/'.join(parts[:-1])
-		step = get_current_step(foldername + "/log.lammps")
-		title = get_title(foldername + "/nanoparticle.in")
-		yield foldername, step, title
+		folder_name = get_nth_path_element(execution.replace("\\", "/"), -1)
+		nano = nanoparticle.Nanoparticle.from_executed(folder_name)
+		yield folder_name, nano.run.get_current_step(), nano.title
 
 
 def get_running_executions():
 	if platform.system() == "Windows":
-		yield from get_runninng_windows(True)
+		yield from get_running_windows(True)
 	elif platform.system() == "Linux":
-		yield from get_runninng_windows(False)
-		yield from get_runninng_linux()
+		yield from get_running_windows(False)
+		yield from get_running_linux()
 	else:
 		raise Exception(f"Unknown system: {platform.system()}")
 
 
-def get_runninng_linux():
+def get_running_linux():
 	ps_result = os.popen("ps -ef | grep " + config.LAMMPS_EXECUTABLE).readlines()
 	for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
-		parts = execution.split("/")
-		foldername = '/'.join(parts[:-1])
-		step = get_current_step(foldername + "/log.lammps")
-		title = get_title(foldername + "/nanoparticle.in")
-		yield foldername, step, title
+		folder_name = get_nth_path_element(execution, -1)
+		nano = nanoparticle.Nanoparticle.from_executed(folder_name)
+		yield folder_name, nano.run.get_current_step(), nano.title
 
 
 def filter_empty(l: list) -> list:
@@ -137,3 +95,15 @@ def parse_nanoparticle_name(key):
 def add_task(folder, progress: Progress, step, tasks, title):
 	logging.info(f"Found running execution: {folder} ({step})")
 	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
+
+
+def get_nth_path_element(path: str, n: int) -> str:
+	return path.split("/")[n]
+
+
+def get_path_elements(path: str, f: int, t: int) -> str:
+	return "/".join(path.split("/")[f:t])
+
+
+def dot_dot(path: str):
+	return get_path_elements(path, 0, -1)

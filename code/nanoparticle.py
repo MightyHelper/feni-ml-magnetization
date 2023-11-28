@@ -5,6 +5,7 @@ import os
 
 import pandas as pd
 
+import config
 import mpilammpsrun as mpilr
 import mpilammpswrapper as mpilw
 import opt
@@ -72,12 +73,15 @@ class Nanoparticle:
 		n.path = realpath(path)
 		if not os.path.isdir(n.path):
 			raise Exception(f"Path {n.path} is not a directory")
-		if not os.path.isfile(n.path + "/log.lammps"):
+		lammps_log = n.path + "/log.lammps"
+		if not os.path.isfile(lammps_log):
 			raise Exception(f"Path {n.path} does not contain a log.lammps file")
 		n.id = n.path.split("/")[-1]
 		n.regions = []
 		n.atom_manipulation = []
-		n.extra_replacements = {}
+		n.extra_replacements = {
+			'in_toko': os.path.isfile(n.path + "/" + config.SLURM_SH)
+		}
 		n.run = mpilr.MpiLammpsRun.from_path(n.path)
 		n.region_name_map = {}
 		n.magnetism = n.get_magnetism()
@@ -89,11 +93,11 @@ class Nanoparticle:
 		n.psd = n.hardcoded_g_r_crop(n.read_psd(feni_ovito.G_R_FILENAME))
 		n.pec = n.read_peh(feni_ovito.PEH_FILENAME)
 		surf = n.read_surface_atoms(feni_ovito.SURFACE_FILENAME)
-		n.total = surf[0]
-		n.fe_s = surf[1]
-		n.ni_s = surf[2]
-		n.fe_c = surf[3]
-		n.ni_c = surf[4]
+		n.total = surf[0] if len(surf) > 0 else 0
+		n.fe_s = surf[1] if len(surf) > 1 else 0
+		n.ni_s = surf[2] if len(surf) > 2 else 0
+		n.fe_c = surf[3] if len(surf) > 3 else 0
+		n.ni_c = surf[4] if len(surf) > 4 else 0
 		return n
 
 	def columns_for_dataset(self):
@@ -242,6 +246,9 @@ class Nanoparticle:
 
 	def _gen_identifier(self):
 		return f"simulation_{time.time()}_{self.rid}"
+
+	def get_simulation_date(self):
+		return self.id.split("_")[1]
 
 	def get_magnetism(self):
 		try:

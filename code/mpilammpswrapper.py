@@ -3,6 +3,7 @@ import platform
 import re
 import subprocess
 
+import config
 from opt import MPIOpt, GPUOpt, OMPOpt
 from template import get_slurm_template, replace_templates
 from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE
@@ -112,12 +113,12 @@ class MpiLammpsWrapper:
 			}
 		)
 		assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
-		with open(local_sim_folder + "/slurm.sh", "w") as f:
+		with open(local_sim_folder + "/" + config.SLURM_SH, "w") as f:
 			f.write(slurm_code)
-		logging.info("Copying slurm.sh to toko...")
-		MpiLammpsWrapper.copy_file_to_toko(local_sim_folder + "/slurm.sh", toko_sim_folder + "/slurm.sh")
+		logging.info(f"Copying {config.SLURM_SH} to toko...")
+		MpiLammpsWrapper.copy_file_to_toko(local_sim_folder + "/" + config.SLURM_SH, toko_sim_folder + "/" + config.SLURM_SH)
 		logging.info("Queueing job in toko...")
-		return MpiLammpsWrapper.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c 'cd {toko_sim_folder}; /apps/slurm/bin/sbatch slurm.sh'"])
+		return MpiLammpsWrapper.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c 'cd {toko_sim_folder}; /apps/slurm/bin/sbatch {config.SLURM_SH}'"])
 
 	@staticmethod
 	def wait_for_execution(jobid):
