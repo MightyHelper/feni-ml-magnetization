@@ -6,7 +6,7 @@ import subprocess
 import config
 from opt import MPIOpt, GPUOpt, OMPOpt
 from template import get_slurm_template, replace_templates
-from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE
+from config import LAMMPS_EXECUTABLE, LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_URL, USER
 
 
 def get_file_name(input_file):
@@ -94,9 +94,7 @@ class MpiLammpsWrapper:
 
 	@staticmethod
 	def run_cmd_for_toko(command_getter):
-		user = "fwilliamson"
-		toko_url = "toko.uncu.edu.ar"
-		command = command_getter(user, toko_url)
+		command = command_getter(USER, TOKO_URL)
 		logging.debug(f"Running {command=}")
 		return subprocess.check_output(command)
 

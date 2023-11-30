@@ -89,6 +89,10 @@ def parse_nanoparticle_name(key):
 	ptype = parts[2]
 	subtype = parts[3]
 	subsubtype = parts[4] if not parts[4].endswith(".in") else ""
+	subsubtype = re.sub("[-_]?" + subtype, "", subsubtype, flags=re.IGNORECASE)
+	subtype = re.sub("[-_]?" + ptype, "", subtype, flags=re.IGNORECASE)
+	subsubtype = re.sub("[-_]?" + subtype, "", subsubtype, flags=re.IGNORECASE)
+	subsubtype = re.sub("[-_]?" + ptype, "", subsubtype, flags=re.IGNORECASE)
 	return ptype, subtype, subsubtype
 
 

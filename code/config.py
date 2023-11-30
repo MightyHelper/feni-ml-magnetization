@@ -13,3 +13,5 @@ LAMMPS_TOKO_EXECUTABLE = "/home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/
 SLURM_TEMPLATE_PATH = "../slurm.template"
 SLURM_SH = "slurm.sh"
 TOKO_PARTITION_TO_USE = "mini"
+TOKO_URL = "toko.uncu.edu.ar"
+USER = "fwilliamson"

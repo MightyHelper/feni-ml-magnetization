@@ -17,6 +17,10 @@ def recursive_input_search(path: str):
 			yield f"{path}/{file}"
 
 
+def sorted_recursive_input_search(path: str):
+	return sorted([*recursive_input_search(path)])
+
+
 def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cylinder | None | Sphere | Plane | Cone | Prism:
 	# Remove multiple spaces
 	line = split_command(line)
@@ -114,6 +118,7 @@ def is_correct_parsing(line: list[str], command: str) -> bool:
 		if (parsed_command[x] != line[x]
 			and f"{parsed_command[x]}.0" != line[x]
 			and f"{line[x]}.0" != parsed_command[x]
+			and not parsed_command[x].startswith(nanoparticlebuilder.SEED_LOCATOR)
 			and abs(float(parsed_command[x]) - float(line[x])) > 0.0001):
 			logging.debug(f"[red]{parsed_command[x]} != {line[x]}[/red]")
 			return False
@@ -227,7 +232,7 @@ def parse_shape(lines: list[str], nano: nanoparticlebuilder.NanoparticleBuilder)
 
 
 def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticlebuilder.NanoparticleBuilder]:
-	for shape in recursive_input_search(path):
+	for shape in sorted_recursive_input_search(path):
 		if any([section in shape for section in ignore]):  # Ignore
 			continue
 		yield parse_single_shape(shape)

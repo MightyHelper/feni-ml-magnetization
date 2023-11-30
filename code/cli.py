@@ -72,9 +72,10 @@ def ls(path: str = "../Shapes"):
 	table.add_column("Type")
 	table.add_column("SubType")
 	table.add_column("SubSubType")
-	for i, key in enumerate(parser.recursive_input_search(path)):
-		ptype, subtype, subsubtype = parse_nanoparticle_name(key)
-		table.add_row(f"[green]{i}[/green]", f"[cyan]{key}[/cyan]", f"[blue]{ptype}[/blue]", f"[blue]{subtype}[/blue]", f"[blue]{subsubtype}[/blue]")
+	table.add_column("Random")
+	for i, (path, nano) in enumerate(parser.load_shapes(path, [])):
+		ptype, subtype, subsubtype = parse_nanoparticle_name(path)
+		table.add_row(f"[green]{i}[/green]", f"[cyan]{path}[/cyan]", f"[blue]{ptype}[/blue]", f"[blue]{subtype}[/blue]", f"[blue]{subsubtype}[/blue]", f"[green]True[/green]" if nano.is_random() else "[red]False[/red]")
 	console.print(table, highlight=True)
 
 
@@ -109,8 +110,10 @@ def inspect(path: str):
 	Inspect a nanoparticle
 	"""
 	_, nano = parser.parse_single_shape(path)
+	is_random = nano.is_random()
 	nano = nano.build()
 	region = nano.get_region()
+	rprint(f"[bold underline green]Can seeds be modified?[/bold underline green] {is_random}")
 	rprint(nano)
 	rprint(region)
 
@@ -120,7 +123,7 @@ def shrink():
 	"""
 	Shrink all nanoparticle shapes
 	"""
-	for path in parser.recursive_input_search("../Shapes"):
+	for path in parser.sorted_recursive_input_search("../Shapes"):
 		_, nano = parser.parse_single_shape(path)
 		nano = nano.build()
 		region = nano.get_region()

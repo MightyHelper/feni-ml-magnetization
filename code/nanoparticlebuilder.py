@@ -1,20 +1,24 @@
+import logging
 import typing
 
 import shapes
 from nanoparticle import Nanoparticle
 
 
+SEED_LOCATOR = "zeed:"
 class NanoparticleBuilder:
 	regions: list[shapes.Shape]
 	atom_manipulation: list[str]
 	region_name_map: dict[str, int]
 	title: str
+	seed_values: list[int]
 
 	def __init__(self, title: str = "Nanoparticle"):
 		self.regions = []
 		self.atom_manipulation = []
 		self.region_name_map = {}
 		self.title = title
+		self.seed_values = []
 
 	def add_shape(self, shape: shapes.Shape, action: str = 'create', atom_type: str = "1") -> int:
 		region_index = len(self.regions)
@@ -65,7 +69,7 @@ class NanoparticleBuilder:
 		if isinstance(region_name, str):
 			region_name = self.get_region_id_by_name(region_name)
 		region_name = int(region_name)
-		command = f"set region reg{region_name} type/subset {atom_type} {count} {seed}"
+		command = f"set region reg{region_name} type/subset {atom_type} {count} {self.new_seed(seed)}"
 		self.atom_manipulation.append(command)
 		return command
 
@@ -75,12 +79,13 @@ class NanoparticleBuilder:
 		return command
 
 	def add_set_type_subset_group(self, atom_type: str, group_name: str, count: str, seed: str) -> str:
-		command = f"set group {group_name} type/subset {atom_type} {count} {seed}"
+
+		command = f"set group {group_name} type/subset {atom_type} {count} {self.new_seed(seed)}"
 		self.atom_manipulation.append(command)
 		return command
 
 	def add_set_type_ratio_group(self, atom_type: str, group_name: str, ratio: str, seed: str) -> str:
-		command = f"set group {group_name} type/ratio {atom_type} {ratio} {seed}"
+		command = f"set group {group_name} type/ratio {atom_type} {ratio} {self.new_seed(seed)}"
 		self.atom_manipulation.append(command)
 		return command
 
@@ -97,9 +102,30 @@ class NanoparticleBuilder:
 		self.atom_manipulation.append(command)
 		return command
 
-	def build(self, **kwargs):
+	def get_seed_count(self) -> int:
+		return len(self.seed_values)
+
+	def is_random(self) -> bool:
+		return self.get_seed_count() > 0
+
+	def build(self, seeds=None, **kwargs):
+		seeds = self.seed_values if seeds is None else seeds
 		nano = Nanoparticle({'title': self.title, **kwargs})
 		nano.regions = self.regions
 		nano.atom_manipulation = self.atom_manipulation
 		nano.region_name_map = self.region_name_map
+		seed_count = self.get_seed_count()
+		nano.atom_manipulation = self.replace_seeds(nano.atom_manipulation, seed_count, seeds)
+		logging.debug(nano.atom_manipulation)
 		return nano
+
+	def replace_seeds(self, atom_manipulation, seed_count, seeds):
+		if len(seeds) != seed_count:
+			raise Exception(f"Expected {seed_count} seeds, got {len(seeds)}")
+		for i in range(0, seed_count):
+			atom_manipulation = [x.replace(SEED_LOCATOR + str(i), str(seeds[i])) for x in atom_manipulation]
+		return atom_manipulation
+
+	def new_seed(self, seed):
+		self.seed_values.append(seed)
+		return SEED_LOCATOR + str(len(self.seed_values) - 1)
