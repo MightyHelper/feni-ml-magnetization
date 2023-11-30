@@ -207,6 +207,23 @@ def parse_group(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Non
 		raise ValueError(f"Unknown group property: {prop}")
 
 
+def parse_delete_atoms(line, nano):
+	# delete_atoms region v compress yes
+	line = split_command(line)
+	selector_type = line[1]
+	# Parse region
+	if selector_type == "region":
+		region_name = line[2]
+		keywords = line[3:]  # [key1, value1, key2, value2, ...]
+		# keywords = {keywords[i]: keywords[i + 1] for i in range(0, len(keywords), 2)}
+		keywords = " ".join(keywords)
+		result = nano.add_delete_atoms_region(region_name, keywords)
+		logging.debug(result)
+		return
+	else:
+		raise ValueError(f"Unknown selector type: {selector_type}")
+
+
 def parse_line(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> None:
 	if line.startswith("#"):
 		logging.debug(f"[blue]{line}[/blue]", extra={"markup": True})
@@ -222,6 +239,10 @@ def parse_line(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> None
 	elif line.startswith("group"):
 		logging.debug(f"[grey]{line}[/grey]", extra={"markup": True})
 		parse_group(line, nano)
+	elif line.startswith("delete_atoms"):
+		logging.debug(f"[red]{line}[/red]", extra={"markup": True})
+		parse_delete_atoms(line, nano)
+
 	else:
 		raise ValueError(f"Unknown line: {line}")
 

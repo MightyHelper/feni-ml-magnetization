@@ -129,3 +129,10 @@ class NanoparticleBuilder:
 	def new_seed(self, seed):
 		self.seed_values.append(seed)
 		return SEED_LOCATOR + str(len(self.seed_values) - 1)
+
+	def add_delete_atoms_region(self, region_name: str, keywords: str):
+		# delete_atoms region v compress yes
+		region_id = self.get_region_id_by_name(region_name)
+		command = f"delete_atoms region reg{region_id} {keywords}"
+		self.atom_manipulation.append(command)
+		return command
