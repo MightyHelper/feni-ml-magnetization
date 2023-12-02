@@ -96,8 +96,8 @@ train_catboost <- function() {
 
 train_svm <- function() {
   svm_grid <- expand.grid(
-    C = 10^seq(0, 4, length = 5),
-    sigma = 10^seq(-7, -1, length = 5)
+    C = 10^seq(0, 4, length = 20),
+    sigma = 10^seq(-7, -1, length = 20)
   )
   model <- caret::train(
     # x = train_data %>% select(-tmg),
