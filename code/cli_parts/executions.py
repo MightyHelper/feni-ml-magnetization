@@ -19,7 +19,7 @@ import config
 import executor
 import nanoparticle
 import poorly_coded_parser as parser
-from utils import get_running_executions, add_task, ZeroHighlighter
+from utils import get_running_executions, add_task, ZeroHighlighter, resolve_path
 from cli_parts.number_highlighter import console
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -115,10 +115,11 @@ def live():
 
 
 @executions.command()
-def execute(path: str, plot: bool = False, test: bool = True, in_toko: bool = False):
+def execute(path: Path, plot: bool = False, test: bool = True, in_toko: bool = False):
 	"""
 	Execute a nanoparticle simulation
 	"""
+	path = resolve_path(path)
 	_, nano = parser.parse_single_shape(path)
 	nano = nano.build()
 	nano.execute(test_run=test, in_toko=in_toko)

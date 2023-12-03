@@ -29,9 +29,9 @@ logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 
-main.add_typer(shapefolder, name="sf")
-main.add_typer(executions, name="exec")
-main.add_typer(fuzzer, name="fuz")
+main.add_typer(shapefolder, name="sf", help="Commands for nanoparticle shape folder")
+main.add_typer(executions, name="exec", help="Commands for nanoparticle executions")
+main.add_typer(fuzzer, name="fuz", help="Commands for nanoparticle fuzzing")
 
 if __name__ == "__main__":
 	main()

@@ -3,7 +3,7 @@ import os
 import re
 
 import nanoparticlebuilder
-import nanoparticle
+import template
 
 import shapes as s
 from shapes import Cylinder, Sphere, Plane, Cone, Prism
@@ -11,6 +11,8 @@ from shapes import Cylinder, Sphere, Plane, Cone, Prism
 
 def recursive_input_search(path: str):
 	for file in os.listdir(path):
+		if file.startswith("Test"):
+			continue
 		if os.path.isdir(f"{path}/{file}"):
 			yield from recursive_input_search(f"{path}/{file}")
 		elif file.endswith(".in"):
@@ -292,20 +294,21 @@ def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticlebuilder.N
 		yield parse_single_shape(shape)
 
 
-def parse_single_shape(shape: str, full_file: bool = False) -> tuple[str, nanoparticlebuilder.NanoparticleBuilder]:
+def parse_single_shape(shape: str, full_file: bool = False, replacements: dict | None = None) -> tuple[str, nanoparticlebuilder.NanoparticleBuilder]:
 	"""
 	Parses a single shape file
 	:param shape:  Path to shape file
 	:param full_file:  Whether to parse the full file or just the first region
 	:return:
 	"""
+	replacements = replacements or {}
 	with open(shape, "r") as f:
 		logging.info(f"[yellow]=== {shape} ===[/yellow]", extra={"markup": True})
 		nano = nanoparticlebuilder.NanoparticleBuilder(title=shape)
 		lines = f.readlines()
 		if not full_file:
 			lines = locate_relevant_lines(lines)
-		lines = [ll.strip() for l in lines if (ll := l.strip()) != ""]
+		lines = [template.replace_templates(ll.strip(), replacements) for l in lines if (ll := l.strip()) != ""]
 		parse_shape(lines, nano)
 		return shape, nano
 
