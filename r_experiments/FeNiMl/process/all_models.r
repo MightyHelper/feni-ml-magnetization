@@ -23,7 +23,7 @@ if (!require("catboost")) {
   devtools::install_url('https://github.com/catboost/catboost/releases/download/v1.2.2/catboost-R-Linux-1.2.2.tgz', INSTALL_opts = c("--no-multiarch", "--no-test-load"))
 }
 library(catboost) # CatBoost
-options(error=traceback)
+options(error=traceback, ragg.max_dim = c(500000, 500000))
 
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -51,9 +51,8 @@ if (clip_dataset) {
   dataset <- dataset[, -nzv]
 }
 dataset <- dataset %>% select(-name) # TODO: remove this
-
+set.seed(123123) # for reproducibility
 if (split_data) {
-  set.seed(123) # for reproducibility
   splitIndex <- createDataPartition(dataset$tmg, p = 0.7, list = FALSE)
   train_data <- dataset[splitIndex,] %>% as.data.frame()
   test_data <- dataset[-splitIndex,] %>% as.data.frame()
@@ -88,6 +87,7 @@ train_catboost <- function() {
     trControl = ctrl,
     # tuneGrid = catboostgrid, # for catboost
     #tunelength = 2,
+    tuneLength = 100,
     logging_level = "Silent",
     preProcess = c("center", "scale") # Standardization
   )
@@ -106,7 +106,8 @@ train_svm <- function() {
     data = train_data,
     method = "svmRadial",
     trControl = ctrl,
-    tuneGrid = svm_grid,
+    tuneLength = 100,
+    # tuneGrid = svm_grid,
     # preProcess = c("center", "scale"), # Standardization
     verbose = 100
   )
@@ -114,16 +115,17 @@ train_svm <- function() {
 }
 
 train_glment <- function() {
-  glmnet_grid <- expand.grid(
-    alpha = 10^seq(-2, -1, length = 50),
-    lambda = 10^seq(-6, -3.5, length = 50)
-  )
+  # glmnet_grid <- expand.grid(
+  #   alpha = 0.1 + seq(-0.5, 0.5, length = 20),
+  #   lambda = 0.0001168715 + seq(-0.0005, 0.0005, length = 20)
+  # )
   model <- caret::train(
     x = train_data %>% select(-tmg),
     y = train_data$tmg,
     method = "glmnet",
     trControl = ctrl,
-    tuneGrid = glmnet_grid,
+    # tuneGrid = glmnet_grid,
+    tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
     verbose = 100
   )
@@ -131,17 +133,18 @@ train_glment <- function() {
 }
 
 train_ranger <- function() {
-  ranger_grid <- expand.grid(
-    mtry = c(2, 3, 4, 5, 6, 7, 8, 9, 10),
-    min.node.size = c(1, 3, 5, 7, 9, 11, 13, 15),
-    splitrule = c("variance", "extratrees")
-  )
+  # ranger_grid <- expand.grid(
+  #   mtry = c(2, 3, 4, 5, 6, 7, 8, 9, 10),
+  #   min.node.size = c(1, 3, 5, 7, 9, 11, 13, 15),
+  #   splitrule = c("variance", "extratrees")
+  # )
   model <- caret::train(
     x = train_data %>% select(-tmg),
     y = train_data$tmg,
     method = "ranger",
     trControl = ctrl,
-    tuneGrid = ranger_grid,
+    # tuneGrid = ranger_grid,
+    tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
     importance = "impurity", # permutation
     verbose = 100,
@@ -162,24 +165,33 @@ save_hyperparameters_plot <- function() {
       color = 'orange'
     ) +
     theme_classic() +
-    labs(title = "Model: Mean and Standard deviation after hyper-parameter tuning") +
+    labs(title = paste0(model_name, ": RMSE by hyperparameters"), x = "Hyperparameters", y = "RMSE") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
   ggsave(paste0(model_name, "_hyperparameters.png"), plot, width = 1000 + 20 * num_rows, height = 2000, units = "px", limitsize = FALSE)
 }
 
 save_hyperparameter_heatmap <- function() {
   print(paste0("Plotting hyperparameters grid for ", model_name, " because it has ", length(hyper), " hyperparameters", "(", hyper[[1]], ", ", hyper[[2]], ")"))
-  print(model$results[[hyper[[1]]]])
-  print(model$results[[hyper[[2]]]])
-  print(model$results$RMSE)
+  x <- model$results[[hyper[[1]]]]
+  y <- model$results[[hyper[[2]]]]
+  # print(x)
+  # print(y)
+  # print(model$results$RMSE)
   # Heatmap of RMSE by hyperparameters
-  plot <- ggplot(model$results, aes(x = as.factor(model$results[[hyper[[1]]]]), y = as.factor(model$results[[hyper[[2]]]]), fill = RMSE)) +
+  plot <- ggplot(model$results, aes(x = as.factor(x), y = as.factor(y), fill = RMSE)) +
     geom_tile() +
-    scale_fill_gradientn(colours = c("blue", "green", "yellow", "red")) +
+    scale_fill_gradientn(colours = c("black", "blue", "blue", "green", "green", "yellow", "yellow", "red", "red", "white")) +
+    # Add pink circle point at minimum
+    geom_point(aes(x = as.factor(x[which.min(model$results$RMSE)]), y = as.factor(y[which.min(model$results$RMSE)])), color = "pink", size = 2) +
+    # Add red circle point at maximum
+    geom_point(aes(x = as.factor(x[which.max(model$results$RMSE)]), y = as.factor(y[which.max(model$results$RMSE)])), color = "magenta", size = 2) +
     labs(title = paste0(model_name, ": RMSE by hyperparameters"), x = hyper[[1]], y = hyper[[2]]) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  unique_count_hyper1 <- length(unique(model$results[[hyper[[1]]]]))
-  unique_count_hyper2 <- length(unique(model$results[[hyper[[2]]]]))
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    scale_x_discrete(labels = function(x) sprintf("%.3e", as.numeric(x))) +
+    scale_y_discrete(labels = function(y) sprintf("%.3e", as.numeric(y)))
+
+  unique_count_hyper1 <- length(unique(x))
+  unique_count_hyper2 <- length(unique(y))
   ggsave(paste0(model_name, "_hyperparameters_grid.png"), plot, width = 1000 + 30 * unique_count_hyper1, height = 1000 + 30 * unique_count_hyper2, units = "px", limitsize = FALSE)
 }
 
