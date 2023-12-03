@@ -24,7 +24,7 @@ def ls(path: str = "../Shapes"):
 	table.add_column("Type")
 	table.add_column("SubType")
 	table.add_column("SubSubType")
-	table.add_column("Random")
+	table.add_column("R")
 	for i, (path, nano) in enumerate(parser.load_shapes(path, [])):
 		ptype, subtype, subsubtype = parse_nanoparticle_name(path)
 		table.add_row(
@@ -33,13 +33,13 @@ def ls(path: str = "../Shapes"):
 			f"[blue]{ptype}[/blue]",
 			f"[blue]{subtype}[/blue]",
 			f"[blue]{subsubtype}[/blue]",
-			f"[green]{len(nano.seed_values)}[/green]" if nano.is_random() else "[red]False[/red]"
+			f"[green]{len(nano.seed_values)}[/green]" if nano.is_random() else "[red]0[/red]"
 		)
 	console.print(table, highlight=True)
 
 
 @shapefolder.command()
-def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True):
+def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True, seed_count: int = 1, seed: int = 123):
 	"""
 	Runs all nanoparticle simulations in a folder
 	"""
@@ -48,8 +48,8 @@ def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True)
 		if test:
 			threads = multiprocessing.cpu_count()
 		else:
-			threads = multiprocessing.cpu_count() / 8
-	nanoparticles = executor.execute_all_nanoparticles_in(path, threads, [], test)
+			threads = multiprocessing.cpu_count() // 8
+	nanoparticles = executor.execute_all_nanoparticles_in(path, threads, [], test, seed_count, seed)
 	nanoparticles.drop(columns=["np"], inplace=True)
 	table = rich.table.Table(title="Nanoparticle run results")
 	for column in nanoparticles.columns:

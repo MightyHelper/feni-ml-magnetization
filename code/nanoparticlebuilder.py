@@ -37,13 +37,14 @@ class NanoparticleBuilder:
 	def use_random_ratio(self, selector: tuple[str, str] = ("type", "1"), target_atom_type: str = "2", ratio_to_convert: str = "0.35", random_seed: str = "250") -> None:
 		self.atom_manipulation.append(f"set {selector[0]} {selector[1]} type/ratio {target_atom_type} {ratio_to_convert} {random_seed}")
 
-	def add_named_shape(self, shape: shapes.Shape, region_name: str) -> None:
+	def add_named_shape(self, shape: shapes.Shape, region_name: str, extra: list[str]) -> None:
 		region_id = self.register_region_name(region_name)
 		self.regions.append(shape)
-		self.atom_manipulation.append(shape.get_region(f"reg{region_id}"))
+		self.atom_manipulation.append(shape.get_region(f"reg{region_id}") + " " + " ".join(extra))
 
 	def register_region_name(self, region_name: str) -> int:
-		self.region_name_map[region_name] = len(self.regions)
+		self.region_name_map[region_name] = len(self.region_name_map.keys())
+		logging.debug(f"Registered region {region_name} as {self.region_name_map[region_name]}")
 		return self.region_name_map[region_name]
 
 	def get_region_id_by_name(self, region_name: str) -> int:
@@ -94,11 +95,13 @@ class NanoparticleBuilder:
 		self.atom_manipulation.append(command)
 		return command
 
-	def add_intersect(self, regions: list[str], region_name: str):
+	def add_intersect(self, regions: list[str], region_name: str, extra: list[str]):
 		region_indices = [self.get_region_id_by_name(region) for region in regions]
 		region_indices = [f"reg{i}" for i in region_indices]
 		new_region_id = self.register_region_name(region_name)
-		command = f"region reg{new_region_id} intersect {len(regions)} {' '.join(region_indices)} units box"
+		logging.debug(f"Intersecting regions {region_indices} into {new_region_id}")
+		logging.debug(str(self.region_name_map))
+		command = f"region reg{new_region_id} intersect {len(regions)} {' '.join(region_indices)} {' '.join(extra)}"
 		self.atom_manipulation.append(command)
 		return command
 
@@ -134,5 +137,17 @@ class NanoparticleBuilder:
 		# delete_atoms region v compress yes
 		region_id = self.get_region_id_by_name(region_name)
 		command = f"delete_atoms region reg{region_id} {keywords}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_set_type_ratio_region(self, value, region_name, ratio, seed):
+		region_id = self.get_region_id_by_name(region_name)
+		command = f"set region reg{region_id} type/ratio {value} {ratio} {self.new_seed(seed)}"
+		self.atom_manipulation.append(command)
+		return command
+
+	def add_group_region(self, region_name, group_name):
+		region_id = self.get_region_id_by_name(region_name)
+		command = f"group {group_name} region reg{region_id}"
 		self.atom_manipulation.append(command)
 		return command
