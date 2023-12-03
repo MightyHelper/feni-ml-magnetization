@@ -86,8 +86,8 @@ train_catboost <- function() {
     method = catboost.caret,
     trControl = ctrl,
     # tuneGrid = catboostgrid, # for catboost
-    #tunelength = 2,
-    tuneLength = 100,
+    # tunelength = 2,
+    # tuneLength = 100,
     logging_level = "Silent",
     preProcess = c("center", "scale") # Standardization
   )
@@ -174,13 +174,12 @@ save_hyperparameter_heatmap <- function() {
   print(paste0("Plotting hyperparameters grid for ", model_name, " because it has ", length(hyper), " hyperparameters", "(", hyper[[1]], ", ", hyper[[2]], ")"))
   x <- model$results[[hyper[[1]]]]
   y <- model$results[[hyper[[2]]]]
-  # print(x)
-  # print(y)
-  # print(model$results$RMSE)
+  min_rmse <- min(model$results$RMSE)
+  rmse_50 <- quantile(model$results$RMSE, 0.5)
   # Heatmap of RMSE by hyperparameters
   plot <- ggplot(model$results, aes(x = as.factor(x), y = as.factor(y), fill = RMSE)) +
     geom_tile() +
-    scale_fill_gradientn(colours = c("black", "blue", "blue", "green", "green", "yellow", "yellow", "red", "red", "white")) +
+    scale_fill_gradientn(colours = c("black", "blue", "green", "yellow", "red", "white"), limits = c(min_rmse, rmse_50)) +
     # Add pink circle point at minimum
     geom_point(aes(x = as.factor(x[which.min(model$results$RMSE)]), y = as.factor(y[which.min(model$results$RMSE)])), color = "pink", size = 2) +
     # Add red circle point at maximum
