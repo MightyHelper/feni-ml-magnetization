@@ -23,7 +23,7 @@ if (!require("catboost")) {
   devtools::install_url('https://github.com/catboost/catboost/releases/download/v1.2.2/catboost-R-Linux-1.2.2.tgz', INSTALL_opts = c("--no-multiarch", "--no-test-load"))
 }
 library(catboost) # CatBoost
-options(error=traceback, ragg.max_dim = c(500000, 500000))
+options(error = traceback, ragg.max_dim = c(500000, 500000))
 
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -176,6 +176,8 @@ save_hyperparameter_heatmap <- function() {
   y <- model$results[[hyper[[2]]]]
   min_rmse <- min(model$results$RMSE)
   rmse_50 <- quantile(model$results$RMSE, 0.5)
+  # Export csv
+  write.csv(model$results, paste0(model_name, "_hyperparameters_grid.csv"), row.names = FALSE)
   # Heatmap of RMSE by hyperparameters
   plot <- ggplot(model$results, aes(x = as.factor(x), y = as.factor(y), fill = RMSE)) +
     geom_tile() +
@@ -209,13 +211,16 @@ save_importance <- function() {
   ggsave(paste0(model_name, "_importance.png"), plot, width = 2000, height = 2000, units = "px", limitsize = FALSE)
   write.csv(importance_results, paste0(model_name, "_importance.csv"))
 }
+
 save_execution_result <- function() {
   predictions <- predict(model, test_data)
-  RMSE <- sqrt(mean((predictions - test_data$tmg)^2))
+  RMSE_full <- caret::RMSE(predictions, test_data$tmg)
+  RMSE_fold <- mean(model$resample$RMSE)
   print("Hyperparameters:")
   hyperparameters_rmse <- data.frame(
     bestTune = model$bestTune,
-    RMSE = RMSE
+    RMSE_fold = RMSE_fold,
+    RMSE_full = RMSE_full
   )
   print(hyperparameters_rmse)
   write.csv(hyperparameters_rmse, paste0(model_name, "_hyperparameters_rmse.csv"), row.names = FALSE)
@@ -223,7 +228,7 @@ save_execution_result <- function() {
   plot <- ggplot(results, aes(x = Reference, y = Predicted)) +
     geom_point(color = 'blue') +
     geom_abline(intercept = 0, slope = 1, color = 'red') +
-    ggtitle(paste0("Model: ", model_name, " - RMSE: ", RMSE)) +
+    ggtitle(paste0("Model: ", model_name, " - RMSE-fold: ", format(RMSE_fold, scientific=F, nsmall=4), " - RMSE-full: ", format(RMSE_full, scientific=F, nsmall=4))) +
     xlab("Reference Values") +
     ylab("Predicted Values") +
     theme_bw()
@@ -257,7 +262,6 @@ if (model_name == "ranger") {
 print("Model:")
 
 print(model)
-
 
 num_rows <- model$results %>% nrow()
 print(paste0("Saving results... (", num_rows, " rows)"))
