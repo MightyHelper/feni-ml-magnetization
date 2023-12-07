@@ -1,0 +1,2 @@
+"bestTune.depth","bestTune.learning_rate","bestTune.iterations","bestTune.l2_leaf_reg","bestTune.rsm","bestTune.border_count","RMSE_fold","RMSE_full"
+6,0.135335283236613,100,1e-06,0.9,255,0.0324024673983281,0.00866050549793158

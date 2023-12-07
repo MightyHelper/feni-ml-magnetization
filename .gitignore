@@ -3,11 +3,6 @@ executions/*
 r_experiments/mount.sh
 /r_experiments/FeNiMl/alpha0.png
 /r_experiments/FeNiMl/alpha1.png
-/r_experiments/FeNiMl/process/catboost_hyperparameters.png
-/r_experiments/FeNiMl/process/catboost_importance.csv
-/r_experiments/FeNiMl/process/catboost_importance.png
-/r_experiments/FeNiMl/process/catboost_results.png
-/r_experiments/FeNiMl/process/catboost_info/catboost_training.json
 /r_experiments/FeNiMl/combined_plot.pdf
 /exports/data.zip
 /exports/data2.zip
@@ -15,21 +10,8 @@ r_experiments/mount.sh
 /r_experiments/FeNiMl/process/ranger_hyperparameters.png
 /code/results.csv
 /r_experiments/FeNiMl/rf_permutation_improtance.png
-/r_experiments/FeNiMl/process/Rplots.pdf
-/r_experiments/FeNiMl/process/Rplots1.pdf
-/r_experiments/FeNiMl/process/Rplots2.pdf
-/r_experiments/FeNiMl/process/Rplots3.pdf
 /code/test.py
-/r_experiments/FeNiMl/process/catboost_info/time_left.tsv
 /r_experiments/FeNiMl/process/Too many glmnet hyperparameters.png
-/r_experiments/FeNiMl/process/saves/glmnet_importance.png
-/r_experiments/FeNiMl/process/saves/glmnet_hyperparameters.png
-/r_experiments/FeNiMl/process/glmnet_importance.csv
-/r_experiments/FeNiMl/process/saves/glmnet_importance.csv
-/r_experiments/FeNiMl/process/glmnet_hyperparameters.png
-/r_experiments/FeNiMl/process/saves/glmnet_results.png
-/r_experiments/FeNiMl/process/catboost_info/learn/events.out.tfevents
-/r_experiments/FeNiMl/process/catboost_info/learn_error.tsv
-/r_experiments/FeNiMl/process/catboost_info/tmp/cat_feature_index.4082ff1f-289beec7-b9fd7b20-8a8e8f6d.tmp
-/r_experiments/FeNiMl/process/glmnet_results.png
-/r_experiments/FeNiMl/process/glmnet_importance.png
+/r_experiments/FeNiMl/process/saves/*
+/r_experiments/FeNiMl/process/saves
+/r_experiments/FeNiMl/process/catboost_info
