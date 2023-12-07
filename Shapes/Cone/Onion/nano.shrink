@@ -1,16 +1,16 @@
-region reg0 cone z 0.0 0.0 18.0 1.0 -21.0 21.0 units box
+region reg0 cone z 0.0 0.0 18.0 1.0 -21.0 21.0 units box 
 create_atoms 1 region reg0
-region reg1 cone z 0.0 0.0 13.5 1.0 -21.0 21.0 units box
+region reg1 cone z 0.0 0.0 13.5 1.0 -21.0 21.0 units box 
 set region reg1 type 2
-region reg2 cone z 0.0 0.0 11.5 1.0 -21.0 21.0 units box
+region reg2 cone z 0.0 0.0 11.5 1.0 -21.0 21.0 units box 
 set region reg2 type 1
-region reg3 cone z 0.0 0.0 7.5 1.0 -21.0 21.0 units box
+region reg3 cone z 0.0 0.0 7.5 1.0 -21.0 21.0 units box 
 set region reg3 type 2
-region reg4 cone z 0.0 0.0 5.5 1.0 -21.0 21.0 units box
+region reg4 cone z 0.0 0.0 5.5 1.0 -21.0 21.0 units box 
 set region reg4 type 1
-region reg5 cone z 0.0 0.0 2.5 1.0 -21.0 21.0 units box
+region reg5 cone z 0.0 0.0 2.5 1.0 -21.0 21.0 units box 
 set region reg5 type 2
-region reg6 cone z 0.0 0.0 1.0 1.0 -21.0 21.0 units box
+region reg6 cone z 0.0 0.0 1.0 1.0 -21.0 21.0 units box 
 set region reg6 type 1
 group Fe type 1
 group Ni type 2

@@ -99,6 +99,7 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		extra = region_args[7:]
 		assert extra[0] == "units", f"Unknown units: {extra[0]}"
 		assert extra[1] == "box", f"Unknown box: {extra[1]}"
+		extra = extra[2:]
 		shape = s.Cone(axis, coord_a, coord_b, radlo, radhi, lo, hi)
 		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
 		nano.add_named_shape(shape, region_name, extra)
