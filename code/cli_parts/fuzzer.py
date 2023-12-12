@@ -48,6 +48,8 @@ def bayes(
 	:param path: The path to the nanoparticle
 	:param target_atom_count: The target atom count
 	:param target_ratio: The target ratio
+	:param target_atom_count_importance: The importance of the atom count
+	:param target_ratio_importance: The importance of the ratio
 	:param plot: Whether to plot the nanoparticle
 	"""
 	rprint(f"Using bayesian search to find the correct value for a parameter in a nanoparticle")
