@@ -22,8 +22,9 @@ def get_full_function(path: str):
 
 	def fuzz(**kwargs):
 		kwargs = {k: str(v) for k, v in kwargs.items()}
+		rprint(kwargs)
 		_, nanoparticle = parser.parse_single_shape(path, False, replacements=kwargs)
-		nanoparticle = nanoparticle.build(kwargs={'title': 'Fuzzing ' + nanoparticle.title})
+		nanoparticle = nanoparticle.build(title='Fuzzing ' + nanoparticle.title)
 		nanoparticle.execute(True)
 		result = executor.parse_ok_execution_results("fuzzed", nanoparticle, True)
 		atom_count = result['total']
