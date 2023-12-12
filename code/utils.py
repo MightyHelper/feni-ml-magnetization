@@ -114,8 +114,4 @@ def dot_dot(path: str):
 
 
 def resolve_path(path):
-	if platform.system() == "Linux":
-		path = path.absolute().as_posix()
-	else:
-		path = path.absolute().as_uri()
-	return path
+	return path.absolute().as_posix()
