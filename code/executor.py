@@ -1,15 +1,30 @@
 # Execute nanoparticle simulations in batch
+import logging
 import multiprocessing
 import multiprocessing.dummy
+import random
+from typing import cast
+
+import nanoparticlebuilder
 import poorly_coded_parser as parser
 import nanoparticle
 import pandas as pd
 from subprocess import CalledProcessError
 
 
-def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool=True):
-	nanoparticles = parser.load_shapes(path, ignore)
-	nanoparticles = [(key, np.build()) for key, np in nanoparticles]
+def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool = True, seed_count: int = 1, seed: int = 123):
+	nano_builders = parser.load_shapes(path, ignore)
+	nanoparticles = []
+	random.seed(seed)
+	for key, nano in nano_builders:
+		nano = cast(nanoparticlebuilder.NanoparticleBuilder, nano)
+		if nano.is_random():
+			for i in range(seed_count):
+				seeds = [random.randint(0, 100000) for _ in range(len(nano.seed_values))]
+				logging.info(f"Using seeds {seeds}")
+				nanoparticles.append((key, nano.build(seeds)))
+		else:
+			nanoparticles.append((key, nano.build()))
 	if threads == 1:
 		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
 	else:
@@ -18,7 +33,7 @@ def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], tes
 	return pd.DataFrame(particles)
 
 
-def _process_nanoparticle(ignore: list[str], key: str, np: nanoparticle.Nanoparticle, test: bool=True):
+def _process_nanoparticle(ignore: list[str], key: str, np: nanoparticle.Nanoparticle, test: bool = True):
 	print(f"\033[32m{key}\033[0m")
 	if not any([section in key for section in ignore]):
 		try:

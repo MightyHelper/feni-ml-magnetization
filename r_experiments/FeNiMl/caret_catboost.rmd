@@ -1,0 +1,230 @@
+---
+title: "Regression Model using Caret FeNi"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Clean the environment
+```{r}
+rm(list = ls())
+cat("\014")  # clean the console
+```
+```{r}
+library(ranger)   # Random Forest
+library(glmnet)   # elastic net
+library(kernlab)  # SVM
+
+```
+https://catboost.ai/en/docs/installation/r-installation-binary-installation
+
+```{r eval=FALSE, include=FALSE}
+#install.packages('devtools')
+devtools::install_url('https://github.com/catboost/catboost/releases/download/v1.2.2/catboost-R-Linux-1.2.2.tgz', INSTALL_opts = c("--no-multiarch", "--no-test-load"))
+```
+```{r}
+library(catboost)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+## 1. Reading the dataset
+
+```{r}
+library(readr)
+dataset <- read_csv("../new_dataset.csv")
+head(dataset)
+```
+
+## 1.1 remove predictor with zero variance
+
+```{r}
+library(caret)
+nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
+dataset <- dataset[, -nzv]
+```
+
+```{r}
+dataset <- dataset %>% select(-name)
+```
+
+## 2. Splitting the dataset
+We will split the dataset into a training set (70%) and a testing set (30%).
+
+```{r}
+set.seed(123) # for reproducibility
+splitIndex <- createDataPartition(dataset$tmg, p = 0.7, list = FALSE)
+train_data <- dataset[splitIndex, ]
+test_data <- dataset[-splitIndex, ]
+
+train_data <-train_data %>% as.data.frame()
+```
+
+## 3. Creating a model model
+Using the glmnet package, we'll predict the `tmg` feature
+
+
+```{r}
+# Define the control parameters for training
+ctrl <- trainControl(method = "cv", 
+                     number = 5,
+                     returnResamp = 'final',
+                     savePredictions = 'final',
+                     verboseIter = F,
+                     allowParallel = F
+                     )
+```
+
+
+The caret's train function sometimes requires to be adapted to the algorithm used. For instance, the `ranger` packages requires to set the importance, while the `glmenet`does not!
+
+[info for range parameters](https://stackoverflow.com/questions/48334929/r-using-ranger-with-caret-tunegrid-argument)
+
+
+### Define a grid for parameter tuning for catboost
+This should be adapted for each algorithm
+
+```{r}
+# Define the parameter grid
+catboostgrid <- expand.grid(
+  # Maximum depth of trees. Deeper trees can model more complex relationships, 
+  # but risk overfitting and require more data and time to train.
+  depth = c(6, 8, 10),
+
+  # Learning rate, or shrinkage factor. This parameter scales the contribution of each tree. 
+  # Lower values can achieve better performance but require more trees.
+  learning_rate = c(0.01, 0.1),
+
+  # Maximum number of trees to be built, or the number of boosting steps. More iterations lead to a more complex model, 
+  # but also increase the risk of overfitting and the time to train the model.
+  iterations = c(100, 200),
+
+  # L2 regularization term for the cost function. This parameter applies a penalty 
+  # for complexity in the structure of the individual trees. Higher values make the model more conservative.
+  l2_leaf_reg = c(1, 3),
+
+  # Fraction of features to be used for each tree, a technique to reduce 
+  # overfitting and speed up training.
+  rsm = c(0.8, 1),
+
+  # Number of splits considered for each feature. Higher values can lead to finer splits, but are more computationally expensive.
+  border_count = c(32, 64)
+)
+
+```
+
+
+### Caret for other models
+```{r}
+# Train the  model with caret
+model <- train(
+  tmg ~ ., # Define the formula
+  
+  data = train_data,
+  #method = "ranger", # 
+  #method = "glmnet", # 
+  #method =  catboost.caret, # for catboost
+  method = "svmRadial", # for support vector machines install kernlab
+  trControl = ctrl,
+  # tuneGrid = expand.grid(alpha = 0.5, lambda = 0.1), # For Elastic Net (alpha=0.5)
+  tuneGrid = expand.grid(C = c(0.1,0.5,0.25), sigma = c(0.007, 0.02, 0.1, 0.005)), # for SVM
+  #tuneGrid = grid, # for catboost
+  #tunelength = 2,
+  preProcess = c("center", "scale") # Standardization
+  #importance = "permutation" #  parameter used for ranger
+)
+
+# Print the 
+print(model)
+```
+### Caret for catboost
+
+The Caret  wrapper for catboost does not support the formula interface, 
+```{r}
+# Train the  model with caret
+model <- train(
+  x = train_data %>% select(-tmg),
+  y = train_data$tmg,
+  #data = train_data,
+  method =  catboost.caret,
+  trControl = ctrl,
+  #tuneGrid = catboostgrid, # for catboost
+  #tunelength = 2,
+  preProcess = c("center", "scale"), # Standardization
+  verbose = 100
+)
+
+# Print the 
+print(model)
+```
+
+## CV results
+Note: This code should be adapted according to the hyperparameters used by the model. 
+
+```{r}
+
+hyperparameters_glmnet <- c("alpha","lambda")
+
+hyperparameters_ranger <- c("mtry","splitrule")
+
+hyperparameters_svm <- c("C","sigma")
+
+hyperparameters_catboost <- c("learning_rate","depth")
+
+
+model$results %>% tidyr::unite(col= a_l, hyperparameters_catboost,sep="_") %>%
+  ggplot(aes(x = a_l, y = RMSE)) +
+  geom_point(color = 'red') +
+  geom_errorbar(
+    aes(ymin = RMSE - RMSESD, ymax = RMSE + RMSESD),
+    width = .02,
+    color = 'orange'
+  ) +
+  theme_classic()+
+  #ggdark::dark_theme_bw() +
+  labs(title="Model: Mean and Standard deviation after hyper-parameter tuning")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+## 4. Calculate importance 
+Note: SVM does not have an intern Feature score procedure. Caret uses AUC for calculate it. More info here:
+https://topepo.github.io/caret/variable-importance.html#model-independent-metrics
+
+```{r fig.height=10, fig.width=10}
+varImp(model)
+importance_results <- varImp(model, scale = FALSE)
+plot(varImp(model),top = 20)
+```
+
+
+
+## 5. Evaluate results on test dataset
+
+```{r}
+predictions <- predict(model, test_data)
+# Compute the RMSE (Root Mean Square Error)
+RMSE <- sqrt(mean((predictions - test_data$tmg)^2))
+print(RMSE)
+```
+
+## 6. Plot: Predicted vs Reference values
+
+```{r}
+
+results <- data.frame(Reference = test_data$tmg, Predicted = as.vector(predictions))
+ggplot(results, aes(x = Reference, y = Predicted)) +
+  geom_point(color='blue') +
+  geom_abline(intercept = 0, slope = 1, color='red') +
+  ggtitle("Predicted vs Reference values") +
+  xlab("Reference Values") +
+  ylab("Predicted Values") +
+  theme_bw()
+
+```
+

@@ -111,3 +111,11 @@ def get_path_elements(path: str, f: int, t: int) -> str:
 
 def dot_dot(path: str):
 	return get_path_elements(path, 0, -1)
+
+
+def resolve_path(path):
+	if platform.system() == "Linux":
+		path = path.absolute().as_posix()
+	else:
+		path = path.absolute().as_uri()
+	return path
