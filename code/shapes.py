@@ -301,3 +301,37 @@ class Prism(Shape):
 
 	def __str__(self):
 		return f"Prism_{self.xlo}_{self.xhi}_{self.ylo}_{self.yhi}_{self.zlo}_{self.zhi}_{self.xy}_{self.xz}_{self.yz}"
+
+
+class Ellipsoid(Shape):
+	"""Represents an ellipsoid
+	ellipsoid args = x y z radiusx radiusy radiusz
+	x,y,z = coords of ellipsoid center (distance units)
+	radiusx,radiusy,radiusz = radii of ellipsoid (distance units)
+	"""
+	x: float
+	y: float
+	z: float
+	radiusx: float
+	radiusy: float
+	radiusz: float
+
+	def __init__(self, x: float, y: float, z: float, radiusx: float, radiusy: float, radiusz: float):
+		self.x = x
+		self.y = y
+		self.z = z
+		self.radiusx = radiusx
+		self.radiusy = radiusy
+		self.radiusz = radiusz
+
+	def get_volume(self) -> float:
+		return 0.0
+
+	def get_region(self, name: str) -> str:
+		return f"region {name} ellipsoid {self.x} {self.y} {self.z} {self.radiusx} {self.radiusy} {self.radiusz} units box"
+
+	def get_lattice_point_count(self) -> int:
+		return 0
+
+	def __str__(self):
+		return f"Ellipsoid_{self.x}_{self.y}_{self.z}_{self.radiusx}_{self.radiusy}_{self.radiusz}"

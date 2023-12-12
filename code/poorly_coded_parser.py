@@ -23,7 +23,7 @@ def sorted_recursive_input_search(path: str):
 	return sorted([*recursive_input_search(path)])
 
 
-def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cylinder | None | Sphere | Plane | Cone | Prism:
+def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> s.Shape | None:
 	# Remove multiple spaces
 	line = split_command(line)
 	region_name = line[1]
@@ -132,6 +132,23 @@ def parse_region(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> Cy
 		command = nano.add_intersect(reg_ids, region_name, extra)
 		logging.debug(command)
 		return None
+	elif region_type == "ellipsoid":
+		# region ellipsoid 0 0 0 10 10 10 units box
+		coord_a = float(region_args[0])
+		coord_b = float(region_args[1])
+		coord_c = float(region_args[2])
+		radius_a = float(region_args[3])
+		radius_b = float(region_args[4])
+		radius_c = float(region_args[5])
+		extra = region_args[6:]
+		assert extra[0] == "units", f"Unknown units: {extra[0]}"
+		assert extra[1] == "box", f"Unknown box: {extra[1]}"
+		extra = extra[2:]
+		shape = s.Ellipsoid(coord_a, coord_b, coord_c, radius_a, radius_b, radius_c)
+		assert is_correct_parsing(line, shape.get_region(region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
+		nano.add_named_shape(shape, region_name, extra)
+		logging.debug(shape)
+		return shape
 	else:
 		raise ValueError(f"Unknown region type: {region_type}")
 
