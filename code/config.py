@@ -15,3 +15,9 @@ SLURM_SH = "slurm.sh"
 TOKO_PARTITION_TO_USE = "mini"
 TOKO_URL = "toko.uncu.edu.ar"
 USER = "fwilliamson"
+
+# Lammps config; !!! DO NOT CHANGE !!! (Not reflected in the template)
+FULL_RUN_DURATION = 300000
+LAMMPS_DUMP_INTERVAL = 100000
+FE_ATOM = 1
+NI_ATOM = 2

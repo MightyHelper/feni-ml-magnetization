@@ -1,5 +1,7 @@
 import logging
+import platform
 import re
+import subprocess
 import time
 import os
 
@@ -14,16 +16,10 @@ import feni_mag
 import feni_ovito
 import random
 
-from config import LOCAL_EXECUTION_PATH
-
-FE_ATOM = 1
-NI_ATOM = 2
-
-FULL_RUN_DURATION = 300000
-
-
-def realpath(path):
-	return os.path.realpath(path)
+from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM
+from execution_queue import ExecutionQueue
+from simulation_task import SimulationTask
+from utils import drop_index, realpath
 
 
 class Nanoparticle:
@@ -57,6 +53,7 @@ class Nanoparticle:
 		self.title = self.extra_replacements.get("title", "Nanoparticle")
 		self.id = self._gen_identifier() if id_x is None else id_x
 		self.path = realpath(LOCAL_EXECUTION_PATH + "/" + self.id) + "/"
+		self.run = None
 
 	def hardcoded_g_r_crop(self, g_r):
 		return g_r[0:60]
@@ -102,7 +99,7 @@ class Nanoparticle:
 	def columns_for_dataset(self):
 		# col_order = ["psd", "psd11", "psd12", "psd22", "coordc", "coordc_fe", "coordc_ni", "pec", "fe_s", "ni_s", "fe_c", "ni_c", "n_fe", "n_ni", "tmg"]
 		out = [
-			self._drop_index(pd.DataFrame([self.get_descriptor_name()], columns=["name"])),
+			drop_index(pd.DataFrame([self.get_descriptor_name()], columns=["name"])),
 		]
 		for k, (v, count) in {
 			'psd': (self.psd[['psd']].copy(), 60),
@@ -116,22 +113,18 @@ class Nanoparticle:
 		}.items():
 			out += [self._get_pivoted_df(v, k, expected_row_count=count)]
 		for k, v in {
-			'fe_s': self._drop_index(pd.DataFrame([self.fe_s], columns=["fe_s"])),
-			'ni_s': self._drop_index(pd.DataFrame([self.ni_s], columns=["ni_s"])),
-			'fe_c': self._drop_index(pd.DataFrame([self.fe_c], columns=["fe_c"])),
-			'ni_c': self._drop_index(pd.DataFrame([self.ni_c], columns=["ni_c"])),
-			'n_fe': self._drop_index(pd.DataFrame([self.count_atoms_of_type(FE_ATOM)], columns=["n_fe"])),
-			'n_ni': self._drop_index(pd.DataFrame([self.count_atoms_of_type(NI_ATOM)], columns=["n_ni"])),
-			'tmg': self._drop_index(pd.DataFrame([self.magnetism[0]], columns=["tmg"])),
+			'fe_s': drop_index(pd.DataFrame([self.fe_s], columns=["fe_s"])),
+			'ni_s': drop_index(pd.DataFrame([self.ni_s], columns=["ni_s"])),
+			'fe_c': drop_index(pd.DataFrame([self.fe_c], columns=["fe_c"])),
+			'ni_c': drop_index(pd.DataFrame([self.ni_c], columns=["ni_c"])),
+			'n_fe': drop_index(pd.DataFrame([self.count_atoms_of_type(FE_ATOM)], columns=["n_fe"])),
+			'n_ni': drop_index(pd.DataFrame([self.count_atoms_of_type(NI_ATOM)], columns=["n_ni"])),
+			'tmg': drop_index(pd.DataFrame([self.magnetism[0]], columns=["tmg"])),
 		}.items():
 			out += [v]
 
 		# Concat columns of all dataframes
 		return pd.concat(out, axis=1)
-
-	def _drop_index(self, df):
-		df.index = ["" for _ in df.index]
-		return df
 
 	def _get_pivoted_df(self, df, name, expected_row_count=100):
 		row_count = df.shape[0]
@@ -206,20 +199,35 @@ class Nanoparticle:
 			df = pd.DataFrame(columns=["pe", "count"])
 		return df
 
-	def execute(self, test_run: bool = True, **kwargs):
+	def get_simulation_task(self, test_run: bool = True, **kwargs) -> SimulationTask:
 		"""
-		Executes the nanoparticle simulation
-		:param test_run:  If true, only one dump will be generated
-		:param kwargs: 	Extra arguments to pass to the lammps run
-		:return:
+		Generates a simulation task for this nanoparticle
+		:param test_run: If true, only one dump will be generated
+		:param kwargs: Extra arguments to pass to the lammps run
+		:return: A simulation task
 		"""
 		code = self._build_lammps_code(test_run)
-		os.mkdir(self.path)  # Create the run directory
-		dumps, lammps_run = self._build_lammps_run(code, kwargs, test_run)
-		self.run = lammps_run.execute()
-		if not test_run:
-			feni_mag.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
-			feni_ovito.parse(filenames={'base_path': self.path, 'dump': dumps[-1]})
+		os.mkdir(self.path)
+		dumps, self.run = self._build_lammps_run(code, kwargs, test_run)
+		sim_task = self.run.get_simulation_task()
+		sim_task.add_callback(self.on_post_execution)
+		return sim_task
+
+	def schedule_execution(self, execution_queue: ExecutionQueue) -> None:
+		"""
+		Schedules the execution of this nanoparticle
+		:param execution_queue: The execution queue to use
+		"""
+		execution_queue.enqueue(self.get_simulation_task())
+
+	def on_post_execution(self, result: str) -> None:
+		"""
+		Callback for when the execution is finished
+		:return:
+		"""
+		if FULL_RUN_DURATION in self.run.dumps:
+			feni_mag.MagnetismExtractor.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
+			feni_ovito.FeNiOvitoParser.parse(filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION]})
 			self.magnetism = self.get_magnetism()
 
 	def _build_lammps_run(self, code, kwargs, test_run):
@@ -230,13 +238,13 @@ class Nanoparticle:
 				"cwd": self.path,
 				**kwargs
 			},
-			dumps := [f"iron.{i}.dump" for i in ([0] if test_run else [*range(0, FULL_RUN_DURATION + 1, 100000)])],
+			dumps := [f"iron.{i}.dump" for i in ([0] if test_run else [*range(0, FULL_RUN_DURATION + 1, LAMMPS_DUMP_INTERVAL)])],
 			file_name=self.path + "nanoparticle.in"
 		)
 		return dumps, lammps_run
 
 	def _build_lammps_code(self, test_run):
-		return template.replace_templates(template.get_lammps_template(), {
+		return template.TemplateUtils.replace_templates(template.TemplateUtils.get_lammps_template(), {
 			"region": self.get_region(),
 			"run_steps": str(0 if test_run else FULL_RUN_DURATION),
 			"title": f"{self.title}",
@@ -295,3 +303,42 @@ class Nanoparticle:
 		out["count_fe"] = self.coord_fe["count"]
 		out["count_ni"] = self.coord_ni["count"]
 		return out
+
+
+class RunningExecutionLocator:
+	@staticmethod
+	def get_running_windows(from_windows: bool = True):
+		# wmic.exe process where "name='python.exe'" get commandline, disable stderr
+
+		if from_windows:
+			path = "wmic.exe"
+		else:
+			path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
+		result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"], stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
+		result = [x.strip() for x in result if x.strip() != ""]
+		for execution in {x for result in result if "-in" in result and (x := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
+			folder_name = RunningExecutionLocator.get_nth_path_element(execution.replace("\\", "/"), -1)
+			nano = Nanoparticle.from_executed(folder_name)
+			yield folder_name, nano.run.get_current_step(), nano.title
+
+	@staticmethod
+	def get_running_executions():
+		if platform.system() == "Windows":
+			yield from RunningExecutionLocator.get_running_windows(True)
+		elif platform.system() == "Linux":
+			yield from RunningExecutionLocator.get_running_windows(False)
+			yield from RunningExecutionLocator.get_running_linux()
+		else:
+			raise Exception(f"Unknown system: {platform.system()}")
+
+	@staticmethod
+	def get_running_linux():
+		ps_result = os.popen("ps -ef | grep " + config.LAMMPS_EXECUTABLE).readlines()
+		for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
+			folder_name = RunningExecutionLocator.get_nth_path_element(execution, -1)
+			nano = Nanoparticle.from_executed(folder_name)
+			yield folder_name, nano.run.get_current_step(), nano.title
+
+	@staticmethod
+	def get_nth_path_element(path: str, n: int) -> str:
+		return path.split("/")[n]

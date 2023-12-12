@@ -19,7 +19,8 @@ import config
 import executor
 import nanoparticle
 import poorly_coded_parser as parser
-from utils import get_running_executions, add_task, ZeroHighlighter, resolve_path
+from utils import add_task, ZeroHighlighter, resolve_path
+from nanoparticle import get_running_executions
 from cli_parts.number_highlighter import console
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -92,7 +93,7 @@ def live():
 		try:
 			while True:
 				for folder, step, title in running:
-					progress.update(tasks[folder], completed=step, total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
+					progress.update(tasks[folder], completed=step, total=None if step == -1 else config.FULL_RUN_DURATION)
 				progress.refresh()
 				time.sleep(0.2)
 				running = [*get_running_executions()]

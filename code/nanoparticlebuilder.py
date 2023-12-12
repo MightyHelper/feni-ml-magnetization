@@ -4,9 +4,13 @@ import typing
 import shapes
 from nanoparticle import Nanoparticle
 
-
 SEED_LOCATOR = "zeed:"
+
+
 class NanoparticleBuilder:
+	"""
+	Assembles a nanoparticle
+	"""
 	regions: list[shapes.Shape]
 	atom_manipulation: list[str]
 	region_name_map: dict[str, int]
@@ -151,3 +155,6 @@ class NanoparticleBuilder:
 		command = f"group {group_name} region reg{region_id}"
 		self.atom_manipulation.append(command)
 		return command
+
+	def __str__(self):
+		return f"NanoparticleBuilder({self.title}, regions:{len(self.regions)}, manipulations:{len(self.atom_manipulation)}, seeds:{len(self.seed_values)})"

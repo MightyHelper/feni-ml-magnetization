@@ -1,15 +1,14 @@
-import datetime
+import base64
 import logging
 import os
 import platform
+import random
 import re
-import subprocess
 
 from rich.highlighter import RegexHighlighter
 from rich.progress import Progress
 
 import config
-import nanoparticle
 
 
 def get_current_step(lammps_log):
@@ -41,39 +40,6 @@ def get_title(path):
 	return title
 
 
-def get_running_windows(from_windows: bool = True):
-	# wmic.exe process where "name='python.exe'" get commandline, disable stderr
-
-	if from_windows:
-		path = "wmic.exe"
-	else:
-		path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
-	result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"], stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
-	result = [x.strip() for x in result if x.strip() != ""]
-	for execution in {x for result in result if "-in" in result and (x := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
-		folder_name = get_nth_path_element(execution.replace("\\", "/"), -1)
-		nano = nanoparticle.Nanoparticle.from_executed(folder_name)
-		yield folder_name, nano.run.get_current_step(), nano.title
-
-
-def get_running_executions():
-	if platform.system() == "Windows":
-		yield from get_running_windows(True)
-	elif platform.system() == "Linux":
-		yield from get_running_windows(False)
-		yield from get_running_linux()
-	else:
-		raise Exception(f"Unknown system: {platform.system()}")
-
-
-def get_running_linux():
-	ps_result = os.popen("ps -ef | grep " + config.LAMMPS_EXECUTABLE).readlines()
-	for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
-		folder_name = get_nth_path_element(execution, -1)
-		nano = nanoparticle.Nanoparticle.from_executed(folder_name)
-		yield folder_name, nano.run.get_current_step(), nano.title
-
-
 def filter_empty(l: list) -> list:
 	return [x for x in l if x != ""]
 
@@ -98,11 +64,7 @@ def parse_nanoparticle_name(key):
 
 def add_task(folder, progress: Progress, step, tasks, title):
 	logging.info(f"Found running execution: {folder} ({step})")
-	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else nanoparticle.FULL_RUN_DURATION)
-
-
-def get_nth_path_element(path: str, n: int) -> str:
-	return path.split("/")[n]
+	tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else config.FULL_RUN_DURATION)
 
 
 def get_path_elements(path: str, f: int, t: int) -> str:
@@ -119,3 +81,37 @@ def resolve_path(path):
 	else:
 		path = path.absolute().as_uri()
 	return path
+
+
+def confirm(message):
+	res = input(f"{message} (y/n) ")
+	if res != "y":
+		raise ValueError("Oki :c")
+
+
+def get_file_name(input_file):
+	return "/".join(input_file.split("/")[-2:])
+
+
+def get_index(lines: list[str], section: str, head: str) -> int:
+	"""
+	Get the index of a section in a list of lines
+	:param lines:
+	:param section:
+	:param head:
+	:return:
+	"""
+	return [i for i, l in enumerate(lines) if l.startswith(head + section)][0]
+
+
+def generate_random_filename():
+	return base64.b32encode(random.randbytes(5)).decode("ascii")
+
+
+def drop_index(df):
+	df.index = ["" for _ in df.index]
+	return df
+
+
+def realpath(path):
+	return os.path.realpath(path)

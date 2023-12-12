@@ -5,6 +5,7 @@ import multiprocessing.dummy
 import random
 from typing import cast
 
+import config
 import nanoparticlebuilder
 import poorly_coded_parser as parser
 import nanoparticle
@@ -12,7 +13,19 @@ import pandas as pd
 from subprocess import CalledProcessError
 
 
-def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool = True, seed_count: int = 1, seed: int = 123):
+def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], test: bool = True, seed_count: int = 1, seed: int = 123, count_only: bool = False):
+	nanoparticles = build_nanoparticles_to_execute(ignore, path, seed, seed_count)
+	if count_only:
+		return len(nanoparticles)
+	if threads == 1:
+		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
+	else:
+		with multiprocessing.dummy.Pool(threads) as p:
+			particles = p.starmap(_process_nanoparticle, [(ignore, key, np, test) for key, np in nanoparticles])
+	return pd.DataFrame(particles)
+
+
+def build_nanoparticles_to_execute(ignore, path, seed, seed_count):
 	nano_builders = parser.load_shapes(path, ignore)
 	nanoparticles = []
 	random.seed(seed)
@@ -25,12 +38,7 @@ def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], tes
 				nanoparticles.append((key, nano.build(seeds)))
 		else:
 			nanoparticles.append((key, nano.build()))
-	if threads == 1:
-		particles = [_process_nanoparticle(ignore, key, np, test) for key, np in nanoparticles]
-	else:
-		with multiprocessing.dummy.Pool(threads) as p:
-			particles = p.starmap(_process_nanoparticle, [(ignore, key, np, test) for key, np in nanoparticles])
-	return pd.DataFrame(particles)
+	return nanoparticles
 
 
 def _process_nanoparticle(ignore: list[str], key: str, np: nanoparticle.Nanoparticle, test: bool = True):
@@ -56,8 +64,8 @@ def _process_nanoparticle(ignore: list[str], key: str, np: nanoparticle.Nanopart
 
 
 def parse_ok_execution_results(key: str, np: nanoparticle.Nanoparticle, was_test: bool):
-	fe = np.count_atoms_of_type(nanoparticle.FE_ATOM)
-	ni = np.count_atoms_of_type(nanoparticle.NI_ATOM)
+	fe = np.count_atoms_of_type(config.FE_ATOM)
+	ni = np.count_atoms_of_type(config.NI_ATOM)
 	# np.plot()
 	return {
 		"ok": True,

@@ -3,12 +3,11 @@ import os
 import re
 
 import numpy as np
-import random
-import base64
 from matplotlib import pyplot as plt
 
-import config
 from mpilammpswrapper import MpiLammpsWrapper
+from simulation_task import SimulationTask
+from utils import get_index, generate_random_filename
 
 DUMP_ATOM_TYPE = 0
 DUMP_ATOM_ID = 1
@@ -25,18 +24,11 @@ DUMP_ATOM_PE = 11
 DUMP_ATOM_KE = 12
 
 
-def generate_random_filename():
-	return base64.b32encode(random.randbytes(5)).decode("ascii")
-
-
-def get_index(lines, section):
-	return [i for i, l in enumerate(lines) if l.startswith("ITEM: " + section)][0]
-
-
 class MPILammpsDump:
 	"""
 	Functions to parse a dump file
 	"""
+
 	def __init__(self, path):
 		self.path = path
 		self.dump = self._parse()
@@ -44,10 +36,10 @@ class MPILammpsDump:
 	def _parse(self):
 		with open(self.path, "r") as f:
 			lines = f.readlines()
-			timestep_index = get_index(lines, "TIMESTEP")
-			number_of_atoms_index = get_index(lines, "NUMBER OF ATOMS")
-			box_bounds_index = get_index(lines, "BOX BOUNDS")
-			atoms_index = get_index(lines, "ATOMS")
+			timestep_index = get_index(lines, "TIMESTEP", "ITEM: ")
+			number_of_atoms_index = get_index(lines, "NUMBER OF ATOMS", "ITEM: ")
+			box_bounds_index = get_index(lines, "BOX BOUNDS", "ITEM: ")
+			atoms_index = get_index(lines, "ATOMS", "ITEM: ")
 			timestep = int(lines[timestep_index + 1])
 			number_of_atoms = int(lines[number_of_atoms_index + 1])
 			box_bounds = np.array([[float(x) for x in line.split(" ") if x != ""] for line in lines[box_bounds_index + 1:box_bounds_index + 4]])
@@ -79,11 +71,18 @@ class MPILammpsDump:
 	def count_atoms_of_type(self, atom_type):
 		return np.count_nonzero(self.dump['atoms'][:, DUMP_ATOM_TYPE] == atom_type)
 
+	def __str__(self):
+		return f"<Dump@{self.dump['timestep']} for {self.path}>"
+
+	def __repr__(self):
+		return str(self)
+
 
 class MpiLammpsRun:
 	"""
 	Functions to execute a lammps run
 	"""
+
 	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
 		self.output = ""
 		self.code = code
@@ -116,10 +115,17 @@ class MpiLammpsRun:
 			pass
 		return step
 
-	def execute(self) -> 'MpiLammpsRun':
-		MpiLammpsWrapper.gen_and_sim(self.code, self.sim_params, file_to_use=self.file_name)
+	def get_simulation_task(self) -> SimulationTask:
+		"""
+		Get a simulation task for this run
+		"""
+		sim_task = MpiLammpsWrapper.generate(self.code, self.sim_params, file_to_use=self.file_name)
+		sim_task.add_callback(self.on_post_execution)
+		return sim_task
+
+	def on_post_execution(self, result: str) -> None:
+		self.output = result
 		self.dumps = self._parse_dumps()
-		return self
 
 	def _parse_dumps(self):
 		dumps = {}
@@ -127,7 +133,6 @@ class MpiLammpsRun:
 			result = MPILammpsDump(dump)
 			dumps[result.dump['timestep']] = result
 		return dumps
-
 
 	@staticmethod
 	def from_path(path):

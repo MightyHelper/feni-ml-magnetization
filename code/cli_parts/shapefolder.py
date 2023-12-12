@@ -6,6 +6,7 @@ import typer
 from rich import print as rprint
 
 import executor
+import nanoparticle_locator
 import poorly_coded_parser as parser
 from cli_parts.number_highlighter import console, h
 from utils import parse_nanoparticle_name, dot_dot
@@ -39,7 +40,7 @@ def ls(path: str = "../Shapes"):
 
 
 @shapefolder.command()
-def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True, seed_count: int = 1, seed: int = 123):
+def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True, seed_count: int = 1, seed: int = 123, count_only: bool = False, in_toko: bool = False):
 	"""
 	Runs all nanoparticle simulations in a folder
 	"""
@@ -49,7 +50,10 @@ def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True,
 			threads = multiprocessing.cpu_count()
 		else:
 			threads = multiprocessing.cpu_count() // 8
-	nanoparticles = executor.execute_all_nanoparticles_in(path, threads, [], test, seed_count, seed)
+	nanoparticles = executor.execute_all_nanoparticles_in(path, threads, [], test, seed_count, seed, count_only)
+	if count_only:
+		rprint(f"Found [green]{nanoparticles}[/green] nanoparticle shapes.")
+		return
 	nanoparticles.drop(columns=["np"], inplace=True)
 	table = rich.table.Table(title="Nanoparticle run results")
 	for column in nanoparticles.columns:
@@ -82,7 +86,7 @@ def shrink():
 	"""
 	Shrink all nanoparticle shapes
 	"""
-	for path in parser.sorted_recursive_input_search("../Shapes"):
+	for path in nanoparticle_locator.sorted_recursive_input_search("../Shapes"):
 		_, nano = parser.parse_single_shape(path)
 		nano = nano.build()
 		region = nano.get_region()
