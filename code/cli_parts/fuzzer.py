@@ -39,6 +39,8 @@ def bayes(
 	path: Path,
 	target_atom_count: int = 1250,
 	target_ratio: float = 0.33,
+	target_atom_count_importance: float = 1,
+	target_ratio_importance: float = 10000,
 	plot: bool = False
 ):
 	"""
@@ -52,10 +54,11 @@ def bayes(
 	path = utils.resolve_path(path)
 	keys, run_fuzzer = get_full_function(path)
 	target_values = [target_atom_count, target_ratio]
+	target_importance = [target_atom_count_importance, target_ratio_importance]
 
 	def result(**kwargs):
 		atom_count, ratio, nanoparticle = run_fuzzer(**kwargs)
-		return -sum((actual - target) ** 2 for actual, target in zip((atom_count, ratio), target_values))
+		return -sum(importance * ((actual - target) ** 2) for actual, (target, importance) in zip((atom_count, ratio), zip(target_values, target_importance)))
 
 	param_space = {}
 	for key in keys:
