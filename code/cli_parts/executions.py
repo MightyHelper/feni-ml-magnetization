@@ -73,9 +73,9 @@ def clean():
 
 
 @executions.command()
-def live():
+def live(in_toko: bool = False):
 	"""
-		Find live executions
+	Find live executions
 	"""
 	# Run ps -ef | grep lmp
 	with Progress(
@@ -85,7 +85,7 @@ def live():
 		TimeElapsedColumn(),
 		expand=True
 	) as progress:
-		running = [*nanoparticle.RunningExecutionLocator.get_running_executions()]
+		running = [*nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)]
 		tasks = {}
 		for folder, step, title in running:
 			add_task(folder, progress, step, tasks, title)

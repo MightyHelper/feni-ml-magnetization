@@ -26,7 +26,7 @@ class Nanoparticle:
 	"""Represents a nanoparticle"""
 	regions: list[shapes.Shape]
 	atom_manipulation: list[str]
-	run: mpilr.MpiLammpsRun
+	run: mpilr.MpiLammpsRun | None
 	region_name_map: dict[str, int] = {}
 	magnetism: tuple[float, float]
 	id: str
@@ -212,18 +212,21 @@ class Nanoparticle:
 		sim_task.add_callback(self.on_post_execution)
 		return sim_task
 
-	def schedule_execution(self, execution_queue: ExecutionQueue) -> None:
+	def schedule_execution(self, execution_queue: ExecutionQueue, test_run: bool = True, **kwargs) -> None:
 		"""
 		Schedules the execution of this nanoparticle
 		:param execution_queue: The execution queue to use
+		:param test_run: If true, only one dump will be generated
+		:param kwargs: Extra arguments to pass to the lammps run
 		"""
-		execution_queue.enqueue(self.get_simulation_task())
+		execution_queue.enqueue(self.get_simulation_task(test_run, **kwargs))
 
 	def on_post_execution(self, result: str) -> None:
 		"""
 		Callback for when the execution is finished
 		:return:
 		"""
+		logging.debug(f"{self.run.dumps=}")
 		if FULL_RUN_DURATION in self.run.dumps:
 			feni_mag.MagnetismExtractor.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
 			feni_ovito.FeNiOvitoParser.parse(filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION]})
@@ -283,6 +286,8 @@ class Nanoparticle:
 		self.run.dumps[0].plot()
 
 	def count_atoms_of_type(self, atom_type, dump_idx=0):
+		if dump_idx not in self.run.dumps:
+			raise Exception(f"Dump {dump_idx} not found (Available dumps: {self.run.dumps.keys()}) - {self.run.dumps=}")
 		return self.run.dumps[dump_idx].count_atoms_of_type(atom_type)
 
 	def total_atoms(self, dump_idx=0):
@@ -321,14 +326,17 @@ class RunningExecutionLocator:
 			yield folder_name, nano.run.get_current_step(), nano.title
 
 	@staticmethod
-	def get_running_executions():
-		if platform.system() == "Windows":
-			yield from RunningExecutionLocator.get_running_windows(True)
-		elif platform.system() == "Linux":
-			yield from RunningExecutionLocator.get_running_windows(False)
-			yield from RunningExecutionLocator.get_running_linux()
+	def get_running_executions(in_toko: bool = False):
+		if not in_toko:
+			if platform.system() == "Windows":
+				yield from RunningExecutionLocator.get_running_windows(True)
+			elif platform.system() == "Linux":
+				yield from RunningExecutionLocator.get_running_windows(False)
+				yield from RunningExecutionLocator.get_running_linux()
+			else:
+				raise Exception(f"Unknown system: {platform.system()}")
 		else:
-			raise Exception(f"Unknown system: {platform.system()}")
+			yield from RunningExecutionLocator.get_running_toko()
 
 	@staticmethod
 	def get_running_linux():
@@ -341,3 +349,11 @@ class RunningExecutionLocator:
 	@staticmethod
 	def get_nth_path_element(path: str, n: int) -> str:
 		return path.split("/")[n]
+
+	@staticmethod
+	def get_running_toko():
+		pass
+		# for execution in {x for result in os.popen("squeue -u " + config.TOKO_USER).readlines() if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
+		# 	folder_name = RunningExecutionLocator.get_nth_path_element(execution, -1)
+		# 	nano = Nanoparticle.from_executed(folder_name)
+		# 	yield folder_name, nano.run.get_current_step(), nano.title

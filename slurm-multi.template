@@ -6,3 +6,5 @@
 module load openmpi-2.1.6 gcc-9.2.0
 cd {{cwd}}
 mpirun python3 multi.py {{cmds}} > {{output}}
+
+## TAG: {{file_tag}}

@@ -1,4 +1,5 @@
 import dataclasses
+import logging
 from dataclasses import field
 from typing import Callable
 
@@ -17,3 +18,4 @@ class SimulationTask:
 
 	def add_callback(self, callback: Callable[[str], None]):
 		self.callbacks.append(callback)
+		logging.debug(f"Added callback {callback} to {self} (Now {len(self.callbacks)} callbacks)")

@@ -95,7 +95,7 @@ class MpiLammpsRun:
 			self.expect_dumps = [f"{sim_params['cwd']}/{dump}" for dump in self.expect_dumps]
 		else:
 			logging.warning("No CWD passed to sim_params!")
-		self.dumps: list[MPILammpsDump] = []
+		self.dumps: dict[int, MPILammpsDump] = {}
 
 	def get_lammps_log_filename(self):
 		return self.sim_params['cwd'] + "/log.lammps"
@@ -108,6 +108,7 @@ class MpiLammpsRun:
 		try:
 			with open(self.get_lammps_log_filename(), "r") as f:
 				lines = f.readlines()
+				# noinspection PyBroadException
 				try:
 					split = re.split(r" +", lines[-1].strip())
 					step = int(split[0])
@@ -128,11 +129,14 @@ class MpiLammpsRun:
 	def on_post_execution(self, result: str) -> None:
 		self.output = result
 		self.dumps = self._parse_dumps()
+		logging.debug(f"Finished execution of {self.file_name}")
 
 	def _parse_dumps(self):
 		dumps = {}
 		for dump in self.expect_dumps:
+			logging.debug(f"Parsing dump {dump}")
 			result = MPILammpsDump(dump)
+			logging.debug("Result: " + str(result))
 			dumps[result.dump['timestep']] = result
 		return dumps
 

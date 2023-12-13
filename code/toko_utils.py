@@ -9,11 +9,12 @@ from pathlib import Path
 import numpy as np
 
 import config
-from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, LAMMPS_EXECUTABLE
+import utils
+from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
 from template import TemplateUtils
-from utils import confirm, write_local_file
+from utils import write_local_file
 
 
 class TokoUtils:
@@ -28,6 +29,16 @@ class TokoUtils:
 			["rsync", "-r", local_path + "/", f"{user}@{toko_url}:{toko_path}/"] if is_folder else
 			["rsync", local_path, f"{user}@{toko_url}:{toko_path}"]
 		)
+
+	@staticmethod
+	def copy_file_multi_to_toko(local_paths: list[str], toko_path: str):
+		logging.info(f"Copying files {local_paths} to toko {toko_path}...")
+		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["rsync", "-ar", *local_paths, f"{user}@{toko_url}:{toko_path}"])
+
+	@staticmethod
+	def copy_file_multi_from_toko(toko_paths: list[str], local_path: str):
+		logging.info(f"Copying files {toko_paths} from toko to local {local_path}...")
+		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["rsync", "-ar", *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths], local_path])
 
 	@staticmethod
 	def copy_file_from_toko(toko_path: str, local_path: str, is_folder: bool = False):
@@ -145,6 +156,8 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 			lammps_log = os.path.join(toko_sim_folder, "log.lammps")
 			tasks.append(f"\"sh -c 'cd {toko_sim_folder}; {LAMMPS_TOKO_EXECUTABLE} -in {toko_nano_in} > {lammps_log}'\"")
 		# Create a slurm script to run the commands in parallel
+		local_slurm_sh = os.path.join(local_batch_path, config.SLURM_SH)
+		toko_slurm_sh = os.path.join(toko_batch_path, config.SLURM_SH)
 		slurm_code = TemplateUtils.replace_templates(
 			TemplateUtils.get_slurm_multi_template(), {
 				"tasks": str(n_tasks),
@@ -153,22 +166,22 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 				"cwd": toko_batch_path,
 				"partition": TOKO_PARTITION_TO_USE,
 				"output": os.path.join(toko_batch_path, "batch_run.out"),
+				"file_tag": toko_slurm_sh
 			}
 		)
 		assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
-		local_slurm_sh = os.path.join(local_batch_path, config.SLURM_SH)
 		write_local_file(local_slurm_sh, slurm_code)
 		logging.info(f"Copying {config.SLURM_SH} to toko...")
-		toko_slurm_sh = os.path.join(toko_batch_path, config.SLURM_SH)
 		TokoUtils.copy_file_to_toko(local_slurm_sh, toko_slurm_sh)
 		logging.info("Queueing job in toko...")
 		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c 'cd {toko_batch_path}; {config.TOKO_SBATCH} {config.SLURM_SH}'"])
 
 	def _simulate(self):
-		simulations = self._get_next_task()
+		simulations = self.queue
 		local_batch_path, toko_batch_path, simulation_info = self.prepare_scripts(simulations)
 		sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(simulation_info, local_batch_path, toko_batch_path, n_tasks=self.batch_size)
 		self.process_output(local_batch_path, sbatch_output, simulations, toko_batch_path)
+		self.queue = []
 
 	def prepare_scripts(self, simulations):
 		"""
@@ -180,7 +193,7 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 		simulation_info = []
 		# Make new dir in TOKO_EXECUTION_PATH "batch_<timestamp>_<random[0-1000]>"
 		batch_name = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
-		local_batch_path = os.path.join(config.LOCAL_EXECUTION_PATH, batch_name)
+		local_batch_path = os.path.join(LOCAL_EXECUTION_PATH, batch_name)
 		toko_batch_path = os.path.join(TOKO_EXECUTION_PATH, batch_name)
 		batch_info = os.path.join(local_batch_path, "batch_info.txt")
 		local_multi_py = config.LOCAL_MULTI_PY
@@ -196,10 +209,11 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 			logging.debug(f"{local_sim_folder=}")
 			logging.debug(f"{toko_nano_in=}")
 			logging.debug("Copying input file...")
-			TokoUtils.copy_file_to_toko(local_sim_folder.as_posix(), toko_sim_folder.as_posix(), is_folder=True)
 			if i == 0:
 				TokoUtils.copy_alloy_files(local_sim_folder, toko_sim_folder)
 			simulation_info.append((toko_nano_in.as_posix(), toko_sim_folder.as_posix(), local_sim_folder.as_posix()))
+		TokoUtils.copy_file_multi_to_toko([folder for (_, _, folder) in simulation_info], TOKO_EXECUTION_PATH)
+
 		TokoUtils.copy_file_to_toko(local_batch_path, toko_batch_path, is_folder=True)
 		TokoUtils.copy_file_to_toko(local_multi_py, toko_multi_py)
 		return local_batch_path, toko_batch_path, simulation_info
@@ -209,19 +223,16 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 		TokoUtils.wait_for_toko_execution(jobid)
 		logging.info("Copying output files from toko to local machine...")
 		TokoUtils.copy_file_from_toko(toko_batch_path, local_batch_path, is_folder=True)
+		files_to_copy_back = []
+		callback_info = []
 		for i, simulation in enumerate(simulations):
 			# Copy each simulation output to the local machine
 			local_sim_folder: Path = Path(simulation.input_file).parent.absolute()
 			toko_sim_folder: Path = Path(os.path.join(TOKO_EXECUTION_PATH, local_sim_folder.name))
-			TokoUtils.copy_file_from_toko(toko_sim_folder.as_posix(), local_sim_folder.as_posix(), is_folder=True)
+			# TokoUtils.copy_file_from_toko(toko_sim_folder.as_posix(), local_sim_folder.as_posix(), is_folder=True)
 			local_lammps_log = os.path.join(local_sim_folder, "log.lammps")
-			with open(local_lammps_log, "r") as f:
-				lammps_log = f.read()
-			self.run_callback(simulation, lammps_log)
-
-	def _get_next_task(self):
-		if len(self.queue) == 0:
-			return None
-		next_task = self.queue[:self.batch_size]
-		self.queue = self.queue[self.batch_size:]
-		return next_task
+			files_to_copy_back.append(toko_sim_folder.as_posix())
+			callback_info.append((simulation, local_lammps_log))
+		TokoUtils.copy_file_multi_from_toko([folder for folder in files_to_copy_back], LOCAL_EXECUTION_PATH)
+		for simulation, lammps_log in callback_info:
+			self.run_callback(simulation, utils.read_local_file(lammps_log))
