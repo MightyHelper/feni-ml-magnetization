@@ -115,3 +115,8 @@ def drop_index(df):
 
 def realpath(path):
 	return os.path.realpath(path)
+
+
+def write_local_file(path, slurm_code):
+	with open(path, "w") as f:
+		f.write(slurm_code)

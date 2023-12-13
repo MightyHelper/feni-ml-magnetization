@@ -20,7 +20,6 @@ import executor
 import nanoparticle
 import poorly_coded_parser as parser
 from utils import add_task, ZeroHighlighter, resolve_path
-from nanoparticle import get_running_executions
 from cli_parts.number_highlighter import console
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -83,7 +82,7 @@ def live():
 		TimeElapsedColumn(),
 		expand=True
 	) as progress:
-		running = [*get_running_executions()]
+		running = [*nanoparticle.RunningExecutionLocator.get_running_executions()]
 		tasks = {}
 		for folder, step, title in running:
 			add_task(folder, progress, step, tasks, title)
@@ -96,7 +95,7 @@ def live():
 					progress.update(tasks[folder], completed=step, total=None if step == -1 else config.FULL_RUN_DURATION)
 				progress.refresh()
 				time.sleep(0.2)
-				running = [*get_running_executions()]
+				running = [*nanoparticle.RunningExecutionLocator.get_running_executions()]
 				for folder, step, title in running:
 					if folder not in tasks:
 						add_task(folder, progress, step, tasks, title)
@@ -121,7 +120,7 @@ def execute(path: Path, plot: bool = False, test: bool = True, in_toko: bool = F
 	Execute a nanoparticle simulation
 	"""
 	path = resolve_path(path)
-	_, nano = parser.parse_single_shape(path)
+	_, nano = parser.PoorlyCodedParser.parse_single_shape(path)
 	nano = nano.build()
 	nano.execute(test_run=test, in_toko=in_toko)
 	rprint(executor.parse_ok_execution_results(path, nano, test))

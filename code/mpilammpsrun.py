@@ -34,6 +34,8 @@ class MPILammpsDump:
 		self.dump = self._parse()
 
 	def _parse(self):
+		if not os.path.exists(self.path):
+			raise FileNotFoundError(f"Dump file {self.path} does not exist!")
 		with open(self.path, "r") as f:
 			lines = f.readlines()
 			timestep_index = get_index(lines, "TIMESTEP", "ITEM: ")

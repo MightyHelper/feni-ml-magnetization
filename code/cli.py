@@ -1,31 +1,10 @@
-import logging
-import signal
-import sys
-
 import typer
-from rich.logging import RichHandler
-
+import setup_logging
 from cli_parts.executions import executions
 from cli_parts.shapefolder import shapefolder
 from cli_parts.fuzzer import fuzzer
-from config import LOG_LEVEL
 
-# Don't turn these signal into exceptions, just die.
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-
-logging.basicConfig(
-	level="NOTSET",
-	format="%(message)s",
-	datefmt="[%X]",
-	handlers=[RichHandler(rich_tracebacks=True)]
-)
-
-if not sys.stdout.isatty():
-	logging.disable(logging.DEBUG)  # Disable debug and info messages
-log = logging.getLogger("rich")
-logging.getLogger("").setLevel(LOG_LEVEL)
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
+setup_logging.setup_logging()
 
 main = typer.Typer(add_completion=False, no_args_is_help=True)
 

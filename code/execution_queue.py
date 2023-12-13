@@ -70,8 +70,8 @@ class TokoExecutionQueue(ExecutionQueue):
 		simulation_task: SimulationTask = self._get_next_task()
 		try:
 			logging.info(f"[bold green]TokoExecutionQueue[/bold green] Running [bold yellow]{simulation_task.input_file}[/bold yellow] in [cyan]{simulation_task.cwd}[/cyan]", extra={"markup": True, "highlighter": None})
-			result = tokoutil.simulate_in_toko(simulation_task.input_file)
-			simulation_task.callback(result)
+			result = tokoutil.simulate_in_toko(simulation_task)
+			self.run_callback(simulation_task, result)
 		except subprocess.CalledProcessError as e:
 			self.print_error(e)
 			raise e

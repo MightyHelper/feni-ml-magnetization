@@ -207,7 +207,6 @@ class Nanoparticle:
 		:return: A simulation task
 		"""
 		code = self._build_lammps_code(test_run)
-		os.mkdir(self.path)
 		dumps, self.run = self._build_lammps_run(code, kwargs, test_run)
 		sim_task = self.run.get_simulation_task()
 		sim_task.add_callback(self.on_post_execution)

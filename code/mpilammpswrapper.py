@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any
 from opt import MPIOpt, GPUOpt, OMPOpt
 from simulation_task import SimulationTask
@@ -24,7 +25,18 @@ class MpiLammpsWrapper:
 
 	@staticmethod
 	def generate(code: str, sim_params: dict[str, Any] = None, file_to_use: str = '/tmp/in.melt') -> SimulationTask:
+		"""
+		Generate the local folder structure and return a simulation task
+		:param code:
+		:param sim_params:
+		:param file_to_use:
+		:return:
+		"""
 		assert "{{" not in code, "Not all templates were replaced"
-		assert os.path.exists(os.path.dirname(file_to_use)), f"Folder {os.path.dirname(file_to_use)} does not exist"
+		path = Path(file_to_use)
+		if not path.parent.exists():
+			if not path.parent.parent.exists():
+				os.mkdir(path.parent.parent)
+			os.mkdir(path.parent)
 		with open(file_to_use, 'w') as f: f.write(code)
 		return MpiLammpsWrapper.get_task(input_file=file_to_use, **sim_params)

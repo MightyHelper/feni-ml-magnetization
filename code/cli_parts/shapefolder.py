@@ -26,7 +26,7 @@ def ls(path: str = "../Shapes"):
 	table.add_column("SubType")
 	table.add_column("SubSubType")
 	table.add_column("R")
-	for i, (path, nano) in enumerate(parser.load_shapes(path, [])):
+	for i, (path, nano) in enumerate(parser.PoorlyCodedParser.load_shapes(path, [])):
 		ptype, subtype, subsubtype = parse_nanoparticle_name(path)
 		table.add_row(
 			f"[green]{i}[/green]",
@@ -72,7 +72,7 @@ def inspect(path: str):
 	"""
 	Inspect a nanoparticle
 	"""
-	_, nano = parser.parse_single_shape(path)
+	_, nano = parser.PoorlyCodedParser.parse_single_shape(path)
 	is_random = nano.is_random()
 	nano = nano.build()
 	region = nano.get_region()
@@ -86,14 +86,14 @@ def shrink():
 	"""
 	Shrink all nanoparticle shapes
 	"""
-	for path in nanoparticle_locator.sorted_recursive_input_search("../Shapes"):
-		_, nano = parser.parse_single_shape(path)
+	for path in nanoparticle_locator.NanoparticleLocator.sorted_search("../Shapes"):
+		_, nano = parser.PoorlyCodedParser.parse_single_shape(path)
 		nano = nano.build()
 		region = nano.get_region()
 		shrink_path = dot_dot(path) + "/nano.shrink"
 		with open(shrink_path, "w") as f:
 			f.write(region)
-		_, parsed = parser.parse_single_shape(shrink_path, True)
+		_, parsed = parser.PoorlyCodedParser.parse_single_shape(shrink_path, True)
 		parsed = parsed.build()
 		parsed_region = parsed.get_region()
 		assert parsed_region == region, f"Regions are not equal:\n{parsed_region}\n{region}"
