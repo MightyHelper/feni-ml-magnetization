@@ -16,7 +16,7 @@ COORD_FILENAME = "Coordination_Histogram.txt"
 class FeNiOvitoParser:
 	@staticmethod
 	def __parse_worker(
-		filenames=None
+		filenames: dict[str, str]=None
 	):
 		from ovito.io import import_file, export_file
 		from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, HistogramModifier, ExpressionSelectionModifier
@@ -137,7 +137,7 @@ class FeNiOvitoParser:
 		numpy.savetxt(proportion, data, fmt='%s', header="N_Fe / Ntotal N_Ni / Ntotal")
 
 	@staticmethod
-	def parse(filenames=None):
+	def parse(filenames: dict[str, str]=None):
 		filenames = {} if filenames is None else filenames
 		p = Process(target=FeNiOvitoParser.__parse_worker, args=(filenames,))
 		p.start()

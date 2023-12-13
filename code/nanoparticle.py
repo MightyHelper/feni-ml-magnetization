@@ -230,7 +230,7 @@ class Nanoparticle:
 		logging.debug(f"{self.run.dumps=}")
 		if FULL_RUN_DURATION in self.run.dumps:
 			feni_mag.MagnetismExtractor.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
-			feni_ovito.FeNiOvitoParser.parse(filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION]})
+			feni_ovito.FeNiOvitoParser.parse(filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION].path})
 			self.magnetism = self.get_magnetism()
 
 	def _build_lammps_run(self, code, kwargs, test_run):

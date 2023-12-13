@@ -100,7 +100,7 @@ def live(in_toko: bool = False, listen_anyway: bool = False):
 				for folder, step, title in running:
 					progress.update(tasks[folder], completed=step, total=None if step == -1 else config.FULL_RUN_DURATION)
 				progress.refresh()
-				time.sleep(20 if in_toko else 0.2)
+				time.sleep(10 + 1 * len(running) if in_toko else 0.2)
 				running = [*nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)]
 				for folder, step, title in running:
 					if folder not in tasks:
