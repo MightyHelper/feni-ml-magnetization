@@ -25,8 +25,8 @@ def execute_all_nanoparticles_in(path: str, threads: int, ignore: list[str], tes
 	return pd.DataFrame(particles)
 
 
-def build_nanoparticles_to_execute(ignore, path, seed, seed_count):
-	nano_builders = parser.load_shapes(path, ignore)
+def build_nanoparticles_to_execute(ignore: list[str], path: str, seed: int, seed_count: int) -> list[tuple[str, nanoparticle.Nanoparticle]]:
+	nano_builders = parser.PoorlyCodedParser.load_shapes(path, ignore)
 	nanoparticles = []
 	random.seed(seed)
 	for key, nano in nano_builders:

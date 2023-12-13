@@ -57,7 +57,7 @@ class TokoUtils:
 	@staticmethod
 	def wait_for_toko_execution(jobid):
 		logging.info("Waiting for execution to finish in toko...")
-		TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c 'while [ \"$(/apps/slurm/bin/squeue -hj {jobid})\" != \"\" ]; do sleep 1; done'"])
+		TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", "-o", "ServerAliveInterval=10", f"{user}@{toko_url}", f"sh -c 'while [ \"$({TOKO_SQUEUE} -hj {jobid})\" != \"\" ]; do sleep 1; done'"])
 
 	@staticmethod
 	def copy_alloy_files(local_sim_folder, toko_sim_folder):

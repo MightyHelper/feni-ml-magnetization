@@ -73,9 +73,11 @@ def clean():
 
 
 @executions.command()
-def live(in_toko: bool = False):
+def live(in_toko: bool = False, listen_anyway: bool = False):
 	"""
 	Find live executions
+	:param in_toko: Whether to listen for executions in Toko
+	:param listen_anyway: Whether to listen for executions even if there are none
 	"""
 	# Run ps -ef | grep lmp
 	with Progress(
@@ -91,7 +93,8 @@ def live(in_toko: bool = False):
 			add_task(folder, progress, step, tasks, title)
 		if len(running) == 0:
 			logging.error("[red]No running executions found[/red]", extra={"markup": True})
-			return
+			if not listen_anyway:
+				return
 		try:
 			while True:
 				for folder, step, title in running:
