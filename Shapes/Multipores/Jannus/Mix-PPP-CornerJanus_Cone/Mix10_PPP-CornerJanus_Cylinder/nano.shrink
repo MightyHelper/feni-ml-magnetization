@@ -1,0 +1,20 @@
+region reg0 cone z 0.0 0.0 21.0 1.0 -16.0 16.0 units box 
+create_atoms 1 region reg0
+region reg1 plane 0.0 0.0 1.0 0.0 1.0 1.0 units box 
+set region reg1 type 2
+region reg2 sphere -6.0 -5.0 -11.0 4.0 units box side out
+set region reg2 type 2
+region reg3 sphere 2.0 1.0 -6.0 4.0 units box side out
+set region reg3 type 2
+region reg4 sphere 6.0 1.0 -15.0 4.0 units box side out
+set region reg4 type 2
+region reg5 sphere 1.0 -2.0 4.0 4.0 units box side out
+set region reg5 type 2
+delete_atoms region reg2 compress yes
+delete_atoms region reg3 compress yes
+delete_atoms region reg4 compress yes
+delete_atoms region reg5 compress yes
+group Fe type 1
+group Ni type 2
+set group Fe type/subset 2 220 300
+set region reg1 type/subset 1 124 300
