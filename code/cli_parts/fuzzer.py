@@ -22,8 +22,9 @@ def get_full_function(path: str):
 
 	def fuzz(**kwargs):
 		kwargs = {k: str(v) for k, v in kwargs.items()}
+		rprint(kwargs)
 		_, nanoparticle = parser.parse_single_shape(path, False, replacements=kwargs)
-		nanoparticle = nanoparticle.build(kwargs={'title': 'Fuzzing ' + nanoparticle.title})
+		nanoparticle = nanoparticle.build(title='Fuzzing ' + nanoparticle.title)
 		nanoparticle.execute(True)
 		result = executor.parse_ok_execution_results("fuzzed", nanoparticle, True)
 		atom_count = result['total']
@@ -38,6 +39,8 @@ def bayes(
 	path: Path,
 	target_atom_count: int = 1250,
 	target_ratio: float = 0.33,
+	target_atom_count_importance: float = 1,
+	target_ratio_importance: float = 10000,
 	plot: bool = False
 ):
 	"""
@@ -45,16 +48,19 @@ def bayes(
 	:param path: The path to the nanoparticle
 	:param target_atom_count: The target atom count
 	:param target_ratio: The target ratio
+	:param target_atom_count_importance: The importance of the atom count
+	:param target_ratio_importance: The importance of the ratio
 	:param plot: Whether to plot the nanoparticle
 	"""
 	rprint(f"Using bayesian search to find the correct value for a parameter in a nanoparticle")
 	path = utils.resolve_path(path)
 	keys, run_fuzzer = get_full_function(path)
 	target_values = [target_atom_count, target_ratio]
+	target_importance = [target_atom_count_importance, target_ratio_importance]
 
 	def result(**kwargs):
 		atom_count, ratio, nanoparticle = run_fuzzer(**kwargs)
-		return -sum((actual - target) ** 2 for actual, target in zip((atom_count, ratio), target_values))
+		return -sum(importance * ((actual - target) ** 2) for actual, (target, importance) in zip((atom_count, ratio), zip(target_values, target_importance)))
 
 	param_space = {}
 	for key in keys:
