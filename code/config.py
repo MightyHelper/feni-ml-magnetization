@@ -1,13 +1,15 @@
 import logging
 
 # Program config
-LOG_LEVEL = logging.DEBUG  # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL = logging.INFO  # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 LAMMPS_TEMPLATE_PATH = "../lammps.template"  # Local path pointing to the lammps template
 SLURM_TEMPLATE_PATH = "../slurm.template"  # Local path pointing to the slurm template
+SLURM_MULTI_TEMPLATE_PATH = "../slurm-multi.template"  # Local path pointing to the slurm template
 
 # Local
 LAMMPS_EXECUTABLE = "/home/federico/sistemas_complejos/lammps/lammps/build6/lmp"  # Path to the lammps executable in local
 LOCAL_EXECUTION_PATH = "../executions"  # Path in local where the simulations will be stored
+LOCAL_MULTI_PY = "../multi.py"  # Path in local to the multi.py file
 
 # Toko
 LAMMPS_TOKO_EXECUTABLE = "/home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/src/lmp_g++_openmpi"  # Path to the lammps executable in toko

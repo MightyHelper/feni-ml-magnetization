@@ -2,7 +2,6 @@ import logging
 import platform
 import re
 import subprocess
-import toko_utils as tokoutil
 from abc import ABC, abstractmethod
 from config import LAMMPS_EXECUTABLE
 from simulation_task import SimulationTask
@@ -63,35 +62,3 @@ class LocalExecutionQueue(ExecutionQueue):
 		except OSError as e:
 			self.print_error(e)
 			raise ValueError(f"Is LAMMPS ({lammps_executable}) installed?") from e
-
-
-class TokoExecutionQueue(ExecutionQueue):
-	def _simulate(self) -> None:
-		simulation_task: SimulationTask = self._get_next_task()
-		try:
-			logging.info(f"[bold green]TokoExecutionQueue[/bold green] Running [bold yellow]{simulation_task.input_file}[/bold yellow] in [cyan]{simulation_task.cwd}[/cyan]", extra={"markup": True, "highlighter": None})
-			result = tokoutil.simulate_in_toko(simulation_task)
-			self.run_callback(simulation_task, result)
-		except subprocess.CalledProcessError as e:
-			self.print_error(e)
-			raise e
-		except OSError as e:
-			self.print_error(e)
-			raise ValueError(f"Is LAMMPS ({LAMMPS_EXECUTABLE}) installed?") from e
-
-
-class TokoBatchedExecutionQueue(ExecutionQueue):
-	def __init__(self, batch_size: int = 10):
-		super().__init__()
-		self.batch_size = batch_size
-
-	def _simulate(self):
-		simulations = self._get_next_task()
-		logging.warning(f"[red]\[Not implemented] Running {len(simulations)} simulations in toko[/red]")
-
-	def _get_next_task(self):
-		if len(self.queue) == 0:
-			return None
-		next_task = self.queue[:self.batch_size]
-		self.queue = self.queue[self.batch_size:]
-		return next_task

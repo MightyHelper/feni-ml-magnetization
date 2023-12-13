@@ -40,15 +40,18 @@ def ls():
 	table.add_column("In Toko")
 
 	for i, folder in enumerate(sorted(execs)):
-		info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
-		table.add_row(
-			f"[green]{i}[/green]",
-			f"[cyan]{folder}[/cyan]",
-			f"[blue]{info.title}[/blue]",
-			f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
-			f"[magenta]{info.magnetism}[/magenta]",
-			f"[red]{info.extra_replacements['in_toko']}[/red]"
-		)
+		try:
+			info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
+			table.add_row(
+				f"[green]{i}[/green]",
+				f"[cyan]{folder}[/cyan]",
+				f"[blue]{info.title}[/blue]",
+				f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
+				f"[magenta]{info.magnetism}[/magenta]",
+				f"[red]{info.extra_replacements['in_toko']}[/red]"
+			)
+		except Exception as e:
+			logging.debug(f"Error parsing {folder}: {e}")
 	console.print(table, highlight=True)
 
 

@@ -1,3 +1,4 @@
+import itertools
 import os
 from typing import Generator
 
@@ -36,11 +37,13 @@ class NanoparticleLocator:
 				yield f"{path}/{file}"
 
 	@staticmethod
-	def get_a_particle(path: str = "../Shapes", extension: str = ".in") -> str:
+	def get_a_particle(path: str = "../Shapes", extension: str = ".in", index: int = 0) -> str:
 		"""
 		Returns the first particle found in the given path
 		:param path:  The path to search
 		:param extension:  The extension to search for
+		:param index:  The index of the particle to return
 		:return:
 		"""
-		return next(iter(NanoparticleLocator.search(path, extension)))
+		generator = NanoparticleLocator.search(path, extension)
+		return next(itertools.islice(generator, index, None))

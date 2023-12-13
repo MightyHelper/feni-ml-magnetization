@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks={{tasks}}
 #SBATCH --partition={{partition}}
-#SBATCH --time=00:45:00
+#SBATCH --time={{time}}
 . /etc/profile
 module load openmpi-2.1.6 gcc-9.2.0
 ## /home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/src/lmp_g++_openmpi

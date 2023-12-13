@@ -120,3 +120,7 @@ def realpath(path):
 def write_local_file(path, slurm_code):
 	with open(path, "w") as f:
 		f.write(slurm_code)
+
+def read_local_file(path):
+	template = open(path, "r")
+	return template.read()
