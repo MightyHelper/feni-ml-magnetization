@@ -15,3 +15,7 @@ r_experiments/mount.sh
 /r_experiments/FeNiMl/process/saves/*
 /r_experiments/FeNiMl/process/saves
 /r_experiments/FeNiMl/process/catboost_info
+/r_experiments/FeNiMl/catboost_info/
+/r_experiments/FeNiMl/*.html
+/r_experiments/FeNiMl/*.csv
+/r_experiments/FeNiMl/*.png
