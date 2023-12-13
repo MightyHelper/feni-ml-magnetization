@@ -16,6 +16,7 @@ import feni_mag
 import feni_ovito
 import random
 
+import toko_utils
 from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
@@ -352,8 +353,51 @@ class RunningExecutionLocator:
 
 	@staticmethod
 	def get_running_toko():
-		pass
-		# for execution in {x for result in os.popen("squeue -u " + config.TOKO_USER).readlines() if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
-		# 	folder_name = RunningExecutionLocator.get_nth_path_element(execution, -1)
-		# 	nano = Nanoparticle.from_executed(folder_name)
-		# 	yield folder_name, nano.run.get_current_step(), nano.title
+		# List job ids with (in toko with ssh): # squeue -hu fwilliamson -o "%i"
+		# Then Get slurm.sh contents with # scontrol write batch_script <JOB_ID> -
+		# Then parse {{file_tag}} which is in the last line as a comment with "## TAG: <file_tag>"
+		# Then get batch_info.txt from that path
+		# Read it
+		# Read each simulation and get the current step
+		# Return the current step
+		job_ids = toko_utils.TokoUtils.get_my_jobids()
+		logging.debug(f"Found {len(job_ids)} active jobs ({job_ids})")
+		for job_id in job_ids:
+			logging.debug(f"Getting info for job {job_id}")
+			batch_script = toko_utils.TokoUtils.get_batch_script(job_id)
+			logging.debug(f"Batch script: {batch_script}")
+			file_tag = toko_utils.TokoUtils.get_file_tag(batch_script)
+			logging.debug(f"File tag: {file_tag}")
+			batch_info = os.path.join(os.path.dirname(file_tag), "batch_info.txt")
+			logging.debug(f"Batch info: {batch_info}")
+			batch_info_content = toko_utils.TokoUtils.read_file(batch_info)
+			files_to_read: list[tuple[str, str, str]] = []
+			for line in batch_info_content.split("\n"):
+				if line.strip() == "":
+					continue
+				index, nano_in = line.split(": ")
+				f_name: str = os.path.basename(os.path.dirname(nano_in))
+				folder_name = os.path.join(config.TOKO_EXECUTION_PATH, f_name)
+				lammps_log = os.path.join(folder_name, "log.lammps")
+				remote_nano_in = os.path.join(folder_name, os.path.basename(nano_in))
+				files_to_read.append((folder_name, lammps_log, remote_nano_in))
+			file_output: dict[str, str] = {}
+			file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
+			file_contents = toko_utils.TokoUtils.read_multiple_files(file_names_to_read)
+			for i, content in enumerate(file_contents):
+				file_output[file_names_to_read[i]] = content
+
+			for folder_name, lammps_log, remote_nano_in in files_to_read:
+				try:
+					lammps_log_content = file_output[lammps_log]
+					if "Total wall time" in lammps_log_content:
+						logging.debug(f"Found finished job {folder_name}")
+						continue
+					current_step = mpilr.MpiLammpsRun.compute_current_step(lammps_log_content)
+					logging.debug(f"Current step: {current_step} {folder_name}")
+				except subprocess.CalledProcessError:
+					current_step = -1
+					logging.debug(f"Error getting current step for {folder_name}")
+				code = file_output[remote_nano_in]
+				title = code.split("\n")[0][1:].strip()
+				yield folder_name, current_step, title

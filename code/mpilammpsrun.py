@@ -100,23 +100,32 @@ class MpiLammpsRun:
 	def get_lammps_log_filename(self):
 		return self.sim_params['cwd'] + "/log.lammps"
 
-	def get_current_step(self):
+	@staticmethod
+	def compute_current_step(lammps_log_contents: str):
 		"""
 		Get the current step of a lammps log file
 		"""
 		step = -1
+		lines = [line.strip() for line in lammps_log_contents.split("\n") if line.strip() != ""]
+		# noinspection PyBroadException
 		try:
-			with open(self.get_lammps_log_filename(), "r") as f:
-				lines = f.readlines()
-				# noinspection PyBroadException
-				try:
-					split = re.split(r" +", lines[-1].strip())
-					step = int(split[0])
-				except Exception:
-					pass
-		except FileNotFoundError:
+			split = re.split(r" +", lines[-1])
+			step = int(split[0])
+		except Exception:
+			logging.debug(f"Could not parse step from {lines}")
 			pass
 		return step
+
+	def get_current_step(self):
+		"""
+		Get the current step of a lammps log file
+		"""
+		try:
+			with open(self.get_lammps_log_filename(), "r") as f:
+				return MpiLammpsRun.compute_current_step(f.read())
+		except FileNotFoundError:
+			pass
+		return -1
 
 	def get_simulation_task(self) -> SimulationTask:
 		"""

@@ -18,6 +18,8 @@ TOKO_PARTITION_TO_USE = "mini"
 TOKO_URL = "toko.uncu.edu.ar"
 TOKO_USER = "fwilliamson"
 TOKO_SBATCH = "/apps/slurm/bin/sbatch"
+TOKO_SQUEUE = "/apps/slurm/bin/squeue"
+TOKO_SCONTROL = "/apps/slurm/bin/scontrol"
 
 SLURM_SH = "slurm.sh"
 

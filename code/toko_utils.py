@@ -10,7 +10,7 @@ import numpy as np
 
 import config
 import utils
-from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH
+from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, TOKO_SQUEUE, TOKO_SCONTROL
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
 from template import TemplateUtils
@@ -65,6 +65,55 @@ class TokoUtils:
 		toko_alloy_file: Path = Path(os.path.join(toko_sim_folder.parent.parent, "FeCuNi.eam.alloy"))
 		logging.info("Copying alloy files...")
 		TokoUtils.copy_file_to_toko(local_alloy_file.as_posix(), toko_alloy_file.as_posix())
+
+	@staticmethod
+	def get_my_jobids() -> list[int]:
+		"""
+		Get the job ids of the current user
+		Runs: `squeue -u <USER> -h -o %i`
+		:return:
+		"""
+		return [int(jobid) for jobid in TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{TOKO_SQUEUE} -u {user} -h -o %i'"]).decode("utf-8").split("\n") if jobid]
+
+	@staticmethod
+	def get_batch_script(job_id):
+		"""
+		Get the batch script that was used to run the job
+		Runs: `scontrol write batch_script <JOB_ID> -`
+		:param job_id:
+		:return:
+		"""
+		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{TOKO_SCONTROL} write batch_script {job_id} -'"]).decode("utf-8")
+
+	@staticmethod
+	def get_file_tag(batch_script):
+		"""
+		Get the file tag from a batch script
+		:param batch_script:
+		:return:
+		"""
+		return re.search(r"## TAG: (.*)", batch_script).group(1)
+
+	@staticmethod
+	def read_file(filename: str) -> str:
+		"""
+		Read a file in toko
+		:param filename:
+		:return:
+		"""
+		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"cat {filename}"]).decode("utf-8")
+
+	@staticmethod
+	def read_multiple_files(filenames: list[str]) -> list[str]:
+		"""
+		Read multiple files in toko
+		:param filenames:
+		:return:
+		"""
+		# Temp separate files by a DELIMITER, and then split
+		DELIMITER = "\n===============================\n"
+		command = "echo -e \"" + DELIMITER.join([f"$(cat {filename})" for filename in filenames]) + "\""
+		return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}'"]).decode("utf-8").split(DELIMITER)
 
 
 class TokoExecutionQueue(ExecutionQueue):
