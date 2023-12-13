@@ -6,6 +6,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import numpy as np
+
 import config
 from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, LAMMPS_EXECUTABLE
 from execution_queue import ExecutionQueue
@@ -116,13 +118,13 @@ class TokoExecutionQueue(ExecutionQueue):
 
 def estimate_time(count, tasks):
 	"""
-	ceil(Count / tasks) * 45 min in hh:mm:ss
+	ceil(Count / tasks) * 45 min in d-hh:mm
 	Acceptable time formats include "minutes", "minutes:seconds", "hours:minutes:seconds", "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds".
 	:param count:
 	:param tasks:
 	:return:
 	"""
-	minutes = int((count / tasks) * 45)
+	minutes = int(np.ceil(count / tasks) * 45)
 	hours = minutes // 60
 	days = hours // 24
 	remaining_minutes = minutes % 60
@@ -165,7 +167,7 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 	def _simulate(self):
 		simulations = self._get_next_task()
 		local_batch_path, toko_batch_path, simulation_info = self.prepare_scripts(simulations)
-		sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(simulation_info, local_batch_path, toko_batch_path)
+		sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(simulation_info, local_batch_path, toko_batch_path, n_tasks=self.batch_size)
 		self.process_output(local_batch_path, sbatch_output, simulations, toko_batch_path)
 
 	def prepare_scripts(self, simulations):
@@ -184,7 +186,7 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 		local_multi_py = config.LOCAL_MULTI_PY
 		toko_multi_py = os.path.join(toko_batch_path, "multi.py")
 		os.mkdir(local_batch_path)
-		write_local_file(batch_info, "\n".join([f"{i + 1}: {simulation.input_file}" for i, simulation in enumerate(simulations)]))
+		write_local_file(batch_info, "\n".join([f"{i + 1}: {simulation.input_file}" for i, simulation in enumerate(simulations)]) + "\n")
 		for i, simulation in enumerate(simulations):
 			local_sim_folder: Path = Path(simulation.input_file).parent.absolute()
 			toko_sim_folder: Path = Path(os.path.join(TOKO_EXECUTION_PATH, local_sim_folder.name))

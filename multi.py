@@ -2,6 +2,8 @@
 
 import os
 import sys
+import time
+import subprocess
 
 world_size = os.getenv("OMPI_COMM_WORLD_SIZE")
 world_rank = os.getenv("OMPI_COMM_WORLD_RANK")
@@ -24,7 +26,23 @@ print(f"argv = {argv}")
 print(f"all_executions = {all_executions}")
 print(f"my_executions = {my_executions}")
 
+important_env = [
+	"LD_LIBRARY_PATH",
+	"PATH",
+	"PYTHONPATH",
+	"LIBRARY_PATH",
+	"MODULESHOME",
+	"MANPATH",
+	"MPI_HOME",
+	"MPI_SYSCONFIG",
+	"LOADEDMODULES",
+	"MPI_BIN",
+	"MPI_MAN",
+]
+env = {k: v for k, v in os.environ.items() if k in important_env}
+
 for execution in my_executions:
-	print(f"Starting {execution}")
-	os.system(f"{execution}")
-	print(f"Finished {execution}")
+	print(f"[{world_rank} {time.time():.2f}] Starting {execution}")
+
+	subprocess.run(f"{execution}", env=env, shell=True)
+	print(f"[{world_rank} {time.time():.2f}] Finished {execution}")
