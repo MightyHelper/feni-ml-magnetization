@@ -9,7 +9,8 @@ from config import LOG_LEVEL
 
 def setup_logging():
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
-	signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+	if hasattr(signal, "SIGPIPE"):
+		signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 	logging.basicConfig(
 		level="NOTSET",
