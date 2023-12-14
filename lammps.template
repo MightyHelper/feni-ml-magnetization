@@ -37,7 +37,7 @@ pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
 pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
 
 neighbor 	0.5 bin
-neigh_modify 	every 10 check yes delay 10
+# neigh_modify every 10 check yes delay 10 # No need for frozen lattice
 
 comm_style tiled
 balance 0.1 rcb
@@ -69,8 +69,8 @@ thermo_modify flush yes
 fix temperatura all langevin 0 0 1 23136
 fix b all langevin/spin 300 0.01 29481
 fix c all nve/spin lattice frozen
-fix d all momentum 10 linear 1 1 1 angular rescale
-fix centrar all recenter INIT INIT INIT
+# fix d all momentum 10 linear 1 1 1 angular rescale # No need for frozen lattice
+# fix centrar all recenter INIT INIT INIT # No need for frozen lattice
 
 
 dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
