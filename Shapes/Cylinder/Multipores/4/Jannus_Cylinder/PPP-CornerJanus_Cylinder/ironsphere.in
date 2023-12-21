@@ -1,0 +1,97 @@
+# bcc iron in a 3d periodic box
+
+clear 
+units 		metal
+atom_style 	spin
+
+# dimension 	3
+boundary 	p p p
+
+# necessary for the serial algorithm (sametag)
+atom_modify 	map array 
+
+region 		box block -25 25 -25 25 -25 25 units box
+create_box	2 box
+
+lattice		bcc 2.8665
+region		cilindroExterno cylinder z 0 0 12.5 -15 15 units box
+create_atoms	1 region cilindroExterno
+region		esquina plane 0 0 6 0 1 1 units box
+set region esquina type 2
+
+ region		    s1 sphere 0 -7 11 3.5 units box 
+set region      s1 type 2
+region		    s2 sphere 0 -7 -8 3.5 units box 
+set region      s2 type 2
+region		    s3 sphere 0 7 -8 3.5 units box
+set region      s3 type 2
+region		    s4 sphere 0 7 11 3.5 units box 
+set region      s4 type 2
+
+delete_atoms 	region s1 compress yes 
+delete_atoms 	region s2 compress yes 
+delete_atoms 	region s3 compress yes 
+delete_atoms 	region s4 compress yes 
+
+group		Fe type 1
+group		Ni type 2
+
+#Esquina aleatoria: si se comentan las dos líneas siguientes, el corte será perfecto y habrá Ni en la esquina y Fe en el resto del cilindro.
+#El 62 indica la cantidad de mezcla. 
+#set group Fe type/subset 2 62 300
+#set region esquina type/subset 1 62 300
+
+# setting mass, mag. moments, and interactions for bcc iron
+
+mass		1 55.845 #Fe
+mass		2 58.693 #Ni
+
+set 		group Fe spin 2.2 0 0 1 #Fe
+set		group Ni spin 0.61 0 0 1 #Ni
+
+pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
+pair_coeff 	* * eam/alloy FeCuNi.eam.alloy Fe Ni
+pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
+pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
+pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
+
+neighbor 	0.5 bin
+neigh_modify 	every 10 check yes delay 10
+
+timestep 0.001
+
+velocity 	all create 0 4928459 rot yes dist gaussian
+
+compute 	out_mag    all spin
+compute 	out_pe     all pe
+compute 	out_ke     all ke
+compute 	out_temp   all temp
+compute     keAtom  all ke/atom
+compute     peAtom  all pe/atom
+compute     outsp all property/atom spx spy spz sp fmx fmy fmz
+
+variable 	magx 	  equal c_out_mag[1]
+variable	magy	  equal c_out_mag[2]
+variable 	magz      equal c_out_mag[3]
+variable 	magnorm   equal c_out_mag[4]
+variable 	emag      equal c_out_mag[5]
+variable 	tmag      equal c_out_mag[6]
+
+thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
+thermo          500
+
+
+
+#fix a all precession/spin anisotropy 0.0000035 0.0 0.0 1.0
+#fix a all precession/spin cubic -0.0000035 0.00000036 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0
+fix temperatura all langevin 0 0 1 23136
+fix b all langevin/spin 300 0.01 29481
+fix c all nve/spin lattice frozen
+fix d all momentum 10 linear 1 1 1 angular rescale
+fix centrar all recenter INIT INIT INIT
+
+
+dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
+
+run 		300000
+
