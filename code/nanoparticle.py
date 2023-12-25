@@ -8,7 +8,7 @@ import os
 import pandas as pd
 
 import config
-import mpilammpsrun as mpilr
+import lammpsrun as lr
 import opt
 import shapes
 import template
@@ -27,7 +27,7 @@ class Nanoparticle:
 	"""Represents a nanoparticle"""
 	regions: list[shapes.Shape]
 	atom_manipulation: list[str]
-	run: mpilr.MpiLammpsRun | None
+	run: lr.LammpsRun | None
 	region_name_map: dict[str, int] = {}
 	magnetism: tuple[float, float]
 	id: str
@@ -79,7 +79,7 @@ class Nanoparticle:
 		n.extra_replacements = {
 			'in_toko': os.path.isfile(n.path + "/" + config.SLURM_SH)
 		}
-		n.run = mpilr.MpiLammpsRun.from_path(n.path)
+		n.run = lr.LammpsRun.from_path(n.path)
 		n.region_name_map = {}
 		n.magnetism = n.get_magnetism()
 		n.title = n.run.code.split("\n")[0][1:].strip()
@@ -234,7 +234,7 @@ class Nanoparticle:
 			self.magnetism = self.get_magnetism()
 
 	def _build_lammps_run(self, code, kwargs, test_run):
-		lammps_run = mpilr.MpiLammpsRun(
+		lammps_run = lr.LammpsRun(
 			code, {
 				"omp": opt.OMPOpt(use=False, n_threads=2),
 				"mpi": opt.MPIOpt(use=False, hw_threads=False, n_threads=4),
@@ -308,6 +308,35 @@ class Nanoparticle:
 		out["count_fe"] = self.coord_fe["count"]
 		out["count_ni"] = self.coord_ni["count"]
 		return out
+
+	def asdict(self):
+		try:
+			return {
+				"ok": True,
+				"key": self.id,
+				"np": self,
+				"run_path": self.path,
+				"fe": self.count_atoms_of_type(FE_ATOM),
+				"ni": self.count_atoms_of_type(NI_ATOM),
+				"total": self.total_atoms(),
+				"ratio_fe": self.count_atoms_of_type(FE_ATOM) / self.total_atoms(),
+				"ratio_ni": self.count_atoms_of_type(NI_ATOM) / self.total_atoms(),
+				"mag": self.magnetism[0]
+			}
+		except Exception:
+			return {
+				"ok": False,
+				"key": self.id,
+				"np": self,
+				"run_path": self.path,
+				"fe": 0,
+				"ni": 0,
+				"total": 0,
+				"ratio_fe": 0,
+				"ratio_ni": 0,
+				"mag": float('nan')
+			}
+
 
 
 class RunningExecutionLocator:
@@ -393,7 +422,7 @@ class RunningExecutionLocator:
 					if "Total wall time" in lammps_log_content:
 						logging.debug(f"Found finished job {folder_name}")
 						continue
-					current_step = mpilr.MpiLammpsRun.compute_current_step(lammps_log_content)
+					current_step = lr.LammpsRun.compute_current_step(lammps_log_content)
 					logging.debug(f"Current step: {current_step} {folder_name}")
 				except subprocess.CalledProcessError:
 					current_step = -1

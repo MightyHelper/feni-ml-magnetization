@@ -32,14 +32,17 @@ class ExecutionQueue(ABC):
 			callback(result)
 
 	def print_error(self, e, **kwargs):
-		kwargs['queue'] = self.queue
-		kwargs['queue_obj'] = self
+		kwargs['queue'] = type(self)
+		kwargs['queue'] = len(self.queue)
 		params = "\n".join([f"{key}={value}" for key, value in kwargs.items()]) if kwargs else ""
 		logging.error("ERROR:" + str(e) + params, extra={"markup": True})
 
 	def run(self):
 		while len(self.queue) > 0:
-			self._simulate()
+			try:
+				self._simulate()
+			except Exception as e:
+				logging.error(f"Error in {type(self)}: {e}")
 
 	@abstractmethod
 	def _simulate(self) -> None:
@@ -57,8 +60,10 @@ class LocalExecutionQueue(ExecutionQueue):
 			result = subprocess.check_output(cmd.split(" "), cwd=simulation_task.cwd, shell=platform.system() == "Windows")
 			self.run_callback(simulation_task, result.decode("utf-8"))
 		except subprocess.CalledProcessError as e:
+			simulation_task.ok = False
 			self.print_error(e)
 			raise e
 		except OSError as e:
+			simulation_task.ok = False
 			self.print_error(e)
 			raise ValueError(f"Is LAMMPS ({lammps_executable}) installed?") from e

@@ -5,7 +5,7 @@ from opt import MPIOpt, GPUOpt, OMPOpt
 from simulation_task import SimulationTask
 
 
-class MpiLammpsWrapper:
+class SimulationWrapper:
 	"""
 	Wrapper for MPI LAMMPS
 	"""
@@ -39,4 +39,4 @@ class MpiLammpsWrapper:
 				os.mkdir(path.parent.parent)
 			os.mkdir(path.parent)
 		with open(file_to_use, 'w') as f: f.write(code)
-		return MpiLammpsWrapper.get_task(input_file=file_to_use, **sim_params)
+		return SimulationWrapper.get_task(input_file=file_to_use, **sim_params)

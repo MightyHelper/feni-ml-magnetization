@@ -15,6 +15,7 @@ class SimulationTask:
 	cwd: str = field(default_factory=str)
 	is_test_run: bool = field(default_factory=lambda: False)
 	callbacks: list[Callable[[str], None]] = field(default_factory=list)
+	ok: bool = field(default_factory=lambda: True)
 
 	def add_callback(self, callback: Callable[[str], None]):
 		self.callbacks.append(callback)

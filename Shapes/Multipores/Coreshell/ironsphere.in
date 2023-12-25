@@ -18,13 +18,13 @@ region          ce cone z 0.0 0.0 17 1 -22 23 units box
 create_atoms	1 region ce
 region          ci cone z 0.0 0.0 10 1 -20 21 units box
 set region      ci type 2
-region		    s1 sphere -6 -5 -10 3.5 units box side out
+region		    s1 sphere -6 -5 -10 3.5 units box
 set region      s1 type 2
-region		    s2 sphere 2 2 -4 3.5 units box side out
+region		    s2 sphere 2 2 -4 3.5 units box
 set region      s2 type 2
-region		    s3 sphere 6 5 -15 3.5 units box side out
+region		    s3 sphere 6 5 -15 3.5 units box
 set region      s3 type 2
-region		    s4 sphere 1 -2 4 3.5 units box side out
+region		    s4 sphere 1 -2 4 3.5 units box
 set region      s4 type 2
 
 delete_atoms 	region s1 compress yes 
@@ -89,4 +89,3 @@ fix centrar all recenter INIT INIT INIT
 dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
 
 run 		300000
-

@@ -1,7 +1,7 @@
 import logging
 
 # Program config
-LOG_LEVEL = logging.DEBUG  # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL = logging.WARNING  # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 LAMMPS_TEMPLATE_PATH = "../lammps.template"  # Local path pointing to the lammps template
 SLURM_TEMPLATE_PATH = "../slurm.template"  # Local path pointing to the slurm template
 SLURM_MULTI_TEMPLATE_PATH = "../slurm-multi.template"  # Local path pointing to the slurm template
