@@ -14,8 +14,6 @@ atom_modify 	map array
 region 		box block -25 25 -25 25 -25 25 units box
 create_box	2 box
 
-lattice		bcc 2.8665
-
 group		Fe type 1
 group		Ni type 2
 

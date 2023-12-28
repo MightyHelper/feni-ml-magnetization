@@ -25,7 +25,7 @@ executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
 @executions.command()
-def ls():
+def ls(count: bool = False):
     """
     List all executions that were done
     """
@@ -37,20 +37,20 @@ def ls():
     table.add_column("Date")
     table.add_column("Magnetism")
     table.add_column("In Toko")
-
-    for i, folder in enumerate(sorted(execs)):
-        try:
-            info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
-            table.add_row(
-                f"[green]{i}[/green]",
-                f"[cyan]{folder}[/cyan]",
-                f"[blue]{info.title}[/blue]",
-                f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
-                f"[magenta]{info.magnetism}[/magenta]",
-                f"[red]{info.extra_replacements['in_toko']}[/red]"
-            )
-        except Exception as e:
-            logging.debug(f"Error parsing {folder}: {e}")
+    if not count:
+        for i, folder in enumerate(sorted(execs)):
+            try:
+                info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
+                table.add_row(
+                    f"[green]{i}[/green]",
+                    f"[cyan]{folder}[/cyan]",
+                    f"[blue]{info.title}[/blue]",
+                    f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
+                    f"[magenta]{info.magnetism}[/magenta]",
+                    f"[red]{info.extra_replacements['in_toko']}[/red]"
+                )
+            except Exception as e:
+                logging.debug(f"Error parsing {folder}: {e}")
     console.print(table, highlight=True)
 
 

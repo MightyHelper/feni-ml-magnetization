@@ -51,17 +51,36 @@ def execute_nanoparticles(
     return out_nanos
 
 
-def build_nanoparticles_to_execute(ignore: list[str], path: str, seed: int, seed_count: int) -> list[tuple[str, nanoparticle.Nanoparticle]]:
-	nano_builders = parser.PoorlyCodedParser.load_shapes(path, ignore)
-	nanoparticles = []
-	random.seed(seed)
-	for key, nano in nano_builders:
-		nano = cast(nanoparticlebuilder.NanoparticleBuilder, nano)
-		if nano.is_random():
-			for i in range(seed_count):
-				seeds = [random.randint(0, 100000) for _ in range(len(nano.seed_values))]
-				logging.debug(f"Using seeds {seeds}")
-				nanoparticles.append((key, nano.build(seeds)))
-		else:
-			nanoparticles.append((key, nano.build()))
-	return nanoparticles
+def execute_single_nanoparticle(
+        nanoparticle: tuple[str, Nanoparticle],
+        at: str = "local",
+        test: bool = False
+) -> tuple[str, Nanoparticle]:
+    """
+    Execute only a single nanoparticle
+    :param nanoparticle:
+    :param at:
+    :param test:
+    :return:
+    """
+    result: list[tuple[str, Nanoparticle]] = execute_nanoparticles([nanoparticle], at=at, test=test)
+    if len(result) == 0:
+        raise Exception(f"Execution of nanoparticle {nanoparticle} Failed.")
+    return result[0]
+
+
+def build_nanoparticles_to_execute(ignore: list[str], path: str, seed: int, seed_count: int) -> list[
+    tuple[str, nanoparticle.Nanoparticle]]:
+    nano_builders = parser.PoorlyCodedParser.load_shapes(path, ignore)
+    nanoparticles = []
+    random.seed(seed)
+    for key, nano in nano_builders:
+        nano = cast(nanoparticlebuilder.NanoparticleBuilder, nano)
+        if nano.is_random():
+            for i in range(seed_count):
+                seeds = [random.randint(0, 100000) for _ in range(len(nano.seed_values))]
+                logging.debug(f"Using seeds {seeds}")
+                nanoparticles.append((key, nano.build(seeds)))
+        else:
+            nanoparticles.append((key, nano.build()))
+    return nanoparticles
