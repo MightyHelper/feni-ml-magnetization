@@ -2,12 +2,11 @@ import logging
 import re
 from pathlib import Path
 
-from bayes_opt import BayesianOptimization, UtilityFunction
+from bayes_opt import BayesianOptimization
 import typer
 from rich import print as rprint
 
 import config
-import executor
 import poorly_coded_parser as parser
 import utils
 
@@ -26,7 +25,7 @@ def get_full_function(path: str):
 		_, nanoparticle = parser.parse_single_shape(path, False, replacements=kwargs)
 		nanoparticle = nanoparticle.build(title='Fuzzing ' + nanoparticle.title)
 		nanoparticle.execute(True)
-		result = executor.parse_ok_execution_results("fuzzed", nanoparticle, True)
+		result = nanoparticle.asdict()
 		atom_count = result['total']
 		ratio = result['ratio_ni']
 		return atom_count, ratio, nanoparticle

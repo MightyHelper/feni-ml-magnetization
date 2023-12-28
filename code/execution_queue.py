@@ -67,7 +67,7 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         kwargs['queue'] = type(self)
         kwargs['queue'] = len(self.queue)
         params = "\n".join([f"{key}={value}" for key, value in kwargs.items()]) if kwargs else ""
-        logging.error("ERROR:" + str(e) + params, extra={"markup": True})
+        logging.error("ERROR:" + str(e) + " " + params, extra={"markup": True})
 
     def run(self):
         while len(self.queue) > 0:

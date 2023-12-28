@@ -84,25 +84,29 @@ class TokoUtils:
             "utf-8").split("\n") if jobid]
 
     @staticmethod
-    def get_batch_script(job_id):
+    def get_batch_script(job_id: int) -> str:
         """
         Get the batch script that was used to run the job
         Runs: `scontrol write batch_script <JOB_ID> -`
         :param job_id:
         :return:
         """
-        return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}",
-                                                                  f"sh -c '{TOKO_SCONTROL} write batch_script {job_id} -'"]).decode(
-            "utf-8")
+        return TokoUtils.run_cmd_for_toko(
+            lambda user, toko_url: [
+                "ssh", f"{user}@{toko_url}",
+                f"sh -c '{TOKO_SCONTROL} write batch_script {job_id} -'"
+            ]
+        ).decode("utf-8")
 
     @staticmethod
-    def get_file_tag(batch_script):
+    def get_file_tag(batch_script: str) -> str | None:
         """
         Get the file tag from a batch script
         :param batch_script:
         :return:
         """
-        return re.search(r"## TAG: (.*)", batch_script).group(1)
+        result = re.search(r"## TAG: (.*)", batch_script)
+        return None if result is None else result.group(1)
 
     @staticmethod
     def read_file(filename: str) -> str:
@@ -111,8 +115,14 @@ class TokoUtils:
         :param filename:
         :return:
         """
-        return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"cat {filename}"]).decode("utf-8")
+        try:
+            return TokoUtils.run_cmd_for_toko(lambda user, toko_url: [
+                "ssh",
+                f"{user}@{toko_url}",
+                f"cat {filename}"
+            ]).decode("utf-8")
+        except subprocess.CalledProcessError:
+            raise FileNotFoundError("TOKO: " + filename)
 
     @staticmethod
     def read_multiple_files(filenames: list[str]) -> list[str]:
@@ -131,6 +141,8 @@ class TokoUtils:
 class TokoExecutionQueue(SingleExecutionQueue):
     @staticmethod
     def submit_toko_script(toko_nano_in: str, toko_sim_folder: str, local_sim_folder: str):
+        local_slurm_sh = os.path.join(local_sim_folder, config.SLURM_SH)
+        toko_slurm_sh = os.path.join(toko_sim_folder, config.SLURM_SH)
         slurm_code = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_template(), {
                 "lammps_exec": LAMMPS_TOKO_EXECUTABLE,
@@ -139,14 +151,13 @@ class TokoExecutionQueue(SingleExecutionQueue):
                 "lammps_input": toko_nano_in,
                 "lammps_output": toko_sim_folder + "/log.lammps",
                 "cwd": toko_sim_folder,
-                "partition": TOKO_PARTITION_TO_USE
+                "partition": TOKO_PARTITION_TO_USE,
+                "file_tag": toko_slurm_sh
             }
         )
         assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
-        local_slurm_sh = os.path.join(local_sim_folder, config.SLURM_SH)
         write_local_file(local_slurm_sh, slurm_code)
         logging.info(f"Copying {config.SLURM_SH} to toko...")
-        toko_slurm_sh = os.path.join(toko_sim_folder, config.SLURM_SH)
         TokoUtils.copy_file_to_toko(local_slurm_sh, toko_slurm_sh)
         logging.info("Queueing job in toko...")
         return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}",

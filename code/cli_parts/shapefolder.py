@@ -4,9 +4,9 @@ import pandas as pd
 import rich.table
 import typer
 from rich import print as rprint
-import executor
 import nanoparticle_locator
 import poorly_coded_parser as parser
+import service.executor_service
 from cli_parts.number_highlighter import console, h
 from nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
@@ -54,7 +54,7 @@ def parseshapes(
     """
     rprint(f"Parsing all input files in [bold underline green]{path}[/bold underline green]")
 
-    nanoparticles: list[tuple[str, Nanoparticle]] = executor.build_nanoparticles_to_execute([], path, seed, seed_count)
+    nanoparticles: list[tuple[str, Nanoparticle]] = service.executor_service.build_nanoparticles_to_execute([], path, seed, seed_count)
     if count_only:
         rprint(f"Found [green]{len(nanoparticles)}[/green] nanoparticle shapes.")
         return
@@ -69,7 +69,7 @@ def parseshapes(
     table.add_column("SubType")
     table.add_column("SubSubType")
     for i in df.index.values:
-        ptype, subtype, subsubtype = parse_nanoparticle_name(df.iloc[i]["key"])
+        ptype, subtype, subsubtype = parse_nanoparticle_name(df.iloc[i]["title"])
         table.add_row(*[h(str(j)) for j in df.iloc[i]], ptype, subtype, subsubtype)
     console.print(table, highlight=True)
 
