@@ -1,0 +1,17 @@
+lattice bcc 2.8665 
+region reg0 ellipsoid 0.0 1.0 1.0 21.0 13.0 13.0 units box 
+create_atoms 1 region reg0
+region reg1 ellipsoid 0.0 1.0 1.0 19.5 10.0 10.0 units box 
+set region reg1 type 2
+region reg2 ellipsoid 0.0 1.0 1.0 18.0 8.0 8.0 units box 
+set region reg2 type 1
+region reg3 ellipsoid 0.0 1.0 1.0 16.0 6.0 6.0 units box 
+set region reg3 type 2
+region reg4 ellipsoid 0.0 1.0 1.0 14.0 4.0 4.0 units box 
+set region reg4 type 1
+region reg5 ellipsoid 0.0 1.0 1.0 12.0 2.0 2.0 units box 
+set region reg5 type 2
+region reg6 ellipsoid 0.0 1.0 1.0 10.0 1.0 1.0 units box 
+set region reg6 type 1
+group Fe type 1
+group Ni type 2

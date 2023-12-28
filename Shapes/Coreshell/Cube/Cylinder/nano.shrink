@@ -1,0 +1,7 @@
+lattice bcc 2.8665 
+region reg0 prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+create_atoms 1 region reg0
+region reg1 cylinder z 0.0 0.0 9.0 -10.0 10.0 units box 
+set region reg1 type 2
+group Fe type 1
+group Ni type 2

@@ -1,3 +1,4 @@
+lattice bcc 2.8665 
 region reg0 prism -12.5 12.5 -12.5 13.0 -13.0 13.0 0.0 0.0 0.0 units box 
 region reg1 sphere 0.0 0.0 0.0 7.5 units box side out
 region reg2 intersect 2 reg0 reg1 

@@ -1,3 +1,4 @@
+lattice bcc 2.8665 
 region reg0 plane 0.0 20.5 0.0 0.0 -1.0 -1.2 units box 
 region reg1 plane 0.0 20.5 0.0 0.0 -1.0 1.2 units box 
 region reg2 plane 0.0 20.5 0.0 1.2 -1.0 0.0 units box 
