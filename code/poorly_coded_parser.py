@@ -312,7 +312,7 @@ class PoorlyCodedParser:
 		"""
 		replacements = replacements or {}
 		with open(shape_path, "r") as f:
-			logging.info(f"[yellow]=== {shape_path} ===[/yellow]", extra={"markup": True})
+			logging.debug(f"[yellow]=== {shape_path} ===[/yellow]", extra={"markup": True})
 			nano = nanoparticlebuilder.NanoparticleBuilder(title=shape_path)
 			lines = f.readlines()
 			if not full_file:

@@ -19,6 +19,7 @@ import config
 import executor
 import nanoparticle
 import poorly_coded_parser as parser
+from service.executor_service import execute_nanoparticles
 from utils import add_task, ZeroHighlighter, resolve_path
 from cli_parts.number_highlighter import console
 
@@ -121,15 +122,15 @@ def live(in_toko: bool = False, listen_anyway: bool = False):
 
 
 @executions.command()
-def execute(path: Path, plot: bool = False, test: bool = True, in_toko: bool = False):
+def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local") -> None:
 	"""
 	Execute a nanoparticle simulation
 	"""
-	path = resolve_path(path)
-	_, nano = parser.PoorlyCodedParser.parse_single_shape(path)
-	nano = nano.build()
-	# nano.execute(test_run=test, in_toko=in_toko)
-	rprint(executor.parse_ok_execution_results(path, nano, test))
+	abs_path: str = resolve_path(path)
+	path, nano_builder = parser.PoorlyCodedParser.parse_single_shape(abs_path)
+	nano = nano_builder.build()
+	result = execute_nanoparticles([(path, nano)], at, test)
+	rprint(executor.parse_ok_execution_results(abs_path, nano, test))
 	if plot:
 		nano.plot()
 

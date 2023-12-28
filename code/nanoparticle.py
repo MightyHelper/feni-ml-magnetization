@@ -212,6 +212,7 @@ class Nanoparticle:
 		dumps, self.run = self._build_lammps_run(code, kwargs, test_run)
 		sim_task = self.run.get_simulation_task()
 		sim_task.add_callback(self.on_post_execution)
+		sim_task.nanoparticle = self
 		return sim_task
 
 	def schedule_execution(self, execution_queue: ExecutionQueue, test_run: bool = True, **kwargs) -> None:
@@ -228,7 +229,6 @@ class Nanoparticle:
 		Callback for when the execution is finished
 		:return:
 		"""
-		logging.debug(f"{self.run.dumps=}")
 		if FULL_RUN_DURATION in self.run.dumps:
 			feni_mag.MagnetismExtractor.extract_magnetism(self.path + "/log.lammps", out_mag=self.path + "/magnetism.txt", digits=4)
 			feni_ovito.FeNiOvitoParser.parse(filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION].path})
@@ -313,7 +313,7 @@ class Nanoparticle:
 	def asdict(self):
 		try:
 			return {
-				"ok": True,
+				"ok": len(self.run.dumps) > 0,
 				"key": self.id,
 				"np": self,
 				"run_path": self.path,
@@ -363,7 +363,10 @@ class RunningExecutionLocator:
 			if platform.system() == "Windows":
 				yield from RunningExecutionLocator.get_running_windows(True)
 			elif platform.system() == "Linux":
-				yield from RunningExecutionLocator.get_running_windows(False)
+				try:
+					yield from RunningExecutionLocator.get_running_windows(False)
+				except FileNotFoundError:
+					pass
 				yield from RunningExecutionLocator.get_running_linux()
 			else:
 				raise Exception(f"Unknown system: {platform.system()}")
@@ -374,13 +377,21 @@ class RunningExecutionLocator:
 	def get_running_linux():
 		ps_result = os.popen("ps -ef | grep " + config.LAMMPS_EXECUTABLE).readlines()
 		for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
-			folder_name = RunningExecutionLocator.get_nth_path_element(execution, -1)
-			nano = Nanoparticle.from_executed(folder_name)
-			yield folder_name, nano.run.get_current_step(), nano.title
+			folder_name = RunningExecutionLocator.get_upto_nth_path_element(execution, -1)
+			try:
+				nano = Nanoparticle.from_executed(folder_name)
+				yield folder_name, nano.run.get_current_step(), nano.title
+			except Exception:
+				pass
 
 	@staticmethod
 	def get_nth_path_element(path: str, n: int) -> str:
 		return path.split("/")[n]
+
+	@staticmethod
+	def get_upto_nth_path_element(path: str, n: int) -> str:
+		return "/".join(path.split("/")[:n])
+
 
 	@staticmethod
 	def get_running_toko():

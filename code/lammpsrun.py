@@ -3,8 +3,7 @@ import os
 import re
 
 from lammpsdump import LammpsDump
-from simulationwrapper import SimulationWrapper
-from simulation_task import SimulationTask
+from simulation_task import SimulationTask, SimulationWrapper
 from utils import generate_random_filename
 
 
@@ -67,6 +66,7 @@ class LammpsRun:
 		self.output = result
 		self.dumps = self._parse_dumps()
 		logging.debug(f"Finished execution of {self.file_name}")
+		logging.info(f"Lammps run {self} done with {len(self.dumps)} dumps")
 
 	def _parse_dumps(self):
 		dumps = {}
