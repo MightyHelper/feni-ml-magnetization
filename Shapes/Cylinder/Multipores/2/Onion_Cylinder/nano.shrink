@@ -1,10 +1,16 @@
 region reg0 cylinder z 0.0 0.0 12.5 -15.0 15.0 units box 
 create_atoms 1 region reg0
-region reg1 cylinder z 0.0 0.0 9.0 -13.0 13.0 units box 
+region reg1 cylinder z 0.0 0.0 8.5 -13.0 13.0 units box 
 set region reg1 type 2
 region reg2 cylinder z 0.0 0.0 6.0 -11.0 11.0 units box 
 set region reg2 type 1
 region reg3 cylinder z 0.0 0.0 3.0 -9.0 9.0 units box 
 set region reg3 type 2
+region reg4 sphere 0.0 -7.0 11.0 3.5 units box 
+set region reg4 type 2
+region reg5 sphere 0.0 -7.0 -8.0 3.5 units box 
+set region reg5 type 2
+delete_atoms region reg4 compress yes
+delete_atoms region reg5 compress yes
 group Fe type 1
 group Ni type 2

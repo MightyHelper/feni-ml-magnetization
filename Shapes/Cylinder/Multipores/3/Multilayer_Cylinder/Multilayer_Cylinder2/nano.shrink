@@ -20,5 +20,14 @@ region reg9 cylinder z 0.0 0.0 9.5 10.0 11.0 units box
 set region reg9 type 2
 region reg10 cylinder z 0.0 0.0 9.5 11.5 13.0 units box 
 set region reg10 type 2
+region reg11 sphere 0.0 -7.0 11.0 3.5 units box 
+set region reg11 type 2
+region reg12 sphere 0.0 -7.0 -8.0 3.5 units box 
+set region reg12 type 2
+region reg13 sphere 0.0 7.0 -8.0 3.5 units box 
+set region reg13 type 2
+delete_atoms region reg11 compress yes
+delete_atoms region reg12 compress yes
+delete_atoms region reg13 compress yes
 group Fe type 1
 group Ni type 2
