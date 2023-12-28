@@ -42,7 +42,7 @@ class ExecutionQueue(ABC):
 			try:
 				self._simulate()
 			except Exception as e:
-				logging.error(f"Error in {type(self)}: {e}")
+				logging.error(f"Error in {type(self)}: {e}", stack_info=True)
 
 	@abstractmethod
 	def _simulate(self) -> None:
@@ -55,8 +55,8 @@ class LocalExecutionQueue(ExecutionQueue):
 		lammps_executable = LAMMPS_EXECUTABLE
 		cmd = f"{simulation_task.mpi} {lammps_executable} {simulation_task.omp} {simulation_task.gpu} -in {simulation_task.input_file}"
 		cmd = re.sub(r' +', " ", cmd).strip()
+		logging.info(f"[bold blue]LocalExecutionQueue[/bold blue] Running [bold yellow]{cmd}[/bold yellow] in [cyan]{simulation_task.cwd}[/cyan]", extra={"markup": True, "highlighter": None})
 		try:
-			logging.info(f"[bold blue]LocalExecutionQueue[/bold blue] Running [bold yellow]{cmd}[/bold yellow] in [cyan]{simulation_task.cwd}[/cyan]", extra={"markup": True, "highlighter": None})
 			result = subprocess.check_output(cmd.split(" "), cwd=simulation_task.cwd, shell=platform.system() == "Windows")
 			self.run_callback(simulation_task, result.decode("utf-8"))
 		except subprocess.CalledProcessError as e:

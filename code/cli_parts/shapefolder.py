@@ -13,6 +13,7 @@ import nanoparticle_locator
 import poorly_coded_parser as parser
 import toko_utils
 from cli_parts.number_highlighter import console, h
+from nanoparticle import Nanoparticle
 from utils import parse_nanoparticle_name, dot_dot
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
@@ -43,6 +44,9 @@ def ls(path: str = "../Shapes"):
 	console.print(table, highlight=True)
 
 
+def _run(x: execution_queue.ExecutionQueue):
+	x.run()
+
 @shapefolder.command()
 def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True, seed_count: int = 1, seed: int = 123, count_only: bool = False, at: Annotated[str, "toko, toko:queue_name, local"] = "local"):
 	"""
@@ -50,24 +54,33 @@ def parseshapes(path: str = "../Shapes", threads: int = None, test: bool = True,
 	"""
 	rprint(f"Parsing all input files in [bold underline green]{path}[/bold underline green]")
 
-	nanoparticles = executor.build_nanoparticles_to_execute([], path, seed, seed_count)
+	nanoparticles: list[tuple[str, Nanoparticle]] = executor.build_nanoparticles_to_execute([], path, seed, seed_count)
 	if count_only:
 		rprint(f"Found [green]{len(nanoparticles)}[/green] nanoparticle shapes.")
 		return
-	with multiprocessing.Pool(threads) as p:
-		nanoparticles = p.starmap(schedule_with_queue, [(np, at, test) for np in nanoparticles])
+	queues = [get_executor(at) for _ in range(threads)]
+	for i, (key, np) in enumerate(nanoparticles):
+		np.schedule_execution(execution_queue=queues[i % threads], test_run=test)
+	# Run each queue in a separate thread
+	threads = [multiprocessing.Process(target=_run, args=(q,)) for q in queues]
 
-	nanoparticles = pd.DataFrame([nanoparticle.asdict() for _, nanoparticle in nanoparticles])
-	nanoparticles.drop(columns=["np"], inplace=True)
+	for t in threads:
+		t.start()
+
+	for t in threads:
+		t.join()
+
+	df: pd.DataFrame = pd.DataFrame([nanoparticle.asdict() for _, nanoparticle in nanoparticles])
+	df.drop(columns=["np"], inplace=True)
 	table = rich.table.Table(title="Nanoparticle run results")
-	for column in nanoparticles.columns:
+	for column in df.columns:
 		table.add_column(column)
 	table.add_column("Type")
 	table.add_column("SubType")
 	table.add_column("SubSubType")
-	for i in nanoparticles.index.values:
-		ptype, subtype, subsubtype = parse_nanoparticle_name(nanoparticles.iloc[i]["key"])
-		table.add_row(*[h(str(j)) for j in nanoparticles.iloc[i]], ptype, subtype, subsubtype)
+	for i in df.index.values:
+		ptype, subtype, subsubtype = parse_nanoparticle_name(df.iloc[i]["key"])
+		table.add_row(*[h(str(j)) for j in df.iloc[i]], ptype, subtype, subsubtype)
 	console.print(table, highlight=True)
 
 

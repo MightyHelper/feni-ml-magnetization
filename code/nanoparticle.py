@@ -29,7 +29,7 @@ class Nanoparticle:
 	atom_manipulation: list[str]
 	run: lr.LammpsRun | None
 	region_name_map: dict[str, int] = {}
-	magnetism: tuple[float, float]
+	magnetism: tuple[float | None, float | None]
 	id: str
 	title: str
 	path: str
@@ -55,6 +55,7 @@ class Nanoparticle:
 		self.id = self._gen_identifier() if id_x is None else id_x
 		self.path = realpath(LOCAL_EXECUTION_PATH + "/" + self.id) + "/"
 		self.run = None
+		self.magnetism = (None, None)
 
 	def hardcoded_g_r_crop(self, g_r):
 		return g_r[0:60]
@@ -316,14 +317,15 @@ class Nanoparticle:
 				"key": self.id,
 				"np": self,
 				"run_path": self.path,
-				"fe": self.count_atoms_of_type(FE_ATOM),
-				"ni": self.count_atoms_of_type(NI_ATOM),
-				"total": self.total_atoms(),
-				"ratio_fe": self.count_atoms_of_type(FE_ATOM) / self.total_atoms(),
-				"ratio_ni": self.count_atoms_of_type(NI_ATOM) / self.total_atoms(),
-				"mag": self.magnetism[0]
+				"fe": -1 if len(self.run.dumps) == 0 else self.count_atoms_of_type(FE_ATOM),
+				"ni": -1 if len(self.run.dumps) == 0 else self.count_atoms_of_type(NI_ATOM),
+				"total": -1 if len(self.run.dumps) == 0 else self.total_atoms(),
+				"ratio_fe": -1 if len(self.run.dumps) == 0 else (self.count_atoms_of_type(FE_ATOM) / self.total_atoms()),
+				"ratio_ni": -1 if len(self.run.dumps) == 0 else (self.count_atoms_of_type(NI_ATOM) / self.total_atoms()),
+				"mag": self.magnetism
 			}
-		except Exception:
+		except Exception as e:
+			logging.warning(f"Error getting nanoparticle data: {type(e)} {e}", stack_info=True)
 			return {
 				"ok": False,
 				"key": self.id,

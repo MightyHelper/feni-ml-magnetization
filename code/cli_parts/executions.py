@@ -128,7 +128,7 @@ def execute(path: Path, plot: bool = False, test: bool = True, in_toko: bool = F
 	path = resolve_path(path)
 	_, nano = parser.PoorlyCodedParser.parse_single_shape(path)
 	nano = nano.build()
-	nano.execute(test_run=test, in_toko=in_toko)
+	# nano.execute(test_run=test, in_toko=in_toko)
 	rprint(executor.parse_ok_execution_results(path, nano, test))
 	if plot:
 		nano.plot()
