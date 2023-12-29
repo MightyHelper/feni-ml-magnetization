@@ -359,6 +359,6 @@ class PoorlyCodedParser:
     @staticmethod
     def first_index_that_startswith(lines: list[str], start: str) -> int:
         out = [i for i, l in enumerate(lines) if l.startswith(start)]
-        assert len(
-            out) > 0, f"Could not find line that starts with {start} - Perhaps you meant to use full_file = True?"
+        assert len(out) > 0, \
+            f"Could not find line that starts with {start} - Perhaps you meant to use full_file = True?"
         return out[0]
