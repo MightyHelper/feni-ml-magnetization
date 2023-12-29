@@ -1,4 +1,4 @@
-lattice bcc 2.8665 
+lattice bcc 2.8665
 region reg0 ellipsoid 0.0 0.0 0.0 20.5 13.0 13.0 units box 
 create_atoms 1 region reg0
 region reg1 prism -8.5 8.5 -8.5 8.5 -8.5 8.5 0.0 0.0 0.0 units box 

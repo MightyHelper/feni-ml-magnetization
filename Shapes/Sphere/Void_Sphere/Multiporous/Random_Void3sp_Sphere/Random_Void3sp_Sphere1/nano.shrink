@@ -1,4 +1,4 @@
-lattice bcc 2.8665 
+lattice bcc 2.8665
 region reg0 sphere 0.0 0.0 0.0 15.5 units box 
 region reg1 sphere -4.0 -4.0 -4.0 4.5 units box side out
 region reg2 sphere 4.0 4.0 4.0 5.0 units box side out

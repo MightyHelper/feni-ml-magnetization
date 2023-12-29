@@ -1,4 +1,4 @@
-lattice bcc 2.8665 
+lattice bcc 2.8665
 region reg0 sphere 0.0 0.0 0.0 15.0 units box 
 create_atoms 1 region reg0
 region reg1 cone z 0.0 0.0 12.0 4.0 -8.0 11.0 units box 
