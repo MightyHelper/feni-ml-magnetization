@@ -10,6 +10,10 @@ from shapes import Cylinder, Sphere, Plane, Cone, Prism
 
 
 class PoorlyCodedParser:
+    """
+    Parse a lammps file and generate a Nanoparticle instance.
+    The code isn't great, but at least it's somewhat tested now
+    """
     @staticmethod
     def parse_region(line: str,
                      nano: nanoparticlebuilder.NanoparticleBuilder) -> None | s.Shape:

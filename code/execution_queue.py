@@ -26,7 +26,7 @@ class ExecutionQueue(ABC):
         """
         pass
 
-    def run_callback(self, simulation_task: SimulationTask, result: str):
+    def run_callback(self, simulation_task: SimulationTask, result: str | None):
         for callback in simulation_task.callbacks:
             callback(result)
 
@@ -69,18 +69,23 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         params = "\n".join([f"{key}={value}" for key, value in kwargs.items()]) if kwargs else ""
         logging.error("ERROR:" + str(e) + " " + params, extra={"markup": True})
 
-    def run(self):
+    def run(self) -> list[SimulationTask]:
         while len(self.queue) > 0:
+            task: SimulationTask | None = self._get_next_task()
+            result: tuple[SimulationTask, str | None] = (task, None)
+            if task is None:
+                break
             try:
-                task: SimulationTask = self._get_next_task()
-                result: SimulationTask = self._simulate(task)
-                self.completed.append(result)
+                result = self._simulate(task)
             except Exception as e:
-                logging.error(f"Error in {type(self)}: {e}", stack_info=True)
+                logging.error(f"Error in {type(self)}: {e}", stack_info=False)
+            finally:
+                self.completed.append(result[0])
+                self.run_callback(result[0], result[1])
         return self.completed
 
     @abstractmethod
-    def _simulate(self, simulation_task: SimulationTask) -> SimulationTask:
+    def _simulate(self, simulation_task: SimulationTask) -> tuple[SimulationTask, str]:
         pass
 
     def __str__(self):
@@ -88,7 +93,7 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
 
 
 class LocalExecutionQueue(SingleExecutionQueue):
-    def _simulate(self, simulation_task: SimulationTask) -> SimulationTask:
+    def _simulate(self, simulation_task: SimulationTask) -> tuple[SimulationTask, str]:
         lammps_executable = LAMMPS_EXECUTABLE
         cmd = f"{simulation_task.mpi} {lammps_executable} {simulation_task.omp} {simulation_task.gpu} -in {simulation_task.input_file}"
         cmd = re.sub(r' +', " ", cmd).strip()
@@ -98,7 +103,7 @@ class LocalExecutionQueue(SingleExecutionQueue):
         try:
             result = subprocess.check_output(cmd.split(" "), cwd=simulation_task.cwd,
                                              shell=platform.system() == "Windows")
-            self.run_callback(simulation_task, result.decode("utf-8"))
+            return simulation_task, result.decode("utf-8")
         except subprocess.CalledProcessError as e:
             simulation_task.ok = False
             self.print_error(e)
@@ -107,7 +112,6 @@ class LocalExecutionQueue(SingleExecutionQueue):
             simulation_task.ok = False
             self.print_error(e)
             raise ValueError(f"Is LAMMPS ({lammps_executable}) installed?") from e
-        return simulation_task
 
 
 def _run_queue(queue: ExecutionQueue) -> list[SimulationTask]:

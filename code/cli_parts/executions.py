@@ -121,7 +121,7 @@ def live(in_toko: bool = False, listen_anyway: bool = False):
 
 
 @executions.command()
-def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local") -> None:
+def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local") -> str | None:
     """
     Execute a nanoparticle simulation
     """
@@ -134,8 +134,10 @@ def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local"
         rprint(nano.asdict())
         if plot:
             nano.plot()
+        return nano.path
     except IndexError:
         logging.error("Execution failed.")
+        return None
 
 
 @executions.command()

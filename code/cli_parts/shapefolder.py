@@ -4,6 +4,8 @@ import pandas as pd
 import rich.table
 import typer
 from rich import print as rprint
+
+import config
 import nanoparticle_locator
 import poorly_coded_parser as parser
 import service.executor_service
@@ -40,6 +42,34 @@ def ls(path: str = "../Shapes"):
     console.print(table, highlight=True)
 
 
+def lerp_green_red(value: float) -> str:
+    # Return hex of color
+    green = int(value * 255)
+    red = int((1 - value) * 255)
+    green_hex = hex(green)[2:]
+    red_hex = hex(red)[2:]
+    return f"#{red_hex:0>2}{green_hex:0>2}00".upper()
+
+
+def correct_highlighter(column: str, value) -> str:
+    desired_by_column = {
+        "ratio_fe": config.DESIRED_FE_RATIO,
+        "ratio_ni": config.DESIRED_NI_RATIO,
+        "total": config.DESIRED_ATOM_COUNT,
+        "fe": config.DESIRED_FE_ATOM_COUNT,
+        "ni": config.DESIRED_NI_ATOM_COUNT
+    }
+    if column in desired_by_column:
+        val = float(value)
+        target = desired_by_column[column]
+        acceptable_variance = 0.1 if target < 1 else 100
+        x = 1 - min(abs(val - target) / acceptable_variance, 1)
+        color = lerp_green_red(x)
+        return f"[{color}]{value}[/{color}]"
+    else:
+        return h(value)
+
+
 @shapefolder.command()
 def parseshapes(
         path: str = "../Shapes",
@@ -48,16 +78,21 @@ def parseshapes(
         seed: int = 123,
         count_only: bool = False,
         at: Annotated[str, "toko, toko:thread_count, local, local:thread_count"] = "local"
-):
+) -> list[tuple[str, Nanoparticle]] | int:
     """
     Runs all nanoparticle simulations in a folder
     """
     rprint(f"Parsing all input files in [bold underline green]{path}[/bold underline green]")
 
-    nanoparticles: list[tuple[str, Nanoparticle]] = service.executor_service.build_nanoparticles_to_execute([], path, seed, seed_count)
+    nanoparticles: list[tuple[str, Nanoparticle]] = service.executor_service.build_nanoparticles_to_execute(
+        [],
+        path,
+        seed,
+        seed_count
+    )
     if count_only:
         rprint(f"Found [green]{len(nanoparticles)}[/green] nanoparticle shapes.")
-        return
+        return len(nanoparticles)
     nanoparticles = execute_nanoparticles(nanoparticles, at, test)
 
     df: pd.DataFrame = pd.DataFrame([nanoparticle.asdict() for _, nanoparticle in nanoparticles])
@@ -70,8 +105,10 @@ def parseshapes(
     table.add_column("SubSubType")
     for i in df.index.values:
         ptype, subtype, subsubtype = parse_nanoparticle_name(df.iloc[i]["title"])
-        table.add_row(*[h(str(j)) for j in df.iloc[i]], ptype, subtype, subsubtype)
+        table.add_row(*[correct_highlighter(table.columns[idx].header, str(j)) for idx, j in enumerate(df.iloc[i])],
+                      ptype, subtype, subsubtype)
     console.print(table, highlight=True)
+    return nanoparticles
 
 
 @shapefolder.command()

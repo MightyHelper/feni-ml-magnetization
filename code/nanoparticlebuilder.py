@@ -1,6 +1,8 @@
 import logging
 import typing
 
+from typing_extensions import deprecated
+
 import shapes
 from nanoparticle import Nanoparticle
 
@@ -24,6 +26,7 @@ class NanoparticleBuilder:
         self.title = title
         self.seed_values = []
 
+    @deprecated("Use add_named_shape")
     def add_shape(self, shape: shapes.Shape, action: str = 'create', atom_type: str = "1") -> int:
         region_index = len(self.regions)
         self.regions.append(shape)

@@ -1,20 +1,60 @@
+import os.path
+from pathlib import Path
+
 import cli_parts.shapefolder as shapefolder
 import cli_parts.executions as executions
 import unittest
 
+import shutil
+
+import nanoparticle_locator
+from nanoparticle import Nanoparticle
+
 
 class TestShapefolder(unittest.TestCase):
-	def test_ls(self):
-		shapefolder.ls()
+    def test_ls(self):
+        shapefolder.ls()
 
-	def test_shrink(self):
-		shapefolder.shrink()
+    def test_shrink(self):
+        shapefolder.shrink()
+
+    def test_parse_all(self):
+        expected: int = len([*nanoparticle_locator.NanoparticleLocator.search("../Shapes", ".in")])
+        actual = shapefolder.parseshapes(test=True, seed_count=1, at="local:16")
+        print(actual)
+        print(len(actual))
+        print(expected)
+        # self.assertEqual(expected, actual)
 
 
 class TestExec(unittest.TestCase):
-	def test_ls(self):
-		executions.ls()
+    def test_ls(self):
+        executions.ls()
 
-
-if __name__ == '__main__':
-	unittest.main()
+    def test_execute(self):
+        ironsphere_in = "../Shapes/Test/Shapes/Cone/Coreshell/ironsphere.in"
+        execution_result: str | None = executions.execute(
+            path=Path(ironsphere_in),
+            plot=False,
+            test=True,
+            at="local"
+        )
+        if execution_result is None:
+            self.fail("Execution failed :c")
+        self.assertTrue(os.path.exists(execution_result), "Execution doesnt exist")
+        self.assertTrue(os.path.exists(os.path.join(execution_result, "log.lammps")), "No Lammps log")
+        self.assertTrue(os.path.exists(os.path.join(execution_result, "iron.0.dump")), "No dump")
+        nano = Nanoparticle.from_executed(execution_result)
+        expected = {
+            'ok': True,
+            'fe': 858,
+            'ni': 390,
+            'total': 1248,
+            'ratio_fe': 0.6875,
+            'ratio_ni': 0.3125
+        }
+        result = nano.asdict()
+        for key, value in expected.items():
+            self.assertEqual(value, result[key])
+        self.assertIn(ironsphere_in, nano.title)
+        shutil.rmtree(execution_result)

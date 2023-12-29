@@ -10,7 +10,7 @@ r_experiments/mount.sh
 /r_experiments/FeNiMl/process/ranger_hyperparameters.png
 /code/results.csv
 /r_experiments/FeNiMl/rf_permutation_improtance.png
-/code/test.py
+/code/my_test_scheduler.py
 /r_experiments/FeNiMl/process/Too many glmnet hyperparameters.png
 /r_experiments/FeNiMl/process/saves/*
 /r_experiments/FeNiMl/process/saves

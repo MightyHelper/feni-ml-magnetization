@@ -135,9 +135,12 @@ def write_local_file(path, slurm_code):
         f.write(slurm_code)
 
 
-def read_local_file(path):
-    template = open(path, "r")
-    return template.read()
+def read_local_file(path) -> str | None:
+    try:
+        with open(path, "r") as template:
+            return template.read()
+    except FileNotFoundError:
+        return None
 
 
 T = TypeVar("T")

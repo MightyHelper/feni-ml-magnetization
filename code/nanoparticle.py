@@ -17,6 +17,7 @@ import feni_ovito
 import random
 
 import toko_utils
+import utils
 from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
@@ -71,7 +72,7 @@ class Nanoparticle:
         n.path = realpath(path)
         if not os.path.isdir(n.path):
             raise Exception(f"Path {n.path} is not a directory")
-        lammps_log = n.path + "/log.lammps"
+        lammps_log = n.get_lammps_log_path()
         if not os.path.isfile(lammps_log):
             raise Exception(f"Path {n.path} does not contain a log.lammps file")
         n.id = n.path.split("/")[-1]
@@ -224,17 +225,26 @@ class Nanoparticle:
         """
         execution_queue.enqueue(self.get_simulation_task(test_run, **kwargs))
 
-    def on_post_execution(self, result: str) -> None:
+    def on_post_execution(self, result: str | None) -> None:
         """
         Callback for when the execution is finished
         :return:
         """
+        if result is None:
+            lammps_log_path: str = self.get_lammps_log_path()
+            print(f"{self.path=} {lammps_log_path}")
+            lammps_log: str = utils.read_local_file(lammps_log_path)
+            logging.warning(f"Run for nanoparticle {self.title} failed. LAMMPS Log:\n{lammps_log}")
+            return
         if FULL_RUN_DURATION in self.run.dumps:
-            feni_mag.MagnetismExtractor.extract_magnetism(self.path + "/log.lammps",
+            feni_mag.MagnetismExtractor.extract_magnetism(self.get_lammps_log_path(),
                                                           out_mag=self.path + "/magnetism.txt", digits=4)
             feni_ovito.FeNiOvitoParser.parse(
                 filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION].path})
             self.magnetism = self.get_magnetism()
+
+    def get_lammps_log_path(self) -> str:
+        return os.path.join(self.path, "log.lammps")
 
     def _build_lammps_run(self, code, kwargs, test_run):
         lammps_run = lr.LammpsRun(
