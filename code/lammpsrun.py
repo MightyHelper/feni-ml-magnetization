@@ -62,7 +62,10 @@ class LammpsRun:
 		sim_task.add_callback(self.on_post_execution)
 		return sim_task
 
-	def on_post_execution(self, result: str) -> None:
+	def on_post_execution(self, result: str | None) -> None:
+		if result is None:
+			logging.debug(f"Execution failed for lammps run {self.file_name}")
+			return
 		self.output = result
 		self.dumps = self._parse_dumps()
 		logging.debug(f"Finished execution of {self.file_name}")
