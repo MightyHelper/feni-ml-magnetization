@@ -161,7 +161,8 @@ class NanoparticleBuilder:
 
     def configure_lattice(self, lattice_type, lattice_spacing, lattice_extra):
         extra: str = " ".join(lattice_extra)
-        command: str = f"lattice {lattice_type} {lattice_spacing} {extra}"
+        extra = " " + extra if len(extra) > 0 else ""
+        command: str = f"lattice {lattice_type} {lattice_spacing}{extra}"
         self.atom_manipulation.append(command)
 
     def __str__(self):

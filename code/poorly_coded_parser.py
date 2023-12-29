@@ -12,7 +12,7 @@ from shapes import Cylinder, Sphere, Plane, Cone, Prism
 class PoorlyCodedParser:
     @staticmethod
     def parse_region(line: str,
-                     nano: nanoparticlebuilder.NanoparticleBuilder) -> Cylinder | None | Sphere | Plane | Cone | Prism:
+                     nano: nanoparticlebuilder.NanoparticleBuilder) -> None | s.Shape:
         # Remove multiple spaces
         line = PoorlyCodedParser.split_command(line)
         region_name = line[1]
@@ -120,6 +120,7 @@ class PoorlyCodedParser:
             logging.debug(shape)
             return shape
         elif region_type == "intersect":
+            # region		halfns intersect 2 sq ce units box
             n = int(region_args[0])
             reg_ids = region_args[1:1 + n]
             extra = region_args[1 + n:]
@@ -140,7 +141,7 @@ class PoorlyCodedParser:
             extra = extra[2:]
             shape = s.Ellipsoid(coord_a, coord_b, coord_c, radius_a, radius_b, radius_c)
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
-                region_name)), f"Region {region_name} is not parsed correctly: \n{split_command(shape.get_region(region_name))} != \n{line}"
+                region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
             logging.debug(shape)
             return shape
@@ -179,7 +180,7 @@ class PoorlyCodedParser:
 
     @staticmethod
     def split_command(line: str) -> list[str]:
-        return re.split("\\s+", line)
+        return re.split("\\s+", line.strip())
 
     @staticmethod
     def parse_set(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> None:
@@ -247,8 +248,9 @@ class PoorlyCodedParser:
         if prop == "type":
             value = line[3]
             result = nano.add_group_type(value, group_name)
-            assert PoorlyCodedParser.is_correct_parsing(line,
-                                                        result), f"Group type {group_name} is not parsed correctly: \n{result} != \n{line}"
+            assert \
+                PoorlyCodedParser.is_correct_parsing(line, result), \
+                f"Group type {group_name} is not parsed correctly: \n{result} != \n{line}"
             logging.debug(result)
             return
         elif prop == "region":
