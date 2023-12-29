@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-import nanoparticlebuilder
+from nanoparticlebuilder import NanoparticleBuilder
 import shapes
 from poorly_coded_parser import PoorlyCodedParser
 from shapes import Cylinder, Sphere
@@ -14,18 +14,18 @@ class TestPoorlyCodedParser(TestCase):
         self.assertEqual(['delete_atoms', 'from', 'there'], parts)
 
     def test_lattice(self):
-        nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
         PoorlyCodedParser.lattice("lattice bcc 2.8665", nano_builder)
         self.assertEqual(['lattice bcc 2.8665'], nano_builder.atom_manipulation)
-        nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
         PoorlyCodedParser.lattice("lattice bcc 2.8665 origin 0 0 0.5", nano_builder)
         self.assertEqual(['lattice bcc 2.8665 origin 0 0 0.5'], nano_builder.atom_manipulation)
 
     def test_parse_group(self):
-        nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
         PoorlyCodedParser.parse_group("group Ni type 2", nano_builder)
         self.assertEqual(['group Ni type 2'], nano_builder.atom_manipulation)
-        nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
         PoorlyCodedParser.parse_group("group \t\tFe type 1", nano_builder)
         self.assertEqual(['group Fe type 1'], nano_builder.atom_manipulation)
 
@@ -80,28 +80,57 @@ class TestPoorlyCodedParser(TestCase):
         )
 
     def test_add_shape_5(self):
-        nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
         PoorlyCodedParser.parse_region("region test sphere 0 0 0 10 units box", nano_builder)
         PoorlyCodedParser.parse_region("region test2 sphere 0 5 0 5 units box", nano_builder)
         PoorlyCodedParser.parse_region("region test intersect 2 test test2 units box", nano_builder)
         self.assertEqual("region reg2 intersect 2 reg0 reg1 units box", nano_builder.atom_manipulation[-1])
 
+    def test_add_shape_6(self):
+        self.confirm_shape(
+            "region test ellipsoid 0 0 0 10 10 10 units box",
+            "test",
+            shapes.Ellipsoid(0, 0, 0, 10, 10, 10)
+        )
+
+    def test_parse_create_atoms(self):
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
+        PoorlyCodedParser.parse_region("region test sphere 0 0 0 10 units box", nano_builder)
+        PoorlyCodedParser.parse_create_atoms("create_atoms 1 region test", nano_builder)
+        self.assertEqual("create_atoms 1 region reg0", nano_builder.atom_manipulation[-1])
+
+    def test_parse_set(self):
+        nano_builder: NanoparticleBuilder = NanoparticleBuilder()
+        PoorlyCodedParser.parse_region("region test sphere 0 0 0 10 units box", nano_builder)
+        PoorlyCodedParser.parse_set("set region test type 1", nano_builder)
+        self.assertEqual(nano_builder.atom_manipulation[-1], "set region reg0 type 1")
+        PoorlyCodedParser.parse_set("set region test type/subset 1 10 123", nano_builder)
+        self.assertEqual(nano_builder.atom_manipulation[-1], "set region reg0 type/subset 1 10 zeed:0")
+        PoorlyCodedParser.parse_set("set region test type/ratio 1 0.5 123", nano_builder)
+        self.assertEqual(nano_builder.atom_manipulation[-1], "set region reg0 type/ratio 1 0.5 zeed:1")
+
+        PoorlyCodedParser.parse_set("set group Fe type/subset 2 230 300", nano_builder)
+        self.assertEqual(nano_builder.atom_manipulation[-1], "set group Fe type/subset 2 230 zeed:2")
+        PoorlyCodedParser.parse_set("set group Fe type/ratio 2 0.2 300", nano_builder)
+        self.assertEqual(nano_builder.atom_manipulation[-1], "set group Fe type/ratio 2 0.2 zeed:3")
+
+
     def confirm_shape(
-            self,
-            command: str,
-            name: str,
-            shape: shapes.Shape,
-            nano_builder: nanoparticlebuilder.NanoparticleBuilder | None = None
-    ) -> nanoparticlebuilder.NanoparticleBuilder:
-        if nano_builder is None:
-            nano_builder: nanoparticlebuilder.NanoparticleBuilder = nanoparticlebuilder.NanoparticleBuilder()
-        PoorlyCodedParser.parse_region(command, nano_builder)
-        self.assertEqual([shape], nano_builder.regions)
-        self.assertEqual(0, nano_builder.get_region_id_by_name(name))
-        thrown = False
-        try:
-            self.assertEqual(-1, nano_builder.get_region_id_by_name("foo"))
-        except KeyError:
-            thrown = True
-        self.assertTrue(thrown, "Should throw key error")
-        return nano_builder
+                self,
+                command: str,
+                name: str,
+                shape: shapes.Shape,
+                nano_builder: NanoparticleBuilder | None = None
+        ) -> NanoparticleBuilder:
+            if nano_builder is None:
+                nano_builder: NanoparticleBuilder = NanoparticleBuilder()
+            PoorlyCodedParser.parse_region(command, nano_builder)
+            self.assertEqual([shape], nano_builder.regions)
+            self.assertEqual(0, nano_builder.get_region_id_by_name(name))
+            thrown = False
+            try:
+                self.assertEqual(-1, nano_builder.get_region_id_by_name("foo"))
+            except KeyError:
+                thrown = True
+            self.assertTrue(thrown, "Should throw key error")
+            return nano_builder
