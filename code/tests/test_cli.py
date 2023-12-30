@@ -20,11 +20,10 @@ class TestShapefolder(unittest.TestCase):
 
     def test_parse_all(self):
         expected: int = len([*nanoparticle_locator.NanoparticleLocator.search("../Shapes", ".in")])
-        actual = shapefolder.parseshapes(test=True, seed_count=1, at="local:16")
-        print(actual)
-        print(len(actual))
-        print(expected)
-        # self.assertEqual(expected, actual)
+        actual: list[tuple[str, Nanoparticle]] = shapefolder.parseshapes(test=True, seed_count=1, at="local:16")
+        ok = [x for x, y in actual if y.is_ok()]
+        self.assertEqual(expected, len(actual), "Lost some executions")
+        self.assertEqual(expected, len(ok), "Some executions failed")
 
 
 class TestExec(unittest.TestCase):

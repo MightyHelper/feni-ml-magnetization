@@ -28,7 +28,10 @@ class ExecutionQueue(ABC):
 
     def run_callback(self, simulation_task: SimulationTask, result: str | None):
         for callback in simulation_task.callbacks:
-            callback(result)
+            try:
+                callback(result)
+            except Exception as e:
+                logging.warning(f"Error in run_callback ({callback})", exc_info=e)
 
     def __str__(self):
         return f"{type(self).__name__}"

@@ -41,8 +41,8 @@ def get_full_function(path: str) -> tuple[list, Callable]:
 @fuzzer.command()
 def bayes(
         path: Annotated[Path, typer.Argument(help="The path to the nanoparticle (the [green].in[/green] file)")],
-        target_atom_count: Annotated[int, typer.Option(help="The target atom count")] = 1250,
-        target_ratio: Annotated[float, typer.Option(help="The target ratio")] = 0.33,
+        target_atom_count: Annotated[int, typer.Option(help="The target atom count")] = config.DESIRED_ATOM_COUNT,
+        target_ratio: Annotated[float, typer.Option(help="The target ratio")] = config.DESIRED_NI_RATIO,
         target_atom_count_importance: Annotated[
             float, typer.Option(help="The importance of getting the atom count right")] = 1,
         target_ratio_importance: Annotated[

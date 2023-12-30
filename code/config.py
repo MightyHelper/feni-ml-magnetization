@@ -12,7 +12,7 @@ LOCAL_EXECUTION_PATH = "../executions"  # Path in local where the simulations wi
 LOCAL_MULTI_PY = "../multi.py"  # Path in local to the multi.py file
 
 # Toko
-LAMMPS_TOKO_EXECUTABLE = "/home/gdossantos/Lammps_Stable_Oct2020/lammps-29Oct20/src/lmp_g++_openmpi"  # Path to the lammps executable in toko
+LAMMPS_TOKO_EXECUTABLE = "/scratch/fwilliamson/lammps_compile/lammps/build1/lmp"  # Path to the lammps executable in toko
 TOKO_EXECUTION_PATH = "~/scratch/projects/magnetism/simulations/"  # Path in toko where the simulations will be stored
 TOKO_PARTITION_TO_USE = "mini"
 TOKO_URL = "toko.uncu.edu.ar"
@@ -29,9 +29,9 @@ LAMMPS_DUMP_INTERVAL = 100000
 FE_ATOM = 1
 NI_ATOM = 2
 
-# Stochiometry config
-DESIRED_FE_RATIO = 0.66
-DESIRED_NI_RATIO = 1 - DESIRED_FE_RATIO
+# Stoichiometry config
 DESIRED_ATOM_COUNT = 1250
+DESIRED_NI_RATIO = 0.33
+DESIRED_FE_RATIO = 1 - DESIRED_NI_RATIO
 DESIRED_NI_ATOM_COUNT = DESIRED_NI_RATIO * DESIRED_ATOM_COUNT
 DESIRED_FE_ATOM_COUNT = DESIRED_FE_RATIO * DESIRED_ATOM_COUNT

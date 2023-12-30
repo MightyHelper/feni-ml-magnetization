@@ -325,20 +325,32 @@ class Nanoparticle:
 
     def asdict(self):
         try:
-            return {
-                "ok": len(self.run.dumps) > 0,
-                "key": self.id,
-                "title": self.title,
-                "np": self,
-                "fe": -1 if len(self.run.dumps) == 0 else self.count_atoms_of_type(FE_ATOM),
-                "ni": -1 if len(self.run.dumps) == 0 else self.count_atoms_of_type(NI_ATOM),
-                "total": -1 if len(self.run.dumps) == 0 else self.total_atoms(),
-                "ratio_fe": -1 if len(self.run.dumps) == 0 else (
-                            self.count_atoms_of_type(FE_ATOM) / self.total_atoms()),
-                "ratio_ni": -1 if len(self.run.dumps) == 0 else (
-                            self.count_atoms_of_type(NI_ATOM) / self.total_atoms()),
-                "mag": self.magnetism
-            }
+            if self.is_ok():
+                return {
+                    "ok": self.is_ok(),
+                    "key": self.id,
+                    "title": self.title,
+                    "np": self,
+                    "fe": self.count_atoms_of_type(FE_ATOM),
+                    "ni": self.count_atoms_of_type(NI_ATOM),
+                    "total": self.total_atoms(),
+                    "ratio_fe": (self.count_atoms_of_type(FE_ATOM) / self.total_atoms()),
+                    "ratio_ni": (self.count_atoms_of_type(NI_ATOM) / self.total_atoms()),
+                    "mag": self.magnetism
+                }
+            else:
+                return {
+                    "ok": self.is_ok(),
+                    "key": self.id,
+                    "title": self.title,
+                    "np": self,
+                    "fe": -1,
+                    "ni": -1,
+                    "total": -1,
+                    "ratio_fe": -1,
+                    "ratio_ni": -1,
+                    "mag": self.magnetism
+                }
         except Exception as e:
             logging.warning(f"Error getting nanoparticle data: {type(e)} {e}", stack_info=True)
             return {
@@ -346,13 +358,16 @@ class Nanoparticle:
                 "key": self.id,
                 "title": self.title,
                 "np": self,
-                "fe": 0,
-                "ni": 0,
-                "total": 0,
-                "ratio_fe": 0,
-                "ratio_ni": 0,
+                "fe": -1,
+                "ni": -1,
+                "total": -1,
+                "ratio_fe": -1,
+                "ratio_ni": -1,
                 "mag": float('nan')
             }
+
+    def is_ok(self):
+        return len(self.run.dumps) > 0
 
 
 class RunningExecutionLocator:

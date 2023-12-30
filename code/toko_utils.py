@@ -34,13 +34,13 @@ class TokoUtils:
 
     @staticmethod
     def copy_file_multi_to_toko(local_paths: list[str], toko_path: str):
-        logging.info(f"Copying files {local_paths} to toko {toko_path}...")
+        logging.info(f"Copying {len(local_paths)} files to toko {toko_path}...")
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url: ["rsync", "-ar", *local_paths, f"{user}@{toko_url}:{toko_path}"])
 
     @staticmethod
     def copy_file_multi_from_toko(toko_paths: list[str], local_path: str):
-        logging.info(f"Copying files {toko_paths} from toko to local {local_path}...")
+        logging.info(f"Copying {len(toko_paths)} files from toko to local {local_path}...")
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url: ["rsync", "-ar", *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths],
                                     local_path])
@@ -226,10 +226,8 @@ def estimate_time(count, tasks):
 
 
 class TokoBatchedExecutionQueue(ExecutionQueue):
-    def __init__(self):
-        super().__init__()
-        self.queue = []
-        self.completed = []
+    queue: list[SimulationTask]
+    completed: list[SimulationTask]
 
     def enqueue(self, simulation_task: SimulationTask):
         assert isinstance(simulation_task, SimulationTask)
@@ -242,20 +240,25 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
         self.queue.append(simulation_task)
 
     def run(self) -> list[SimulationTask]:
-        while len(self.queue) > 0:
-            try:
-                self._simulate()
-            except Exception as e:
-                logging.error(f"Error in {type(self)}: {e}", stack_info=True)
+        try:
+            self._simulate()
+        except Exception as e:
+            logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
         return self.completed
 
     def __init__(self, batch_size: int = 10):
         super().__init__()
         self.batch_size = batch_size
+        self.queue = []
+        self.completed = []
 
     @staticmethod
-    def submit_toko_script(simulation_info: list[tuple[str, str, str]], local_batch_path: str, toko_batch_path: str,
-                           n_tasks: int = 1):
+    def submit_toko_script(
+            simulation_info: list[tuple[str, str, str]],
+            local_batch_path: str,
+            toko_batch_path: str,
+            n_tasks: int = 1
+    ):
         tasks = []
         # Create a list of commands to run in parallel
         for toko_nano_in, toko_sim_folder, local_sim_folder in simulation_info:
@@ -287,10 +290,13 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
     def _simulate(self):
         simulations = self.queue
         local_batch_path, toko_batch_path, simulation_info = self.prepare_scripts(simulations)
-        sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(simulation_info, local_batch_path, toko_batch_path,
-                                                                     n_tasks=self.batch_size)
+        sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(
+            simulation_info,
+            local_batch_path,
+            toko_batch_path,
+            n_tasks=self.batch_size
+        )
         self.process_output(local_batch_path, sbatch_output, simulations, toko_batch_path)
-        self.queue = []
 
     def prepare_scripts(self, simulations):
         """
