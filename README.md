@@ -75,3 +75,40 @@ The files are:
 - Copied back
 - Then analyzed (with ovito etc.)
 
+
+## Shapes
+
+Shape_Distribution_Interface_Pores_variation.in
+
+Valid Shapes:
+- Sphere
+- Cone
+- Cube
+- Ellipsoid
+- Cylinder
+- Octahedron
+
+Distribution:
+- Janus
+  - Axis.Axis       # Axis-aligned separation of Fe and Ni % [X, Y, Z]
+  - Corner          # Corner of shape is turned to Ni
+- Multilayer.N.Axis # Many Stacked Axis layers % []
+- Onion.N           # Stacked layers inwards % [2]
+- Multicore.N       # Multiple Ni spheres inside % [3]
+- Random            # Random distribution
+
+Sandwich  = Multilayer.3.Axis
+CoreShell = Onion.2
+MultiShell = Onion.5
+(Onion = Onion.7)
+PPP       = Corner
+
+Interface
+- Mix.N        # Interface is noisy at N % [05, 10]
+- Normal       # No noise at interface
+
+Pores
+- Full         # Full Shape
+- Pores.N      # N holes inside % [1, 2, 3]
+
+Void = Pores.1
