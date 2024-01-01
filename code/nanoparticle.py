@@ -240,7 +240,7 @@ class Nanoparticle:
             feni_mag.MagnetismExtractor.extract_magnetism(self.get_lammps_log_path(),
                                                           out_mag=self.path + "/magnetism.txt", digits=4)
             feni_ovito.FeNiOvitoParser.parse(
-                filenames={'base_path': self.path, 'dump': self.run.dumps[FULL_RUN_DURATION].path})
+                filenames={'base_path': self.path, 'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)})
             self.magnetism = self.get_magnetism()
 
     def get_lammps_log_path(self) -> str:
