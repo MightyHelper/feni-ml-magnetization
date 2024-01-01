@@ -93,7 +93,7 @@ Distribution:
   - Axis.Axis       # Axis-aligned separation of Fe and Ni % [X, Y, Z]
   - Corner          # Corner of shape is turned to Ni
 - Multilayer.N.Axis # Many Stacked Axis layers % []
-- Onion.N           # Stacked layers inwards % [2]
+- Onion.N[TYPES]           # Stacked layers inwards % [2]
 - Multicore.N       # Multiple Ni spheres inside % [3]
 - Random            # Random distribution
 
