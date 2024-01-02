@@ -1,0 +1,10 @@
+region reg0 prism -12.5 12.5 -12.5 13.0 -13.0 13.0 0.0 0.0 0.0 units box 
+region reg1 sphere 0.0 0.0 0.0 7.5 units box side out
+region reg2 intersect 2 reg0 reg1 
+create_atoms 1 region reg2
+region reg3 prism 2.5 11.0 -12.5 13.0 -13.0 13.0 0.0 0.0 0.0 units box 
+set region reg3 type 2
+group Fe type 1
+set group Fe type/subset 2 124 300
+group Ni type 2
+set group Ni type/subset 1 124 300

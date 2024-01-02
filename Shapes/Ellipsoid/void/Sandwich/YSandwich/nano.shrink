@@ -1,0 +1,11 @@
+lattice bcc 2.8665
+region reg0 prism -24.0 24.0 -3.0 3.0 -20.0 20.0 1.0 1.0 0.0 units box 
+region reg1 ellipsoid 0.0 1.0 1.0 21.0 14.0 14.0 units box 
+create_atoms 1 region reg1
+region reg2 ellipsoid 0.0 1.0 2.0 11.0 7.0 7.0 units box 
+set region reg2 type 2
+delete_atoms region reg2 compress yes
+region reg3 intersect 2 reg0 reg1 units box
+set region reg3 type 2
+group Fe type 1
+group Ni type 2

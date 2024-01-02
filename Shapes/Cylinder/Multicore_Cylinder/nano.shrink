@@ -1,0 +1,13 @@
+lattice bcc 2.8665
+region reg0 cylinder z 0.0 0.0 12.5 -15.0 15.0 units box 
+create_atoms 1 region reg0
+region reg1 sphere 0.0 7.6 7.5 7.1 units box 
+set region reg1 type 2
+region reg2 sphere 0.0 -7.6 7.5 7.1 units box 
+set region reg2 type 2
+region reg3 sphere 0.0 7.6 -7.5 7.1 units box 
+set region reg3 type 2
+region reg4 sphere 0.0 -7.6 -7.5 7.1 units box 
+set region reg4 type 2
+group Fe type 1
+group Ni type 2

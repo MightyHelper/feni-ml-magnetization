@@ -14,22 +14,38 @@ region 		box block -25 25 -25 25 -25 25 units box
 create_box	2 box
 
 lattice		bcc 2.8665
-region		ce cone z 0 0 {{cone_base:10:30}} 1 -{{cone_w:10:30}} {{cone_w:10:30}} units box
-create_atoms	1 region ce
-region		core1 sphere 0 0 0 4 units box
-region		core2 sphere 0 -3 0 4 units box
-region		core3 sphere 1 -3 1 4 units box
-region		core4 sphere 1 -3 0 4 units box
-delete_atoms	region core1
-delete_atoms	region core2
-delete_atoms	region core3
-delete_atoms	region core4
-group 		Fe type 1
+region		cilindroExterno cylinder z 0 0 13 -15 15 units box
+create_atoms	1 region cilindroExterno
+region		v cylinder z 0.0 0.0 7 -7 7 units box
+delete_atoms 	region v compress yes 
+region		capa1 cylinder z 0 0 10 -13.5 -11.0 units box
+set region capa1 type 2
+region		capa2 cylinder z 0 0 13 -10 -8.0 units box
+set region capa2 type 2
+region		capa3 cylinder z 0 0 10 -6.5 -5.0 units box
+set region capa3 type 2
+region		capa4 cylinder z 0 0 13 -3.5 -2.0 units box
+set region capa4 type 2
+region		capa5 cylinder z 0 0 10 -0.5 1.0 units box
+set region capa5 type 2
+region		capa6 cylinder z 0 0 10 2.5 4.0 units box
+set region capa6 type 2
+region		capa7 cylinder z 0 0 10 5.5 7.0 units box
+set region capa7 type 2
+region		capa8 cylinder z 0 0 10 8.5 10.0 units box
+set region capa8 type 2
+region		capa9 cylinder z 0 0 10 10.0 11.0 units box
+set region capa9 type 2
+region		capa10 cylinder z 0 0 10 11.5 13.0 units box
+set region capa10 type 2
 
-set group Fe type/ratio 2 0.30 300
-
+group		Fe type 1
 group		Ni type 2
 
+#Esquina aleatoria: si se comentan las dos líneas siguientes, el corte será perfecto y habrá Ni en la esquina y Fe en el resto del cilindro.
+#El 62 indica la cantidad de mezcla. 
+#set group Fe type/subset 2 62 300
+#set region esquina type/subset 1 62 300
 
 # setting mass, mag. moments, and interactions for bcc iron
 
@@ -84,3 +100,4 @@ fix centrar all recenter INIT INIT INIT
 dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
 
 run 		300000
+

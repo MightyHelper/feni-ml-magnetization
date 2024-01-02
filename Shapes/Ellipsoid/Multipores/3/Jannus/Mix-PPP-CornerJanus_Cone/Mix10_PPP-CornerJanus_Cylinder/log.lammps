@@ -1,0 +1,214 @@
+LAMMPS (23 Jun 2022 - Update 4)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+Loaded 1 plugins from C:\Users\Nadhi\AppData\Local\LAMMPS 64-bit 23Jun2022\plugins
+# bcc iron in a 3d periodic box
+
+clear
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+Loaded 1 plugins from C:\Users\Nadhi\AppData\Local\LAMMPS 64-bit 23Jun2022\plugins
+units 		metal
+atom_style 	spin
+
+# dimension 	3
+boundary 	p p p
+
+# necessary for the serial algorithm (sametag)
+atom_modify 	map array
+
+region 		box block -25 25 -25 25 -25 25 units box
+create_box	2 box
+Created orthogonal box = (-25 -25 -25) to (25 25 25)
+  1 by 1 by 1 MPI processor grid
+
+lattice		bcc 2.8665
+Lattice spacing in x,y,z = 2.8665 2.8665 2.8665
+region          el ellipsoid 0 1 2 21 13 14 units box
+create_atoms	1 region el
+Created 1349 atoms
+  using lattice units in orthogonal box = (-25 -25 -25) to (25 25 25)
+  create_atoms CPU = 0.001 seconds
+ region		    s1 sphere -15 0 0 3.5 units box
+set region      s1 type 2
+Setting atom values ...
+  14 settings made for type
+region		    s2 sphere 15 0 0 3.5 units box
+set region      s2 type 2
+Setting atom values ...
+  14 settings made for type
+region		    s3 sphere 0 0 -6 3.5 units box
+set region      s3 type 2
+Setting atom values ...
+  15 settings made for type
+region		    s4 sphere 0 3 9 3.5 units box
+set region      s4 type 2
+Setting atom values ...
+  15 settings made for type
+
+delete_atoms 	region s1 compress yes
+Deleted 14 atoms, new total = 1335
+delete_atoms 	region s2 compress yes
+Deleted 14 atoms, new total = 1321
+delete_atoms 	region s3 compress yes
+Deleted 15 atoms, new total = 1306
+delete_atoms 	region s4 compress yes
+Deleted 15 atoms, new total = 1291
+region		esquina plane 0 0 7 0 1 1 units box
+set region esquina type 2
+Setting atom values ...
+  439 settings made for type
+
+group		Fe type 1
+852 atoms in group Fe
+group		Ni type 2
+439 atoms in group Ni
+
+#Si no se comentan las dos líneas siguientes, la esquina tendrá una mezcla (indicada por el 124) de átomos de Fe en la esquina de Ni.
+set group Fe type/subset 2 120 300
+Setting atom values ...
+  120 settings made for type/subset
+set region esquina type/subset 1 140 300
+Setting atom values ...
+  140 settings made for type/subset
+
+# setting mass, mag. moments, and interactions for bcc iron
+
+mass		1 55.845 #Fe
+mass		2 58.693 #Ni
+
+set 		group Fe spin 2.2 0 0 1 #Fe
+Setting atom values ...
+  852 settings made for spin
+set		group Ni spin 0.61 0 0 1 #Ni
+Setting atom values ...
+  439 settings made for spin
+
+pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
+pair_coeff 	* * eam/alloy FeCuNi.eam.alloy Fe Ni
+pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
+pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
+pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
+
+neighbor 	0.5 bin
+neigh_modify 	every 10 check yes delay 10
+
+timestep 0.001
+
+velocity 	all create 0 4928459 rot yes dist gaussian
+
+compute 	out_mag    all spin
+compute 	out_pe     all pe
+compute 	out_ke     all ke
+compute 	out_temp   all temp
+compute     keAtom  all ke/atom
+compute     peAtom  all pe/atom
+compute     outsp all property/atom spx spy spz sp fmx fmy fmz
+
+variable 	magx 	  equal c_out_mag[1]
+variable	magy	  equal c_out_mag[2]
+variable 	magz      equal c_out_mag[3]
+variable 	magnorm   equal c_out_mag[4]
+variable 	emag      equal c_out_mag[5]
+variable 	tmag      equal c_out_mag[6]
+
+thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
+thermo          500
+
+
+
+#fix a all precession/spin anisotropy 0.0000035 0.0 0.0 1.0
+#fix a all precession/spin cubic -0.0000035 0.00000036 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0
+fix temperatura all langevin 0 0 1 23136
+fix b all langevin/spin 300 0.01 29481
+fix c all nve/spin lattice frozen
+fix d all momentum 10 linear 1 1 1 angular rescale
+fix centrar all recenter INIT INIT INIT
+
+
+dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
+
+run 		300000
+
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+Your simulation uses code contributions which should be cited:
+
+- fix nve/spin command:
+
+@article{tranchida2018massively,
+title={Massively parallel symplectic algorithm for coupled magnetic spin dynamics and molecular dynamics},
+author={Tranchida, J and Plimpton, SJ and Thibaudeau, P and Thompson, AP},
+journal={Journal of Computational Physics},
+volume={372},
+pages={406-425},
+year={2018},
+publisher={Elsevier}
+doi={10.1016/j.jcp.2018.06.042}
+}
+
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+Neighbor list info ...
+  update every 10 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 6.1
+  ghost atom cutoff = 6.1
+  binsize = 3.05, bins = 17 17 17
+  2 neighbor lists, perpetual/occasional/extra = 2 0 0
+  (1) pair eam/alloy, perpetual, half/full from (2)
+      attributes: half, newton on
+      pair build: halffull/newton
+      stencil: none
+      bin: none
+  (2) pair spin/exchange, perpetual
+      attributes: full, newton on
+      pair build: full/bin/atomonly
+      stencil: full/bin/3d
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 8.476 | 8.476 | 8.476 Mbytes
+   Step          Temp          v_tmag         v_magx         v_magy         v_magz       v_magnorm        KinEng         PotEng         TotEng         Press     
+         0   0              0              0              0              1              1              0             -5013.7029     -5013.7029     -11034.343    
+       500   0              242.25517      0.0017158591  -0.013145299    0.77766638     0.77777937     0             -4992.8892     -4992.8892     -11034.343    
+      1000   0              278.18407      0.012785501    0.0061581091   0.70095494     0.70109858     0             -4988.9593     -4988.9593     -11034.343    
+      1500   0              285.44739      0.0097999599   0.0068473679   0.64357247     0.6436835      0             -4987.1849     -4987.1849     -11034.343    
+      2000   0              284.24754     -0.00033377226 -0.0093345494   0.60141917     0.6014917      0             -4985.9448     -4985.9448     -11034.343    
+      2500   0              295.97842     -0.0059328706   0.020844641    0.56858755     0.56900044     0             -4984.9342     -4984.9342     -11034.343    
+      3000   0              299.34395     -0.025373483    0.028789741    0.53588293     0.53725523     0             -4984.2412     -4984.2412     -11034.343    
+      3500   0              308.83195     -0.020059883    0.055722163    0.51171512     0.51513079     0             -4983.6508     -4983.6508     -11034.343    
+      4000   0              295.14522     -0.037227437    0.050398807    0.49366538     0.49762579     0             -4983.9519     -4983.9519     -11034.343    
+      4500   0              304.40484     -0.058090756    0.037899761    0.49684976     0.50166783     0             -4983.5249     -4983.5249     -11034.343    
+      5000   0              319.39009     -0.061031253    0.050183917    0.47533804     0.48186045     0             -4982.1937     -4982.1937     -11034.343    
+      5500   0              299.39914     -0.072200717    0.047192265    0.47362056     0.48141094     0             -4983.547      -4983.547      -11034.343    
+      6000   0              298.60585     -0.0575983      0.046021014    0.45235549     0.4583241      0             -4983.3207     -4983.3207     -11034.343    
+      6500   0              311.82744     -0.057515323    0.053665328    0.45016633     0.45698764     0             -4982.0429     -4982.0429     -11034.343    
+      7000   0              313.05898     -0.044862397    0.070250135    0.45222737     0.45984487     0             -4982.5502     -4982.5502     -11034.343    
+      7500   0              305.1918      -0.048526807    0.064248917    0.43276743     0.44019362     0             -4982.1241     -4982.1241     -11034.343    
+      8000   0              324.31844     -0.048142445    0.066124313    0.42690434     0.43466934     0             -4981.2603     -4981.2603     -11034.343    
+      8500   0              306.00474     -0.016098888    0.078805042    0.41532915     0.42304576     0             -4982.2351     -4982.2351     -11034.343    
+      9000   0              296.36805     -0.02051597     0.091767496    0.3950967      0.40613247     0             -4982.2837     -4982.2837     -11034.343    
+      9500   0              291.99864     -0.026047276    0.085924405    0.4118969      0.42156912     0             -4983.4048     -4983.4048     -11034.343    
+     10000   0              302.57623     -0.029320407    0.087718875    0.38899278     0.39983705     0             -4981.9264     -4981.9264     -11034.343    
+     10500   0              311.73992     -0.016547212    0.083904174    0.3870291      0.39636504     0             -4981.4983     -4981.4983     -11034.343    
+     11000   0              313.53229     -0.017885172    0.077748927    0.38078289     0.38905062     0             -4980.9815     -4980.9815     -11034.343    
+     11500   0              329.2404      -0.0189496      0.060565724    0.38126047     0.38650594     0             -4980.1508     -4980.1508     -11034.343    
+     12000   0              300.3168      -0.017757095    0.030100901    0.38357275     0.38516156     0             -4981.1875     -4981.1875     -11034.343    
+     12500   0              300.46569     -0.022149529    0.02132563     0.39257227     0.39377452     0             -4981.9223     -4981.9223     -11034.343    
+     13000   0              302.5879      -0.047142939    0.021690468    0.40411174     0.40743003     0             -4982.2848     -4982.2848     -11034.343    
+     13500   0              284.05841     -0.040681217    0.0013245804   0.39780041     0.39987734     0             -4982.8265     -4982.8265     -11034.343    
+     14000   0              295.30983     -0.058425453    0.0086058946   0.39282406     0.39723839     0             -4981.6899     -4981.6899     -11034.343    
+     14500   0              298.68157     -0.048768931    0.014696811    0.3895584      0.39287422     0             -4981.064      -4981.064      -11034.343    
+     15000   0              292.96219     -0.058106368    0.036227634    0.39753845     0.40339263     0             -4982.6459     -4982.6459     -11034.343    
+     15500   0              298.98448     -0.071120887    0.039432103    0.38648489     0.39494764     0             -4982.2269     -4982.2269     -11034.343    
+     16000   0              302.68445     -0.067580839    0.022813857    0.39518575     0.40157118     0             -4981.717      -4981.717      -11034.343    
+     16500   0              290.72488     -0.078677918    0.00376603     0.41268523     0.42013509     0             -4982.5227     -4982.5227     -11034.343    
+     17000   0              302.11844     -0.091544049    0.018611063    0.41304699     0.42347905     0             -4982.2166     -4982.2166     -11034.343    
+     17500   0              321.61497     -0.098740647    0.032068442    0.41809535     0.43079209     0             -4981.9333     -4981.9333     -11034.343    
+     18000   0              287.94922     -0.10255023     0.045609286    0.42797464     0.44244666     0             -4983.3477     -4983.3477     -11034.343    
+     18500   0              299.45004     -0.12028378     0.029880765    0.40999855     0.42832214     0             -4982.5        -4982.5        -11034.343    
+     19000   0              323.62461     -0.097741909    0.0035739525   0.42799514     0.43902858     0             -4981.4311     -4981.4311     -11034.343    
+     19500   0              294.40222     -0.089642452   -0.01531679     0.43807475     0.44741464     0             -4982.9952     -4982.9952     -11034.343    
+     20000   0              288.64256     -0.080794716   -0.025736078    0.4511885      0.45908735     0             -4983.4868     -4983.4868     -11034.343    
+     20500   0              287.27652     -0.069915059   -0.014257003    0.44256015     0.44827543     0             -4983.823      -4983.823      -11034.343    
+     21000   0              289.80209     -0.075134479   -0.032701738    0.44199404     0.44952567     0             -4983.5034     -4983.5034     -11034.343    
+     21500   0              304.61067     -0.092416964   -0.037646278    0.42562122     0.43716308     0             -4982.5482     -4982.5482     -11034.343    
