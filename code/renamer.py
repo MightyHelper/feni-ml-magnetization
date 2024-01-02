@@ -106,4 +106,5 @@ for nanoparticle in nanoparticles:
         index += 1
 
 
-rich.print(renames)
+for newname, (oldname, nanoparticle) in renames.items():
+    print(f"mv {oldname} ../Shapes/{newname}")

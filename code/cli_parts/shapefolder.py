@@ -25,18 +25,22 @@ def ls(path: str = "../Shapes"):
     table = rich.table.Table(title="Available nanoparticles")
     table.add_column("Index")
     table.add_column("Path")
-    table.add_column("Type")
-    table.add_column("SubType")
-    table.add_column("SubSubType")
+    table.add_column("Shape")
+    table.add_column("Distribution")
+    table.add_column("Interface")
+    table.add_column("Pores")
+    table.add_column("Index")
     table.add_column("R")
     for i, (path, nano) in enumerate(parser.PoorlyCodedParser.load_shapes(path, [])):
-        ptype, subtype, subsubtype = parse_nanoparticle_name(path)
+        shape, distribution, interface, pores, index = parse_nanoparticle_name(path)
         table.add_row(
             f"[green]{i}[/green]",
             f"[cyan]{path}[/cyan]",
-            f"[blue]{ptype}[/blue]",
-            f"[blue]{subtype}[/blue]",
-            f"[blue]{subsubtype}[/blue]",
+            f"[blue]{shape}[/blue]",
+            f"[blue]{distribution}[/blue]",
+            f"[blue]{interface}[/blue]",
+            f"[blue]{pores}[/blue]",
+            f"[blue]{index}[/blue]",
             f"[green]{len(nano.seed_values)}[/green]" if nano.is_random() else "[red]0[/red]"
         )
     console.print(table, highlight=True)
@@ -100,13 +104,15 @@ def parseshapes(
     table = rich.table.Table(title="Nanoparticle run results")
     for column in df.columns:
         table.add_column(column)
-    table.add_column("Type")
-    table.add_column("SubType")
-    table.add_column("SubSubType")
+    table.add_column("Shape")
+    table.add_column("Distribution")
+    table.add_column("Interface")
+    table.add_column("Pores")
+    table.add_column("Index")
     for i in df.index.values:
-        ptype, subtype, subsubtype = parse_nanoparticle_name(df.iloc[i]["title"])
+        shape, distribution, interface, pores, index = parse_nanoparticle_name(df.iloc[i]["title"])
         table.add_row(*[correct_highlighter(table.columns[idx].header, str(j)) for idx, j in enumerate(df.iloc[i])],
-                      ptype, subtype, subsubtype)
+                      shape, distribution, interface, pores, index)
     console.print(table, highlight=True)
     return nanoparticles
 

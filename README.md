@@ -109,6 +109,6 @@ Interface
 
 Pores
 - Full         # Full Shape
-- Pores.N      # N holes inside % [1, 2, 3]
+- Pores.N[Size]      # N holes inside % [1, 2, 3]
 
 Void = Pores.1

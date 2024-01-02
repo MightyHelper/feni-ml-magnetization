@@ -53,22 +53,21 @@ class ZeroHighlighter(RegexHighlighter):
         r"(^(?P<zero>0+(.0+)))|([^.\d](?P<zero_1>0+(.0+))$)|(^(?P<zero_2>0+(.0+))$)|([^.\d](?P<zero_3>0+(.0+))[^.\d])"]
 
 
-def parse_nanoparticle_name(key):
-    ptype = None
-    subtype = None
-    subsubtype = None
+def parse_nanoparticle_name(key) -> tuple[str, str, str, str, str]:
+    shape, distribution, interface, pores, index = None, None, None, None, None
     try:
-        parts = key.split("/")
-        ptype = parts[2]
-        subtype = parts[3]
-        subsubtype = parts[4] if not parts[4].endswith(".in") else ""
-        subsubtype = re.sub("[-_]?" + subtype, "", subsubtype, flags=re.IGNORECASE)
-        subtype = re.sub("[-_]?" + ptype, "", subtype, flags=re.IGNORECASE)
-        subsubtype = re.sub("[-_]?" + subtype, "", subsubtype, flags=re.IGNORECASE)
-        subsubtype = re.sub("[-_]?" + ptype, "", subsubtype, flags=re.IGNORECASE)
+        filename = os.path.basename(key)
+        if filename.endswith(".in"):
+            filename = filename[:-3]
+        parts = filename.split("_")
+        shape = parts[0]
+        distribution = parts[1]
+        interface = parts[2]
+        pores = parts[3]
+        index = parts[4]
     except Exception:
         pass
-    return ptype, subtype, subsubtype
+    return shape, distribution, interface, pores, index
 
 
 def add_task(folder, progress: Progress, step, tasks, title):
