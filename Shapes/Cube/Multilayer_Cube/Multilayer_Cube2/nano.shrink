@@ -1,0 +1,18 @@
+region reg0 prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+create_atoms 1 region reg0
+region reg1 prism -11.0 -9.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg1 type 2
+region reg2 prism -8.0 -6.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg2 type 2
+region reg3 prism -5.0 -3.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg3 type 2
+region reg4 prism -2.0 -0.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg4 type 2
+region reg5 prism 1.0 2.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg5 type 2
+region reg6 prism 4.0 5.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg6 type 2
+region reg7 prism 7.0 8.5 -12.5 12.5 -12.5 12.5 0.0 0.0 0.0 units box 
+set region reg7 type 2
+group Fe type 1
+group Ni type 2

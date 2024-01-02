@@ -1,0 +1,10 @@
+region reg0 prism -5.0 5.0 -20.0 20.0 -16.0 16.0 0.0 0.0 0.0 units box 
+region reg1 cone z 0.0 0.0 23.0 1.0 -16.0 16.0 units box 
+create_atoms 1 region reg1
+region reg2 cone z 0.0 0.0 12.5 1.0 -13.0 9.0 units box 
+set region reg2 type 2
+delete_atoms region reg2 compress yes
+region reg3 intersect 2 reg0 reg1 units box
+set region reg3 type 2
+group Fe type 1
+group Ni type 2

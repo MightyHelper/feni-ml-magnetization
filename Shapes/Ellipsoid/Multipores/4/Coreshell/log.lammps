@@ -1,0 +1,169 @@
+LAMMPS (23 Jun 2022 - Update 4)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+Loaded 1 plugins from C:\Users\Nadhi\AppData\Local\LAMMPS 64-bit 23Jun2022\plugins
+# bcc iron in a 3d periodic box
+
+clear
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+Loaded 1 plugins from C:\Users\Nadhi\AppData\Local\LAMMPS 64-bit 23Jun2022\plugins
+units 		metal
+atom_style 	spin
+
+# dimension 	3
+boundary 	p p p
+
+# necessary for the serial algorithm (sametag)
+atom_modify 	map array
+
+region 		box block -25 25 -25 25 -25 25 units box
+create_box	2 box
+Created orthogonal box = (-25 -25 -25) to (25 25 25)
+  1 by 1 by 1 MPI processor grid
+
+lattice		bcc 2.8665
+Lattice spacing in x,y,z = 2.8665 2.8665 2.8665
+region          el ellipsoid 0 0 0 21 13 13 units box
+create_atoms	1 region el
+Created 1283 atoms
+  using lattice units in orthogonal box = (-25 -25 -25) to (25 25 25)
+  create_atoms CPU = 0.001 seconds
+
+ region		    s1 sphere -15 0 0 3.5 units box
+set region      s1 type 2
+Setting atom values ...
+  14 settings made for type
+region		    s2 sphere 15 0 0 3.5 units box
+set region      s2 type 2
+Setting atom values ...
+  14 settings made for type
+region		    s3 sphere 0 0 -6 3.5 units box
+set region      s3 type 2
+Setting atom values ...
+  15 settings made for type
+region		    s4 sphere 0 0 6 3.5 units box
+set region      s4 type 2
+Setting atom values ...
+  15 settings made for type
+
+delete_atoms 	region s1 compress yes
+Deleted 14 atoms, new total = 1269
+delete_atoms 	region s2 compress yes
+Deleted 14 atoms, new total = 1255
+delete_atoms 	region s3 compress yes
+Deleted 15 atoms, new total = 1240
+delete_atoms 	region s4 compress yes
+Deleted 15 atoms, new total = 1225
+region          ei ellipsoid 0 1 2 17 8 8 units box
+set region      ei type 2
+Setting atom values ...
+  342 settings made for type
+group		Fe type 1
+883 atoms in group Fe
+group		Ni type 2
+342 atoms in group Ni
+
+
+# setting mass, mag. moments, and interactions for bcc iron
+
+mass		1 55.845 #Fe
+mass		2 58.693 #Ni
+
+set 		group Fe spin 2.2 0 0 1 #Fe
+Setting atom values ...
+  883 settings made for spin
+set		group Ni spin 0.61 0 0 1 #Ni
+Setting atom values ...
+  342 settings made for spin
+
+pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
+pair_coeff 	* * eam/alloy FeCuNi.eam.alloy Fe Ni
+pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
+pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
+pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
+
+neighbor 	0.5 bin
+neigh_modify 	every 10 check yes delay 10
+
+timestep 0.001
+
+velocity 	all create 0 4928459 rot yes dist gaussian
+
+compute 	out_mag    all spin
+compute 	out_pe     all pe
+compute 	out_ke     all ke
+compute 	out_temp   all temp
+compute     keAtom  all ke/atom
+compute     peAtom  all pe/atom
+compute     outsp all property/atom spx spy spz sp fmx fmy fmz
+
+variable 	magx 	  equal c_out_mag[1]
+variable	magy	  equal c_out_mag[2]
+variable 	magz      equal c_out_mag[3]
+variable 	magnorm   equal c_out_mag[4]
+variable 	emag      equal c_out_mag[5]
+variable 	tmag      equal c_out_mag[6]
+
+thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
+thermo          500
+
+
+
+#fix a all precession/spin anisotropy 0.0000035 0.0 0.0 1.0
+#fix a all precession/spin cubic -0.0000035 0.00000036 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0
+fix temperatura all langevin 0 0 1 23136
+fix b all langevin/spin 300 0.01 29481
+fix c all nve/spin lattice frozen
+fix d all momentum 10 linear 1 1 1 angular rescale
+fix centrar all recenter INIT INIT INIT
+
+
+dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
+
+run 		300000
+
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+Your simulation uses code contributions which should be cited:
+
+- fix nve/spin command:
+
+@article{tranchida2018massively,
+title={Massively parallel symplectic algorithm for coupled magnetic spin dynamics and molecular dynamics},
+author={Tranchida, J and Plimpton, SJ and Thibaudeau, P and Thompson, AP},
+journal={Journal of Computational Physics},
+volume={372},
+pages={406-425},
+year={2018},
+publisher={Elsevier}
+doi={10.1016/j.jcp.2018.06.042}
+}
+
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+Neighbor list info ...
+  update every 10 steps, delay 10 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 6.1
+  ghost atom cutoff = 6.1
+  binsize = 3.05, bins = 17 17 17
+  2 neighbor lists, perpetual/occasional/extra = 2 0 0
+  (1) pair eam/alloy, perpetual, half/full from (2)
+      attributes: half, newton on
+      pair build: halffull/newton
+      stencil: none
+      bin: none
+  (2) pair spin/exchange, perpetual
+      attributes: full, newton on
+      pair build: full/bin/atomonly
+      stencil: full/bin/3d
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 8.47 | 8.47 | 8.47 Mbytes
+   Step          Temp          v_tmag         v_magx         v_magy         v_magz       v_magnorm        KinEng         PotEng         TotEng         Press     
+         0   0              0              0              0              1              1              0             -4773.2738     -4773.2738     -6812.8814    
+       500   0              261.20152      0.010920721   -0.011367111    0.79181887     0.79197575     0             -4752.1121     -4752.1121     -6812.8814    
+      1000   0              290.392        0.0095578447   0.02887646     0.69165872     0.69232723     0             -4747.7733     -4747.7733     -6812.8814    
+      1500   0              325.30575     -0.0070057829   0.00053706613  0.63063986     0.630679       0             -4744.2667     -4744.2667     -6812.8814    
+      2000   0              315.6039      -0.0013664236   0.0045463202   0.59836737     0.5983862      0             -4744.3332     -4744.3332     -6812.8814    
+      2500   0              293.18413     -0.012959177   -0.0092517076   0.59705067     0.59726295     0             -4745.8079     -4745.8079     -6812.8814    
