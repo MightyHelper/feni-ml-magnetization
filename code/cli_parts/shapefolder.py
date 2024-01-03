@@ -131,10 +131,11 @@ def inspect(path: str):
     rprint(region)
 
 
-@shapefolder.command()
+@shapefolder.command(deprecated=True, hidden=True)
 def shrink():
     """
-    Shrink all nanoparticle shapes
+    Shrink all nanoparticle shapes (Deprecated - Do not use
+    )
     """
     for path in nanoparticle_locator.NanoparticleLocator.sorted_search("../Shapes"):
         _, nano = parser.PoorlyCodedParser.parse_single_shape(path)
