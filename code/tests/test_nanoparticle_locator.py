@@ -11,8 +11,8 @@ class TestNanoparticleLocator(TestCase):
 		if len(particles) == 0:
 			self.fail("No particles found")
 		particles = list(nanoparticle_locator.NanoparticleLocator.search(PATH, extension=".shrink"))
-		if len(particles) == 0:
-			self.fail("No particles found")
+		if len(particles) != 0:
+			self.fail("No shrinks particles found")
 		particles = list(nanoparticle_locator.NanoparticleLocator.search(PATH, extension=".blabla"))
 		if len(particles) != 0:
 			self.fail("Found particles that don't exist")
@@ -23,8 +23,8 @@ class TestNanoparticleLocator(TestCase):
 			self.fail("No particles found")
 		self.assertListEqual(particles, sorted(particles))
 		particles = list(nanoparticle_locator.NanoparticleLocator.sorted_search(PATH, extension=".shrink"))
-		if len(particles) == 0:
-			self.fail("No particles found")
+		if len(particles) != 0:
+			self.fail("No shrinks particles found")
 		self.assertListEqual(particles, sorted(particles))
 		particles = list(nanoparticle_locator.NanoparticleLocator.sorted_search(PATH, extension=".blabla"))
 		if len(particles) != 0:

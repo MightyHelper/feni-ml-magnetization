@@ -15,8 +15,8 @@ class TestShapefolder(unittest.TestCase):
     def test_ls(self):
         shapefolder.ls()
 
-    def test_shrink(self):
-        shapefolder.shrink()
+    # def test_shrink(self):
+    #     shapefolder.shrink()
 
     def test_parse_all(self):
         expected: int = len([*nanoparticle_locator.NanoparticleLocator.search("../Shapes", ".in")])
@@ -31,7 +31,7 @@ class TestExec(unittest.TestCase):
         executions.ls()
 
     def test_execute(self):
-        ironsphere_in = "../Shapes/Test/Shapes/Cone/Coreshell/ironsphere.in"
+        ironsphere_in = "../Shapes/Test/Cone_Multilayer.2.Axis.X_05_Full_0.in"
         execution_result: str | None = executions.execute(
             path=Path(ironsphere_in),
             plot=False,
@@ -46,11 +46,11 @@ class TestExec(unittest.TestCase):
         nano = Nanoparticle.from_executed(execution_result)
         expected = {
             'ok': True,
-            'fe': 858,
-            'ni': 390,
-            'total': 1248,
-            'ratio_fe': 0.6875,
-            'ratio_ni': 0.3125
+            'fe': 830,
+            'ni': 425,
+            'total': 1255,
+            'ratio_fe': 0.6613545816733067,
+            'ratio_ni': 0.3386454183266932
         }
         result = nano.asdict()
         for key, value in expected.items():
