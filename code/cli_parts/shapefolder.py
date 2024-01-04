@@ -3,6 +3,7 @@ from typing import Annotated
 import pandas as pd
 import rich.table
 import typer
+from matplotlib import pyplot as plt
 from rich import print as rprint
 
 import config
@@ -74,6 +75,24 @@ def correct_highlighter(column: str, value) -> str:
         return h(value)
 
 
+def do_plots(df: pd.DataFrame):
+    # print(df.to_string())
+    # Get unique shapes from the DataFrame
+    unique_shapes = df['Shape'].unique()
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+
+    # Create a stacked histogram dynamically
+    hist_data = [df[df['Shape'] == shape]['ratio_ni'] for shape in unique_shapes]
+    plt.hist(hist_data, bins=30, stacked=True, label=unique_shapes)
+
+    plt.title('Distribution of Items by Shape')
+    plt.xlabel('ratio_ni (Value)')
+    plt.ylabel('Count')
+    plt.legend()
+    plt.show()
+
 @shapefolder.command()
 def parseshapes(
         path: str = "../Shapes",
@@ -81,7 +100,8 @@ def parseshapes(
         seed_count: int = 1,
         seed: int = 123,
         count_only: bool = False,
-        at: Annotated[str, "toko, toko:thread_count, local, local:thread_count"] = "local"
+        at: Annotated[str, "toko, toko:thread_count, local, local:thread_count"] = "local",
+        plot_distribution: bool = False,
 ) -> list[tuple[str, Nanoparticle]] | int:
     """
     Runs all nanoparticle simulations in a folder
@@ -109,11 +129,30 @@ def parseshapes(
     table.add_column("Interface")
     table.add_column("Pores")
     table.add_column("Index")
+    shapes = []
+    distributions = []
+    interfaces = []
+    pores_v = []
+    indexes = []
     for i in df.index.values:
         shape, distribution, interface, pores, index = parse_nanoparticle_name(df.iloc[i]["title"])
+        shapes.append(shape)
+        distributions.append(distribution)
+        interfaces.append(interface)
+        pores_v.append(pores)
+        indexes.append(index)
         table.add_row(*[correct_highlighter(table.columns[idx].header, str(j)) for idx, j in enumerate(df.iloc[i])],
                       shape, distribution, interface, pores, index)
+    df["Shape"] = shapes
+    df["Distribution"] = distributions
+    df["Interface"] = interfaces
+    df["Pores"] = pores
+    df["Index"] = indexes
     console.print(table, highlight=True)
+    if plot_distribution:
+        # Plot ratio_ni
+        do_plots(df)
+
     return nanoparticles
 
 
