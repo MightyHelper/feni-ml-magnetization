@@ -80,19 +80,26 @@ def do_plots(df: pd.DataFrame):
     # Get unique shapes from the DataFrame
     unique_shapes = df['Shape'].unique()
 
-    # Plotting
-    plt.figure(figsize=(10, 6))
+    # Create a figure with a 1x2 grid (1 row, 2 columns)
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
 
-    # Create a stacked histogram dynamically
+    # Subplot 1: Stacked Histogram
     hist_data = [df[df['Shape'] == shape]['ratio_ni'] for shape in unique_shapes]
-    plt.hist(hist_data, bins=30, stacked=True, label=unique_shapes)
+    axes[0].hist(hist_data, bins=30, stacked=True, label=unique_shapes)
+    axes[0].set_title('Distribution of Items by Shape')
+    axes[0].set_xlabel('ratio_ni (Value)')
+    axes[0].set_ylabel('Count')
+    axes[0].legend()
 
-    plt.title('Distribution of Items by Shape')
-    plt.xlabel('ratio_ni (Value)')
-    plt.ylabel('Count')
-    plt.legend()
+    # Subplot 2: Boxplot
+    df.boxplot(column='ratio_ni', by='Shape', ax=axes[1])
+    axes[1].set_title('Boxplot of Items by Shape')
+    axes[1].set_xlabel('Shape')
+    axes[1].set_ylabel('ratio_ni (Value)')
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
     plt.show()
-
 @shapefolder.command()
 def parseshapes(
         path: str = "../Shapes",
