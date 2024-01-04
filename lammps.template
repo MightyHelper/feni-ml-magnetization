@@ -62,7 +62,6 @@ variable 	tmag      equal c_out_mag[6]
                      #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
 thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press
 thermo          500
-thermo_modify flush yes
 
 fix temperatura all langevin 0 0 1 23136
 fix b all langevin/spin 300 0.01 29481

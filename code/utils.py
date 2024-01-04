@@ -72,7 +72,7 @@ def parse_nanoparticle_name(key) -> tuple[str, str, str, str, str]:
 
 def add_task(folder, progress: Progress, step, tasks, title):
     logging.info(f"Found running execution: {folder} ({step})")
-    tasks[folder] = progress.add_task(f"{folder} ({title})", total=None if step == -1 else config.FULL_RUN_DURATION)
+    tasks[folder] = progress.add_task(f"{os.path.basename(folder)} ({title})", total=None if step == -1 else config.FULL_RUN_DURATION)
 
 
 def get_path_elements(path: str, f: int, t: int) -> str:

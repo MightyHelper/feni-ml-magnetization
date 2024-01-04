@@ -1,9 +1,10 @@
 import logging
-import multiprocessing
 import platform
 import re
 import subprocess
 from abc import ABC, abstractmethod
+from multiprocessing.pool import ThreadPool
+
 from config import LAMMPS_EXECUTABLE
 from simulation_task import SimulationTask
 
@@ -136,7 +137,7 @@ class ThreadedLocalExecutionQueue(ExecutionQueue):
         self.index += 1
 
     def run(self) -> list[SimulationTask]:
-        with multiprocessing.Pool(len(self.queues)) as p:
+        with ThreadPool(len(self.queues)) as p:
             results = p.map(_run_queue, self.queues)
         return [task for queue_result in results for task in queue_result]
 
