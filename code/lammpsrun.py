@@ -69,7 +69,7 @@ class LammpsRun:
 		self.output = result
 		self.dumps = self._parse_dumps()
 		logging.debug(f"Finished execution of {self.file_name}")
-		logging.info(f"Lammps run {self} done with {len(self.dumps)} dumps")
+		logging.debug(f"Lammps run {self} done with {len(self.dumps)} dumps")
 
 	def _parse_dumps(self):
 		dumps = {}

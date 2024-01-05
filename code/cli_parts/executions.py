@@ -55,15 +55,23 @@ def ls(count: bool = False):
 
 
 @executions.command()
-def clean():
+def clean(keep_ok: bool = False, keep_full: bool = True, keep_batch: bool = True):
     """
     Clean all executions
     """
     total = 0
-    for path in os.listdir(config.LOCAL_EXECUTION_PATH):
-        for sub_path in os.listdir(config.LOCAL_EXECUTION_PATH + "/" + path):
-            os.remove(config.LOCAL_EXECUTION_PATH + "/" + path + "/" + sub_path)
-        os.rmdir(config.LOCAL_EXECUTION_PATH + "/" + path)
+    for execution in os.listdir(config.LOCAL_EXECUTION_PATH):
+        if 'batch' in execution and keep_batch:
+            continue
+        listdir = os.listdir(os.path.join(config.LOCAL_EXECUTION_PATH, execution))
+        if 'iron.0.dump' in listdir and keep_ok:
+            continue
+        if f'iron.{config.FULL_RUN_DURATION}.dump' in listdir and keep_full:
+            continue
+        for file in listdir:
+            full_path = os.path.join(config.LOCAL_EXECUTION_PATH, execution, file)
+            os.remove(full_path)
+        os.rmdir(config.LOCAL_EXECUTION_PATH + "/" + execution)
         total += 1
     if total == 0:
         rprint(f"[red]No executions to remove[/red].")

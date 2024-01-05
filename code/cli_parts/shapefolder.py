@@ -3,17 +3,16 @@ from typing import Annotated
 import pandas as pd
 import rich.table
 import typer
-from matplotlib import pyplot as plt
 from rich import print as rprint
 
 import config
 import nanoparticle_locator
 import poorly_coded_parser as parser
 import service.executor_service
-from cli_parts.number_highlighter import console, h
+from cli_parts.number_highlighter import console
 from nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
-from utils import parse_nanoparticle_name, dot_dot
+from utils import parse_nanoparticle_name, dot_dot, do_plots, correct_highlighter
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 
@@ -47,59 +46,6 @@ def ls(path: str = "../Shapes"):
     console.print(table, highlight=True)
 
 
-def lerp_green_red(value: float) -> str:
-    # Return hex of color
-    green = int(value * 255)
-    red = int((1 - value) * 255)
-    green_hex = hex(green)[2:]
-    red_hex = hex(red)[2:]
-    return f"#{red_hex:0>2}{green_hex:0>2}00".upper()
-
-
-def correct_highlighter(column: str, value) -> str:
-    desired_by_column = {
-        "ratio_fe": config.DESIRED_FE_RATIO,
-        "ratio_ni": config.DESIRED_NI_RATIO,
-        "total": config.DESIRED_ATOM_COUNT,
-        "fe": config.DESIRED_FE_ATOM_COUNT,
-        "ni": config.DESIRED_NI_ATOM_COUNT
-    }
-    if column in desired_by_column:
-        val = float(value)
-        target = desired_by_column[column]
-        acceptable_variance = 0.1 if target < 1 else 100
-        x = 1 - min(abs(val - target) / acceptable_variance, 1)
-        color = lerp_green_red(x)
-        return f"[{color}]{value}[/{color}]"
-    else:
-        return h(value)
-
-
-def do_plots(df: pd.DataFrame):
-    # print(df.to_string())
-    # Get unique shapes from the DataFrame
-    unique_shapes = df['Shape'].unique()
-
-    # Create a figure with a 1x2 grid (1 row, 2 columns)
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6))
-
-    # Subplot 1: Stacked Histogram
-    hist_data = [df[df['Shape'] == shape]['ratio_ni'] for shape in unique_shapes]
-    axes[0].hist(hist_data, bins=30, stacked=True, label=unique_shapes)
-    axes[0].set_title('Distribution of Items by Shape')
-    axes[0].set_xlabel('ratio_ni (Value)')
-    axes[0].set_ylabel('Count')
-    axes[0].legend()
-
-    # Subplot 2: Boxplot
-    df.boxplot(column='ratio_ni', by='Shape', ax=axes[1])
-    axes[1].set_title('Boxplot of Items by Shape')
-    axes[1].set_xlabel('Shape')
-    axes[1].set_ylabel('ratio_ni (Value)')
-
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-    plt.show()
 @shapefolder.command()
 def parseshapes(
         path: str = "../Shapes",
@@ -109,6 +55,9 @@ def parseshapes(
         count_only: bool = False,
         at: Annotated[str, "toko, toko:thread_count, local, local:thread_count"] = "local",
         plot_distribution: bool = False,
+        full_column_names: bool = False,
+        sort_by: str = "title",
+        show_simulation_key: bool = False,
 ) -> list[tuple[str, Nanoparticle]] | int:
     """
     Runs all nanoparticle simulations in a folder
@@ -125,17 +74,60 @@ def parseshapes(
         rprint(f"Found [green]{len(nanoparticles)}[/green] nanoparticle shapes.")
         return len(nanoparticles)
     nanoparticles = execute_nanoparticles(nanoparticles, at, test)
-
+    table = rich.table.Table(title="Nanoparticle run results", show_footer=True)
     df: pd.DataFrame = pd.DataFrame([nanoparticle.asdict() for _, nanoparticle in nanoparticles])
     df.drop(columns=["np"], inplace=True)
-    table = rich.table.Table(title="Nanoparticle run results")
+    if not show_simulation_key:
+        df.drop(columns=["key"], inplace=True)
+    count_ok_col = "Count OK" if full_column_names else 'C'
+    ratio_ok_col = "Ratio OK" if full_column_names else 'R'
+    df[count_ok_col] = (abs(df["total"] - config.DESIRED_ATOM_COUNT) < config.DESIRED_MAX_ATOM_COUNT_VARIANCE)
+    df[ratio_ok_col] = (abs(df["ratio_fe"] - config.DESIRED_FE_RATIO) < config.DESIRED_MAX_RATIO_VARIANCE)
+    if sort_by == "title":
+        df = df.sort_values(by=["title"], ignore_index=True)
+    elif sort_by == "errors":
+        df = df.sort_values(by=[ratio_ok_col, count_ok_col, "title"], ignore_index=True, ascending=[False, False, True])
+    # if all df['mag'] == (None, None) dont show the column
+    if all(df['mag'] == (None, None)):
+        df.drop(columns=["mag"], inplace=True)
     for column in df.columns:
-        table.add_column(column)
+        full_names = {
+            "ratio_fe": "Fe Ratio",
+            "ratio_ni": "Ni Ratio",
+            "total": "Total atoms",
+            "fe": "Fe atoms",
+            "ni": "Ni atoms",
+            "mag": "Magnetism",
+            "title": "Title",
+            "ok": "OK",
+            "key": "Simulation folder",
+        }
+        short_names = {
+            "ratio_fe": "rFe",
+            "ratio_ni": "rNi",
+            "total": "T",
+            "fe": "Fe",
+            "ni": "Ni",
+            "mag": "Mag",
+            "title": "Title",
+            "ok": "OK",
+            "key": "Folder",
+        }
+        if column in full_names:
+            column = (full_names if full_column_names else short_names)[column]
+        if column in [ratio_ok_col, count_ok_col]:
+            value = len(df) - df[column].sum()
+            if value == 0:
+                table.add_column(column, footer=f"[green]{value}[/green]")
+            else:
+                table.add_column(column, footer=f"[red]{value}[/red]")
+        else:
+            table.add_column(column)
     table.add_column("Shape")
     table.add_column("Distribution")
-    table.add_column("Interface")
+    table.add_column("Int")
     table.add_column("Pores")
-    table.add_column("Index")
+    table.add_column("Index" if full_column_names else "I")
     shapes = []
     distributions = []
     interfaces = []
@@ -148,17 +140,32 @@ def parseshapes(
         interfaces.append(interface)
         pores_v.append(pores)
         indexes.append(index)
-        table.add_row(*[correct_highlighter(table.columns[idx].header, str(j)) for idx, j in enumerate(df.iloc[i])],
-                      shape, distribution, interface, pores, index)
+        table.add_row(
+            *[
+                correct_highlighter(df.columns[idx], str(j))
+                for idx, j in enumerate(df.iloc[i])
+            ],
+            shape,
+            distribution,
+            interface,
+            pores,
+            index
+        )
     df["Shape"] = shapes
     df["Distribution"] = distributions
     df["Interface"] = interfaces
-    df["Pores"] = pores
+    df["Pores"] = pores_v
     df["Index"] = indexes
     console.print(table, highlight=True)
     if plot_distribution:
         # Plot ratio_ni
-        do_plots(df)
+        do_plots(
+            df,
+            "Shape",
+            "ratio_ni",
+            config.DESIRED_NI_RATIO - config.DESIRED_MAX_RATIO_VARIANCE,
+            config.DESIRED_NI_RATIO + config.DESIRED_MAX_RATIO_VARIANCE
+        )
 
     return nanoparticles
 
