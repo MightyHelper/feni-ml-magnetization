@@ -48,16 +48,76 @@ def ls(path: str = "../Shapes"):
 
 @shapefolder.command()
 def parseshapes(
-        path: str = "../Shapes",
-        test: bool = True,
-        seed_count: int = 1,
-        seed: int = 123,
-        count_only: bool = False,
-        at: Annotated[str, "toko, toko:thread_count, local, local:thread_count"] = "local",
-        plot_distribution: bool = False,
-        full_column_names: bool = False,
-        sort_by: str = "title",
-        show_simulation_key: bool = False,
+        path: Annotated[
+            str,
+            typer.Option(
+                help="Path to folder with nanoparticle shapes",
+                show_default=True
+            )
+        ] = "../Shapes",
+        test: Annotated[
+            bool,
+            typer.Option(
+                help=f"Test run (run 0 instead of run {config.FULL_RUN_DURATION})",
+                show_default=True
+            )
+        ] = True,
+        seed_count: Annotated[
+            int,
+            typer.Option(
+                help="Number of nanoparticles to generate with different seeds per existing nanoparticle",
+                show_default=True
+            )
+        ] = 1,
+        seed: Annotated[
+            int,
+            typer.Option(
+                help="Base seed for other seeds",
+                show_default=True
+            )
+        ] = 123,
+        count_only: Annotated[
+            bool,
+            typer.Option(
+                help="Only count the number of nanoparticle shapes without executing",
+                show_default=True
+            )
+        ] = False,
+        at: Annotated[
+            str,
+            typer.Option(
+                help="Possible values: [b u]toko[/b u], [b u]toko:thread_count[/b u], [b u]local[/b u], [b u]local:thread_count[/b u]",
+                show_default=True
+            )
+        ] = "local",
+        plot_ni_distribution: Annotated[
+            bool,
+            typer.Option(
+                help="Plot the distribution of Ni ratio across nanoparticles",
+                show_default=True
+            )
+        ] = False,
+        full_column_names: Annotated[
+            bool,
+            typer.Option(
+                help="Use full column names",
+                show_default=True
+            )
+        ] = False,
+        sort_by: Annotated[
+            str,
+            typer.Option(
+                help="Sort by [b u]title[/b u] or [b u]errors[/b u]",
+                show_default=True
+            )
+        ] = "title",
+        show_simulation_key: Annotated[
+            bool,
+            typer.Option(
+                help="Show the simulation key (folder name)",
+                show_default=True
+            )
+        ] = False,
 ) -> list[tuple[str, Nanoparticle]] | int:
     """
     Runs all nanoparticle simulations in a folder
@@ -157,7 +217,7 @@ def parseshapes(
     df["Pores"] = pores_v
     df["Index"] = indexes
     console.print(table, highlight=True)
-    if plot_distribution:
+    if plot_ni_distribution:
         # Plot ratio_ni
         do_plots(
             df,
