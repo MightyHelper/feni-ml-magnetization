@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElaps
 import config
 import nanoparticle
 import poorly_coded_parser as parser
+import utils
 from service.executor_service import execute_nanoparticles
 from utils import add_task, ZeroHighlighter, resolve_path
 from cli_parts.number_highlighter import console
@@ -25,7 +26,7 @@ executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
 @executions.command()
-def ls(count: bool = False):
+def ls(count: bool = False, plot_magnetism: bool = False):
     """
     List all executions that were done
     """
@@ -37,6 +38,7 @@ def ls(count: bool = False):
     table.add_column("Date")
     table.add_column("Magnetism")
     table.add_column("In Toko")
+    df = pd.DataFrame(columns=["Shape", "magnetism_val", "magnetism_std"])
     if not count:
         for i, folder in enumerate(sorted(execs)):
             try:
@@ -49,8 +51,17 @@ def ls(count: bool = False):
                     f"[magenta]{info.magnetism}[/magenta]",
                     f"[red]{info.extra_replacements['in_toko']}[/red]"
                 )
+                shape, distribution, interface, pores, index = utils.parse_nanoparticle_name(info.title)
+                df = df._append({
+                    "Shape": shape,
+                    "magnetism_val": info.magnetism[0],
+                    "magnetism_std": info.magnetism[1]
+                }, ignore_index=True)
             except Exception as e:
                 logging.debug(f"Error parsing {folder}: {e}")
+    if plot_magnetism:
+        utils.do_plots(df, by="Shape", field="magnetism_val")
+        utils.do_plots(df, by="Shape", field="magnetism_std")
     console.print(table, highlight=True)
 
 
