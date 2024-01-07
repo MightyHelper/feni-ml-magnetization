@@ -35,14 +35,14 @@ create_atoms	1 region octa
 
 #lattice		fcc 3.524
 
-region 		l1 plane 0 13.5 0 0 -1 -1.2 units box
-region 		l2 plane 0 13.5 0 0 -1 1.2 units box
-region 		l3 plane 0 13.5 0 1.2 -1 0 units box
-region		l4 plane 0 13.5 0 -1.2 -1 0 units box
-region		l5 plane 0 -13.5 0 0 1 1.2 units box
-region		l6 plane 0 -13.5 0 0 1 -1.2 units box
-region		l7 plane 0 -13.5 0 -1.2 1 0 units box
-region		l8 plane 0 -13.5 0 1.2 1 0 units box
+region 		l1 plane 0 13 0 0 -1 -1.2 units box
+region 		l2 plane 0 13 0 0 -1 1.2 units box
+region 		l3 plane 0 13 0 1.2 -1 0 units box
+region		l4 plane 0 13 0 -1.2 -1 0 units box
+region		l5 plane 0 -13 0 0 1 1.2 units box
+region		l6 plane 0 -13 0 0 1 -1.2 units box
+region		l7 plane 0 -13 0 -1.2 1 0 units box
+region		l8 plane 0 -13 0 1.2 1 0 units box
 
 region		Rshell intersect 8 l1 l2 l3 l4 l5 l6 l7 l8 side out
 group shell region Rshell
@@ -67,7 +67,7 @@ pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
 pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
 pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
 
-neighbor 	0.5 bin
+neighbor 	0 bin
 neigh_modify 	every 10 check yes delay 10
 
 timestep 0.001
@@ -86,7 +86,7 @@ variable 	magx 	  equal c_out_mag[1]
 variable	magy	  equal c_out_mag[2]
 variable 	magz      equal c_out_mag[3]
 variable 	magnorm   equal c_out_mag[4]
-variable 	emag      equal c_out_mag[5]
+variable 	emag      equal c_out_mag]
 variable 	tmag      equal c_out_mag[6]
 
 thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press

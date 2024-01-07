@@ -25,7 +25,7 @@ region		p8 plane 0 -20 0 1.2 1 0 units box
 region octa intersect 8 p1 p2 p3 p4 p5 p6 p7 p8 side in
 create_atoms	1 region octa
 group		Fe type 1
-set group Fe type/ratio 2 0.35 300
+set group Fe type/ratio 2 0.30 300
 group		Ni type 2
 region 		l1 plane 0 16 0 0 -1 -1.2 units box
 region 		l2 plane 0 16 0 0 -1 1.2 units box

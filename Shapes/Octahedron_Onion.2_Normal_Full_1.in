@@ -36,14 +36,14 @@ region 		p10 plane 0 0 0 0 -1 0 units box
 
 #lattice		fcc 3.524
 
-region 		l1 plane 0 14.5 0 0 -1 -1.2 units box
-region 		l2 plane 0 14.5 0 0 -1 1.2 units box
-region 		l3 plane 0 14.5 0 1.2 -1 0 units box
-region		l4 plane 0 14.5 0 -1.2 -1 0 units box
-region		l5 plane 0 -14.5 0 0 1 1.2 units box
-region		l6 plane 0 -14.5 0 0 1 -1.2 units box
-region		l7 plane 0 -14.5 0 -1.2 1 0 units box
-region		l8 plane 0 -14.5 0 1.2 1 0 units box
+region 		l1 plane 0 14.5 0 0 -1 -1.1 units box
+region 		l2 plane 0 14.5 0 0 -1 1.1 units box
+region 		l3 plane 0 14.5 0 1.1 -1 0 units box
+region		l4 plane 0 14.5 0 -1 -1 0 units box
+region		l5 plane 0 -15 0 0 1 1.1 units box
+region		l6 plane 0 -15 0 0 1 -1.1 units box
+region		l7 plane 0 -15 0 -1 1 0 units box
+region		l8 plane 0 -15 0 1.1 1 0 units box
 
 # Se crea el cascar�n octa�drico
 region		Rshell intersect 8 l1 l2 l3 l4 l5 l6 l7 l8 side out

@@ -18,11 +18,11 @@ region		sq1 prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 create_atoms	1 region sq1
 region		sq2 prism -9 9 -9 9 -9 9 0 0 0 units box
 set region sq2 type 2
-region		sq3 prism -6 6 -6 6 -6 6 0 0 0 units box
+region		sq3 prism -6.5 6.5 -6.5 6.5 -6.5 6.5 0 0 0 units box
 set region sq3 type 1
 region		sq4 prism -5 5 -5 5 -5 5 0 0 0 units box
 set region sq4 type 2
-region		sq6 prism -3.5 3.5 -3.5 3.5 -3.5 3.5 0 0 0 units box
+region		sq6 prism -4.5 4.5 -4.5 4.5 -4.5 4.5 0 0 0 units box
 set region sq6 type 1
 
 group		Fe type 1
@@ -62,7 +62,7 @@ variable	magy	  equal c_out_mag[2]
 variable 	magz      equal c_out_mag[3]
 variable 	magnorm   equal c_out_mag[4]
 variable 	emag      equal c_out_mag[5]
-variable 	tmag      equal c_out_mag[6]
+variable 	tmag      equal c_out_mag[6.5]
 
 thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
 thermo          500

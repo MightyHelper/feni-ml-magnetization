@@ -18,7 +18,7 @@ region		sq prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 create_atoms	1 region sq
 group		Fe type 1
 
-set group Fe type/ratio 2 0.35 300
+set group Fe type/ratio 2 0.30 300
 
 group		Ni type 2
 

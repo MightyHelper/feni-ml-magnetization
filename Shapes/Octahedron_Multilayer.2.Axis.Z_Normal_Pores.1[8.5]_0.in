@@ -23,7 +23,7 @@ region		p6 plane 0 -20 0 0 1 -1.0 units box
 region		p7 plane 0 -20 0 -1.0 1 0 units box
 region		p8 plane 0 -20 0 1.0 1 0 units box
 #region		p9 prism -25 25 -19 19 -25 25 0 0 0 units box
-region		s1 sphere 0 0 0 8.5 units box side out
+region		s1 sphere 0 0 1 8.5 units box side out
 region octa intersect 9 p1 p2 p3 p4 p5 p6 p7 p8 s1
 create_atoms	1 region octa
 group		Fe type 1
