@@ -14,12 +14,14 @@ from rich.highlighter import ReprHighlighter
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn
 
+import cli_parts.ui_utils
 import config
 import nanoparticle
 import poorly_coded_parser as parser
 import utils
 from service.executor_service import execute_nanoparticles
-from utils import add_task, ZeroHighlighter, resolve_path
+from utils import resolve_path
+from cli_parts.ui_utils import add_task, ZeroHighlighter
 from cli_parts.number_highlighter import console
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -60,8 +62,8 @@ def ls(count: bool = False, plot_magnetism: bool = False):
             except Exception as e:
                 logging.debug(f"Error parsing {folder}: {e}")
     if plot_magnetism:
-        utils.do_plots(df, by="Shape", field="magnetism_val")
-        utils.do_plots(df, by="Shape", field="magnetism_std")
+        cli_parts.ui_utils.do_plots(df, by="Shape", field="magnetism_val")
+        cli_parts.ui_utils.do_plots(df, by="Shape", field="magnetism_std")
     console.print(table, highlight=True)
 
 

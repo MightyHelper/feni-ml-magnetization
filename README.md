@@ -4,7 +4,9 @@ Run a nanoparticle simulation with configurable parametes and execution location
 
 ## Configuration
 
-Check and update [template.py](code/template.py) as required.
+Check and update [config.py](code/config.py) as required.
+
+You may create a `config.local.py` file to override the default values inside `code/`.
 
 You probably need to at least update:
 - `LAMMPS_EXECUTABLE`: Your local lammps executable (If you didn't compile lammps manually use `lmp` or the result of `which lmp`)
