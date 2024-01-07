@@ -1,5 +1,7 @@
 import logging
 from typing import Annotated
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import rich.table
 import typer
@@ -220,13 +222,14 @@ def parseshapes(
     console.print(table, highlight=True)
     if plot_ni_distribution:
         # Plot ratio_ni
-        do_plots(
+        fig: plt.Figure = do_plots(
             df,
             "Shape",
             "ratio_ni",
             config.DESIRED_NI_RATIO - config.DESIRED_MAX_RATIO_VARIANCE,
             config.DESIRED_NI_RATIO + config.DESIRED_MAX_RATIO_VARIANCE
         )
+        plt.show()
 
     return nanoparticles
 

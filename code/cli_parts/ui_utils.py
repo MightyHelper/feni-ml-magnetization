@@ -28,6 +28,7 @@ def do_plots(df: pd.DataFrame, by: str = "Shape", field: str = "ratio_ni", min_a
         (by, field, min_acceptable, max_acceptable),
     )
 
+
 def multi_plots(
         df: pd.DataFrame,
         source: str | None = None,
@@ -35,6 +36,8 @@ def multi_plots(
 ) -> plt.Figure:
     # Create a figure with a 1x2 grid (1 row, 2 columns)
     fig, all_axes = plt.subplots(nrows=len(plot_args), ncols=2, figsize=(15, 4 * len(plot_args)))
+    if len(plot_args) == 1:
+        all_axes = [all_axes]
 
     for plt_idx, plt_args in enumerate(plot_args):
         axes = all_axes[plt_idx]
