@@ -52,10 +52,10 @@ class NanoparticleRenamer:
         return f"{'_'.join(parts)}.in"
 
     @staticmethod
-    def _find_interface(processed_name):
+    def _find_interface(processed_name: str) -> str:
         if 'Mix' in processed_name:
             mix_id = re.findall("Mix_?(\d\d)", processed_name)
-            if len(mix_id) > 0: return mix_id[0]
+            if len(mix_id) > 0: return 'Mix.' + str(mix_id[0])
             raise Exception("Couldn't find mix id in " + processed_name)
         else:
             return "Normal"
@@ -92,11 +92,11 @@ class NanoparticleRenamer:
         distributions: dict[str, Callable[[], str]] = {
             'Janus': lambda: NanoparticleRenamer._get_janus_distribution(processed_name),
             'CoreShell': lambda: NanoparticleRenamer._get_core_shell_distribution(actual_shape, processed_name),
-            'Sandwich': lambda: "Sandwich",
+            'Sandwich': lambda: NanoparticleRenamer._get_sandwich_distribution(processed_name),
             'Multicor': lambda: "Multicore.4",
             'Multishell': lambda: NanoparticleRenamer._get_onion_levels(processed_name),
             'Onion': lambda: "Onion.7",
-            'Multilayer': lambda: "Multilayer",
+            'Multilayer': lambda: "Multilayer.?",
             'Random': lambda: "Random",
         }
         call: Callable[[], str] = get_matching(
@@ -133,12 +133,14 @@ class NanoparticleRenamer:
                 return f"Pores.{n_pores[0]}"
             else:
                 return "Pores.?"
+        elif 'Void' in processed_name:
+            return "Pores.1[?]"
         else:
             return "Full"
 
     @staticmethod
     def get_new_nanoparticle_name(old_name: str, other_names: list[str]) -> str:
-        if os.path.basename(old_name).count("_") > 1:
+        if os.path.basename(old_name).count("_") > 1 and old_name.endswith(".in"):
             return old_name
         processed_name: str = NanoparticleRenamer._standardize_name(old_name)
         nano_data: dict[str, str | int] = {
@@ -177,6 +179,20 @@ class NanoparticleRenamer:
     def output_renames(renames: list[tuple[str, str]]) -> None:
         for old_name, new_name in renames:
             NanoparticleRenamer.output_rename(old_name, new_name)
+
+    @staticmethod
+    def _get_sandwich_distribution(processed_name: str) -> str:
+        sandwich_types: dict[str, str] = {
+            'X': 'Multilayer.3.Axis.X',
+            'Y': 'Multilayer.3.Axis.Y',
+            'Z': 'Multilayer.3.Axis.Z',
+            processed_name: 'Multilayer.3',
+        }
+        return get_matching(
+            sandwich_types,
+            processed_name,
+            "Couldn't find Janus type in " + processed_name
+        )
 
 
 if __name__ == '__main__':
