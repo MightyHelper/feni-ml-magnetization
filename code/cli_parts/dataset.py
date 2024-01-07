@@ -1,6 +1,12 @@
+import logging
+import os
+from typing import Annotated
+
 import pandas as pd
 import typer
 from pathlib import Path
+
+from matplotlib import pyplot as plt
 from rich import print as rprint
 
 import config
@@ -8,10 +14,10 @@ from cli_parts import ui_utils
 from nanoparticle_renamer import NanoparticleRenamer
 from utils import parse_nanoparticle_name
 
-renamer = typer.Typer(add_completion=False, no_args_is_help=True, name="renamer")
+dataset = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
 
 
-@renamer.command()
+@dataset.command()
 def rename(path: Path = Path("../Shapes")):
     """
     Output nanoparticle renames for a folder
@@ -21,7 +27,8 @@ def rename(path: Path = Path("../Shapes")):
         rprint("[yellow]No renames found[/yellow]")
     NanoparticleRenamer.output_renames(renames)
 
-@renamer.command()
+
+@dataset.command()
 def single(path: Path):
     """
     Output nanoparticle renames for a folder
@@ -29,7 +36,8 @@ def single(path: Path):
     nanoparticle = NanoparticleRenamer.get_new_nanoparticle_name(path.as_posix(), [])
     rprint(f"[green]{nanoparticle}[/green]")
 
-@renamer.command()
+
+@dataset.command()
 def rename_in_dataset(dataset_path: Path, output_path: Path | None = None):
     """
     Output nanoparticle renames for a folder
@@ -45,7 +53,8 @@ def rename_in_dataset(dataset_path: Path, output_path: Path | None = None):
     if output_path is not None:
         dataset.to_csv(output_path, index=False)
 
-@renamer.command()
+
+@dataset.command()
 def normalize_ratios(input_path: Path, output_path: Path | None = None):
     """
     Output nanoparticle renames for a folder
@@ -64,8 +73,13 @@ def normalize_ratios(input_path: Path, output_path: Path | None = None):
     if output_path is not None:
         dataset.to_csv(output_path, index=False)
 
-@renamer.command()
-def dataset_info(dataset_path: Path):
+
+@dataset.command()
+def dataset_info(
+        dataset_path: Annotated[Path, typer.Argument(help="Path to dataset")],
+        by: Annotated[str, typer.Option(help="Csv of Fields to group by", show_default=True)] = "Shape",
+        save: Path | None = None
+):
     """
     Output nanoparticle renames for a folder
     """
@@ -73,15 +87,29 @@ def dataset_info(dataset_path: Path):
     for i, row in dataset.iterrows():
         shape, distribution, interface, pores, index = parse_nanoparticle_name(row['name'])
         dataset.loc[i, 'Shape'] = shape
-        dataset.loc[i, 'Distribution'] = distribution
-        dataset.loc[i, 'Interface'] = interface
-        dataset.loc[i, 'Pores'] = pores
-        dataset.loc[i, 'Index'] = index
-    ui_utils.do_plots(
-        dataset,
-        "Shape",
-        "n_ni",
-        config.DESIRED_NI_RATIO - config.DESIRED_MAX_RATIO_VARIANCE,
-        config.DESIRED_NI_RATIO + config.DESIRED_MAX_RATIO_VARIANCE
-    )
-
+        dist = distribution.split(".")
+        intf = interface.split(".")
+        prs = pores.split(".")
+        dataset.loc[i, 'Distribution'] = dist[0]
+        dataset.loc[i, 'Distribution_full'] = distribution
+        dataset.loc[i, 'Distribution_data'] = "" if len(dist) == 1 else ".".join(dist[1:])
+        dataset.loc[i, 'Interface'] = intf[0]
+        dataset.loc[i, 'Interface_full'] = interface
+        dataset.loc[i, 'Interface_data'] = "" if len(intf) == 1 else ".".join(intf[1:])
+        dataset.loc[i, 'Pores'] = prs[0]
+        dataset.loc[i, 'Pores_full'] = pores
+        dataset.loc[i, 'Pores_data'] = "" if len(prs) == 1 else ".".join(prs[1:])
+        dataset.loc[i, 'Index'] = int(index)
+    for by_value in by.split(","):
+        logging.info(f"Plotting {by_value}")
+        fig: plt.Figure = ui_utils.multi_plots(
+            dataset,
+            dataset_path.name,
+            (by_value, 'tmg', None, None),
+            (by_value, "n_ni", config.DESIRED_NI_RATIO - config.DESIRED_MAX_RATIO_VARIANCE,
+             config.DESIRED_NI_RATIO + config.DESIRED_MAX_RATIO_VARIANCE)
+        )
+        if save is not None:
+            fig.savefig(os.path.join(save.as_posix(), f"{dataset_path.name}_{by_value}.png"))
+        else:
+            plt.show()

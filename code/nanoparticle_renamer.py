@@ -133,6 +133,12 @@ class NanoparticleRenamer:
                 return f"Pores.{n_pores[0]}"
             else:
                 return "Pores.?"
+        elif '4sp' in processed_name:
+            return "Pores.4[?]"
+        elif '3sp' in processed_name:
+            return "Pores.3[?]"
+        elif '2sp' in processed_name:
+            return "Pores.2[?]"
         elif 'Void' in processed_name:
             return "Pores.1[?]"
         else:
