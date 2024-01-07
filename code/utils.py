@@ -129,3 +129,8 @@ def column_values_as_float(line):
     return [float(x) for x in line.split(" ") if x != ""]
 
 
+def get_matching(distributions: dict[str, T], processed_name: str, error: str) -> T:
+    for key, value in distributions.items():
+        if key in processed_name:
+            return value
+    raise Exception(error)
