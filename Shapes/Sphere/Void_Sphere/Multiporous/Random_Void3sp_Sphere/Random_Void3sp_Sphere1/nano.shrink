@@ -1,0 +1,9 @@
+region reg0 sphere 0.0 0.0 0.0 15.5 units box 
+region reg1 sphere -4.0 -4.0 -4.0 4.5 units box side out
+region reg2 sphere 4.0 4.0 4.0 5.0 units box side out
+region reg3 sphere 4.0 4.0 -4.0 5.0 units box side out
+region reg4 intersect 4 reg0 reg1 reg2 reg3 
+create_atoms 1 region reg4
+set region reg4 type/ratio 2 0.35 300
+group Fe type 1
+group Ni type 2
