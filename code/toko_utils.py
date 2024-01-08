@@ -56,7 +56,7 @@ class TokoUtils:
     def copy_file_from_toko(toko_path: str, local_path: str, is_folder: bool = False):
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url:
-            [config.TOKO_COPY_SCRIPT, "-r", f"{user}@{toko_url}:{toko_path}/", local_path + "/"] if is_folder else
+            [config.TOKO_COPY_SCRIPT, "-r", f"{user}@{toko_url}:{toko_path}/", local_path] if is_folder else
             [config.TOKO_COPY_SCRIPT, f"{user}@{toko_url}:{toko_path}", local_path]
         )
 
