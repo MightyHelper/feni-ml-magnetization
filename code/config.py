@@ -21,6 +21,7 @@ TOKO_USER = "fwilliamson"
 TOKO_SBATCH = "/apps/slurm/bin/sbatch"
 TOKO_SQUEUE = "/apps/slurm/bin/squeue"
 TOKO_SCONTROL = "/apps/slurm/bin/scontrol"
+TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
 
 SLURM_SH = "slurm.sh"
 
