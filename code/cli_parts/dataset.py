@@ -38,11 +38,11 @@ def single(path: Path):
 
 
 @dataset.command()
-def rename_in_dataset(dataset_path: Path, output_path: Path | None = None):
+def rename_in_dataset(dataset_path: Path, output_path: Path = None):
     """
     Output nanoparticle renames for a folder
     """
-    dataset = pd.read_csv(dataset_path)
+    dataset: pd.DataFrame = pd.read_csv(dataset_path)
     names = dataset['name'].tolist()
     renames: list[tuple[str, str]] = NanoparticleRenamer.get_all_renames(names)
     if len(renames) == 0:
@@ -55,11 +55,11 @@ def rename_in_dataset(dataset_path: Path, output_path: Path | None = None):
 
 
 @dataset.command()
-def normalize_ratios(input_path: Path, output_path: Path | None = None):
+def normalize_ratios(input_path: Path, output_path: Path = None):
     """
     Output nanoparticle renames for a folder
     """
-    dataset = pd.read_csv(input_path)
+    dataset: pd.DataFrame = pd.read_csv(input_path)
     rprint("[magenta]Before[/magenta]")
     rprint(dataset[['fe_s', 'ni_s', 'fe_c', 'ni_c', 'n_fe', 'n_ni']].to_string())
     # Find rows where n_fe and n_ni > 1, and then normalise with total = n_fe + n_ni
@@ -78,7 +78,7 @@ def normalize_ratios(input_path: Path, output_path: Path | None = None):
 def dataset_info(
         dataset_path: Annotated[Path, typer.Argument(help="Path to dataset")],
         by: Annotated[str, typer.Option(help="Csv of Fields to group by", show_default=True)] = "Shape",
-        save: Path | None = None
+        save: Path = None
 ):
     """
     Output nanoparticle renames for a folder

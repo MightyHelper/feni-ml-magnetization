@@ -96,7 +96,7 @@ class NanoparticleRenamer:
             'Multicor': lambda: "Multicore.4",
             'Multishell': lambda: NanoparticleRenamer._get_onion_levels(processed_name),
             'Onion': lambda: "Onion.7",
-            'Multilayer': lambda: "Multilayer.?",
+            'Multilayer': lambda: "Multilayer.!",
             'Random': lambda: "Random",
         }
         call: Callable[[], str] = get_matching(
@@ -112,7 +112,7 @@ class NanoparticleRenamer:
             path, nano_builder = poorly_coded_parser.PoorlyCodedParser.parse_single_shape(processed_name)
             return f"Onion.{len(nano_builder.regions)}"
         except Exception:
-            return "Onion.?"
+            return "Onion.!"
 
     @staticmethod
     def _get_shape(processed_name: str) -> str:
@@ -132,15 +132,15 @@ class NanoparticleRenamer:
             if len(n_pores) > 0:
                 return f"Pores.{n_pores[0]}"
             else:
-                return "Pores.?"
+                return "Pores.!"
         elif '4sp' in processed_name:
-            return "Pores.4[?]"
+            return "Pores.4[!]"
         elif '3sp' in processed_name:
-            return "Pores.3[?]"
+            return "Pores.3[!]"
         elif '2sp' in processed_name:
-            return "Pores.2[?]"
+            return "Pores.2[!]"
         elif 'Void' in processed_name:
-            return "Pores.1[?]"
+            return "Pores.1[!]"
         else:
             return "Full"
 
