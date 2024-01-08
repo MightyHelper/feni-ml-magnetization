@@ -43,13 +43,13 @@ class TokoUtils:
     def copy_file_multi_to_toko(local_paths: list[str], toko_path: str):
         logging.info(f"Copying {len(local_paths)} files to toko {toko_path}...")
         return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar", *local_paths, f"{user}@{toko_url}:{toko_path}"])
+            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r', *local_paths, f"{user}@{toko_url}:{toko_path}"])
 
     @staticmethod
     def copy_file_multi_from_toko(toko_paths: list[str], local_path: str):
         logging.info(f"Copying {len(toko_paths)} files from toko to local {local_path}...")
         return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar", *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths],
+            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r', *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths],
                                     local_path])
 
     @staticmethod
