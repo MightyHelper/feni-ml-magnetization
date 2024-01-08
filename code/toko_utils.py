@@ -26,6 +26,13 @@ class TokoUtils:
 
     @staticmethod
     def copy_file_to_toko(local_path: str, toko_path: str, is_folder: bool = False):
+        # Convert Potential CRLF to LF
+        if not is_folder:
+            with open(local_path, 'rb') as f:
+                content = f.read()
+            content = content.replace(b'\r\n', b'\n')
+            with open(local_path, 'wb') as f:
+                f.write(content)
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url:
             ["rsync", "-r", local_path + "/", f"{user}@{toko_url}:{toko_path}/"] if is_folder else
