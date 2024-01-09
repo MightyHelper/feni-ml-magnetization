@@ -19,7 +19,7 @@ create_atoms	1 region ns1
 region		ns2 sphere 0.0 0.0 0.0 7.5 units box
 #set region ns2 type 2
 
-region		Rcore sphere 0.0 0.0 0.0 12.0 units box
+region		Rcore sphere 0.0 0.0 0.0 11.5 units box
 region		Rshell sphere 0.0 0.0 0.0 12.0 units box side out
 group		core region Rcore
 group		shell region Rshell

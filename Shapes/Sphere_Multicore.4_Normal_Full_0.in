@@ -16,13 +16,13 @@ create_box	2 box
 lattice		bcc 2.8665
 region		ns1 sphere 0.0 0.0 0.0 15 units box
 create_atoms	1 region ns1
-region		ns2 sphere 0.0 0.0 8.0 6.8 units box
+region		ns2 sphere 0.0 0.0 8.0 6.5 units box
 set region ns2 type 2
-region		ns3 sphere 0.0 8.0 0.0 6.8 units box
+region		ns3 sphere 0.0 8.0 0.0 6.5 units box
 set region ns3 type 2
-region		ns4 sphere 0.0 0.0 -8.0 6.8 units box
+region		ns4 sphere 0.0 0.0 -8.0 6.5 units box
 set region ns4 type 2
-region		ns6 sphere 0.0 -8.0 0.0 6.8 units box
+region		ns6 sphere 0.0 -8.0 0.0 6.5 units box
 set region ns6 type 2
 
 group		Fe type 1

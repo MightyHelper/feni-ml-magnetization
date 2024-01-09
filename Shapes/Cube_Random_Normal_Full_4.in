@@ -23,7 +23,7 @@ region		s4 sphere 5 -5 5 4 units box side out
 region		s5 sphere -5 5 5 4 units box side out
 region s6 intersect 6 sq s1 s2 s3 s4 s5
 create_atoms	1 region s6
-set region s5 type/ratio 2 0.35 300
+set region s5 type/ratio 2 0.30 300
 group		Fe type 1
 group		Ni type 2
 

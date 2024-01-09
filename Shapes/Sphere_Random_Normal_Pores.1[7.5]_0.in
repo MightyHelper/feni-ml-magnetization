@@ -21,7 +21,7 @@ region		ns2 sphere 0.0 0.0 0.0 7.5 units box
 
 group		Fe type 1
 
-set group Fe type/ratio 2 0.35 1901
+set group Fe type/ratio 2 0.30 1901
 
 group		Ni type 2
 

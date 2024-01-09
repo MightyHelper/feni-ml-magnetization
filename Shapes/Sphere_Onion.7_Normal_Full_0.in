@@ -16,7 +16,7 @@ create_box	2 box
 lattice		bcc 2.8665
 region		ns1 sphere 0.0 0.0 0.0 15 units box
 create_atoms	1 region ns1
-region		ns2 sphere 0.0 0.0 0.0 11.5 units box
+region		ns2 sphere 0.0 0.0 0.0 11 units box
 set region ns2 type 2
 region		ns3 sphere 0.0 0.0 0.0 7 units box
 set region ns3 type 1

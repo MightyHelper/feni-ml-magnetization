@@ -18,7 +18,7 @@ region		c1 prism -12.5 12.5 -12.5 13 -13 13 0 0 0 units box
 region		s sphere 0 0 0 7.5 units box side out
 region cube intersect 2 c1 s
 create_atoms	1 region cube
-region		c2 prism 2.5 11 -12.5 13 -13 13 0 0 0 units box
+region		c2 prism 5 12 -12.5 13 -13 13 0 0 0 units box
 set region c2 type 2
 
 group		Fe type 1

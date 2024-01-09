@@ -22,8 +22,7 @@ region		ns3 prism -6.5 -3.5 -11 11 -11 11 0 0 0 units box
 set region ns3 type 2
 region		ns4 prism -2 1 -11 11 -11 11 0 0 0 units box
 set region ns4 type 2
-region		ns5 prism 2.5 5.5 -11 11 -11 11 0 0 0 units box
-set region ns5 type 2
+
 #region		ns6 prism 1 2.5 -11 11 -11 11 0 0 0 units box
 #set region ns6 type 2
 #region		ns7 prism 4 5.5 -12.5 12.5 -12.5 12.5 0 0 0 units box

@@ -14,19 +14,19 @@ region 		box block -25 25 -25 25 -25 25 units box
 create_box	2 box
 
 lattice		bcc 2.8665
-region          capa1 cone z 0.0 0.0 18 1 -21 21 units box
+region          capa1 cone z 0.0 0.0 21 1 -15 15 units box
 create_atoms	1 region capa1
-region          capa2 cone z 0.0 0.0 13.5 1 -21 21 units box
+region          capa2 cone z 0.0 0.0 16.5 1 -15 12 units box
 set region      capa2 type 2
-region          capa3 cone z 0.0 0.0 11.5 1 -21 21 units box
+region          capa3 cone z 0.0 0.0 14.5 1 -15 9 units box
 set region      capa3 type 1
-region          capa4 cone z 0.0 0.0 7.5 1 -21 21 units box
+region          capa4 cone z 0.0 0.0 10.5 1 -15 6 units box
 set region      capa4 type 2
-region          capa5 cone z 0.0 0.0 5.5 1 -21 21 units box
+region          capa5 cone z 0.0 0.0 8.5 1 -15 3 units box
 set region      capa5 type 1
-region          capa6 cone z 0.0 0.0 2.5 1 -21 21 units box
+region          capa6 cone z 0.0 0.0 5.5 1 -15 1 units box
 set region      capa6 type 2
-region          capa7 cone z 0.0 0.0 1 1 -21 21 units box
+region          capa7 cone z 0.0 0.0 3 1 -15 1 units box
 set region      capa7 type 1
 group 		Fe type 1
 group		Ni type 2
@@ -45,7 +45,7 @@ set		group Ni spin 0.61 0 0 1 #Ni
 
 pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
 pair_coeff 	* * eam/alloy FeCuNi.eam.alloy Fe Ni
-pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
+pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.1671 1.841 #FeFe
 pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
 pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
 

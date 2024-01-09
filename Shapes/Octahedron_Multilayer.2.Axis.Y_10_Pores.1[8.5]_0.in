@@ -29,7 +29,7 @@ create_atoms	1 region octa
 
 
 
-region 		p10 plane 0 2 0 0 1 0 units box
+region 		p10 plane 0 3 0 0 1 0 units box
 region		nickel intersect 2 octa p10 side in
 set		region nickel type 2
 group		Fe type 1

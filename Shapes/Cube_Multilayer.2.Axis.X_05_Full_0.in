@@ -17,7 +17,7 @@ lattice		bcc 2.8665
 region		sq prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 create_atoms	1 region sq
 
-region		sq1 prism 3 11.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
+region		sq1 prism 5 11.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 set region sq1 type 2
 group		Fe type 1
 group		Ni type 2

@@ -19,7 +19,7 @@ create_atoms	1 region ce
 
 region		esquina plane 5 0 0 1 0 0 units box
 set region esquina type 2
-region          v cone z 0.0 0.0 13 1 -13 9 units box
+region          v cone z 0.0 0.0 6 1 -7 7 units box
 set region      v type 2
 delete_atoms 	region v compress yes 
 group		Fe type 1

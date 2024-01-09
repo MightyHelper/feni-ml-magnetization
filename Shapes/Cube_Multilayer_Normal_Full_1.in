@@ -16,8 +16,7 @@ create_box	2 box
 lattice		bcc 2.8665
 region		cub prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 create_atoms	1 region cub
-region		ns2 prism -11 -9.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
-set region ns2 type 2
+
 region		ns3 prism -8 -6.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 set region ns3 type 2
 region		ns4 prism -5 -3.5 -12.5 12.5 -12.5 12.5 0 0 0 units box

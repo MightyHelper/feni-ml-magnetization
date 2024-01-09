@@ -16,7 +16,7 @@ create_box	2 box
 lattice		bcc 2.8665
 region		cilindroExterno cylinder z 0 0 12.5 -15 15 units box
 create_atoms	1 region cilindroExterno
-region		v cylinder z 0.0 0.0 7 -8 7 units box
+region		v cylinder z 0.0 0.0 4 -5 5 units box
 delete_atoms 	region v compress yes
 region		capa1 cylinder z 0 0 9.5 -13.5 -12.0 units box
 set region capa1 type 2

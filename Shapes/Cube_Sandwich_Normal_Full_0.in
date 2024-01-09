@@ -18,7 +18,7 @@ region		sq prism -12.5 12.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
 create_atoms	1 region sq
 
 #lattice		fcc 3.524
-region		sq1 prism -4 4.5 -12.5 12.5 -12.5 12.5 0 0 0 units box
+region		sq1 prism -4 4 -12.5 12.5 -12.5 12.5 0 0 0 units box
 set region sq1 type 2
 group		Fe type 1
 group		Ni type 2
