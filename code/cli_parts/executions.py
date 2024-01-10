@@ -12,7 +12,7 @@ from rich.columns import Columns
 from rich.console import Group
 from rich.highlighter import ReprHighlighter
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn, TaskID
 
 import cli_parts.ui_utils
 import config
@@ -21,7 +21,8 @@ import poorly_coded_parser as parser
 import utils
 from service.executor_service import execute_nanoparticles
 from utils import resolve_path
-from cli_parts.ui_utils import add_task, ZeroHighlighter
+from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks, update_tasks, \
+    create_tasks
 from cli_parts.number_highlighter import console
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -93,13 +94,12 @@ def clean(keep_ok: bool = False, keep_full: bool = True, keep_batch: bool = True
 
 
 @executions.command()
-def live(in_toko: bool = False, listen_anyway: bool = False):
+def live(in_toko: bool = False, listen_anyway: bool = False, only_running: bool = True):
     """
     Find live executions
     :param in_toko: Whether to listen for executions in Toko
     :param listen_anyway: Whether to listen for executions even if there are none
     """
-    # Run ps -ef | grep lmp
     with Progress(
             SpinnerColumn(),
             *Progress.get_default_columns(),
@@ -107,41 +107,32 @@ def live(in_toko: bool = False, listen_anyway: bool = False):
             TimeElapsedColumn(),
             expand=True
     ) as progress:
-        running = [*nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)]
-        tasks = {}
-        for folder, step, title in running:
-            add_task(folder, progress, step, tasks, title)
+        running: list[tuple[str, int, str]] = get_running_executions(in_toko, only_running)
+        tasks: dict[str, TaskID] = {}
+        create_tasks(progress, running, tasks)
         if len(running) == 0:
             logging.error("[red]No running executions found[/red]", extra={"markup": True})
-            if not listen_anyway:
-                return
+            if not listen_anyway: return
         try:
             while True:
-                for folder, step, title in running:
-                    progress.update(tasks[folder], completed=step,
-                                    total=None if step == -1 else config.FULL_RUN_DURATION)
-                progress.refresh()
-                sleep_time = 5 + 0.25 * len(running) if in_toko else 0.2
-                if in_toko:
-                    logging.debug(f"Waiting {sleep_time}")
+                update_tasks(progress, running, tasks)
+                sleep_time: float = 5 + 0.25 * len(running) if in_toko else 0.2
+                if in_toko: logging.debug(f"Waiting {sleep_time}")
                 time.sleep(sleep_time)
-                running = [*nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)]
-                for folder, step, title in running:
-                    if folder not in tasks:
-                        add_task(folder, progress, step, tasks, title)
-                keys_to_remove = []
-                for folder in tasks.keys():
-                    if folder not in [x for x, _, _ in running]:
-                        logging.info(f"Execution {folder} ({step}) has finished")
-                        try:
-                            progress.remove_task(tasks[folder])
-                            keys_to_remove.append(folder)
-                        except KeyError:
-                            pass
-                for key in keys_to_remove:
-                    del tasks[key]
+                running = get_running_executions(in_toko, only_running)
+                add_new_tasks(progress, running, tasks)
+                remove_old_tasks(progress, running, tasks)
         except KeyboardInterrupt:
             logging.info("[yellow]Exiting...[/yellow]", extra={"markup": True})
+
+
+def get_running_executions(in_toko: bool, only_running: bool) -> list[tuple[str, int, str]]:
+    return [
+        (folder, step, title)
+        for folder, step, title in
+        nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)
+        if step != -1 or not only_running
+    ]
 
 
 @executions.command()

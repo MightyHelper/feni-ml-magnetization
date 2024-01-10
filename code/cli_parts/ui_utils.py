@@ -1,17 +1,13 @@
 import logging
 import os
+import re
+
 import pandas as pd
 import config
 from matplotlib import pyplot as plt
 from rich.highlighter import RegexHighlighter
-from rich.progress import Progress
+from rich.progress import Progress, TaskID
 from cli_parts.number_highlighter import h
-
-
-def add_task(folder, progress: Progress, step, tasks, title):
-    logging.info(f"Found running execution: {folder} ({step})")
-    tasks[folder] = progress.add_task(f"{os.path.basename(folder)} ({title})",
-                                      total=None if step == -1 else config.FULL_RUN_DURATION)
 
 
 def confirm(message):
@@ -125,3 +121,56 @@ def lerp_green_red(value: float) -> str:
     green_hex = hex(green)[2:]
     red_hex = hex(red)[2:]
     return f"#{red_hex:0>2}{green_hex:0>2}00".upper()
+
+
+def add_task(folder: str, progress: Progress, step: int, tasks: dict[str, TaskID], title: str):
+    logging.info(f"Found running execution: {folder} ({step})")
+    tasks[folder] = progress.add_task(
+        f"{os.path.basename(folder)} ({title})",
+        total=get_total_execution_length(step, title)
+    )
+
+
+def get_total_execution_length(step: int, title: str):
+    if config.BATCH_EXECUTION in title:
+        # Parse `BATCH_EXECUTION (total)` using regex
+        pattern = r"\((\d+)\)"
+        match = re.search(pattern, title)
+        return None if match is None else int(match.group(1)) * config.FULL_RUN_DURATION
+
+    return None if step == -1 else config.FULL_RUN_DURATION
+
+
+def remove_old_tasks(progress, running, tasks):
+    keys_to_remove = []
+    for folder in tasks.keys():
+        if folder not in [x for x, _, _ in running]:
+            logging.info(f"Execution {folder} has finished")
+            try:
+                progress.remove_task(tasks[folder])
+                keys_to_remove.append(folder)
+            except KeyError:
+                pass
+    for key in keys_to_remove:
+        del tasks[key]
+
+
+def add_new_tasks(progress: Progress, running: list[tuple[str, int, str]], tasks: dict[str, TaskID]):
+    for folder, step, title in running:
+        if folder not in tasks:
+            add_task(folder, progress, step, tasks, title)
+
+
+def update_tasks(progress: Progress, running: list[tuple[str, int, str]], tasks: dict[str, TaskID]):
+    for folder, step, title in running:
+        progress.update(
+            tasks[folder],
+            completed=step,
+            total=get_total_execution_length(step, title)
+        )
+    progress.refresh()
+
+
+def create_tasks(progress: Progress, running: list[tuple[str, int, str]], tasks: dict[str, TaskID]):
+    for folder, step, title in running:
+        add_task(folder, progress, step, tasks, title)

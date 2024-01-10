@@ -11,7 +11,7 @@ import numpy as np
 import config
 import utils
 from config import LAMMPS_TOKO_EXECUTABLE, TOKO_PARTITION_TO_USE, TOKO_USER, TOKO_URL, TOKO_EXECUTION_PATH, \
-    LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, TOKO_SQUEUE, TOKO_SCONTROL
+    LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_BATCH_INFO_PATH
 from execution_queue import ExecutionQueue, SingleExecutionQueue
 from simulation_task import SimulationTask
 from template import TemplateUtils
@@ -150,8 +150,11 @@ class TokoUtils:
         # Temp separate files by a DELIMITER, and then split
         DELIMITER = "\n===============================\n"
         command = "echo -e \"" + DELIMITER.join([f"$(cat {filename})" for filename in filenames]) + "\""
-        return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}'"]).decode("utf-8").split(DELIMITER)
+        result: list[str] = TokoUtils.run_cmd_for_toko(
+            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}' 2> /dev/null"]).decode(
+            "utf-8").split(DELIMITER)
+        logging.debug(f"Read {len(result)} files from toko")
+        return result
 
     @staticmethod
     def remove_files(*file_path: str):
@@ -291,25 +294,20 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
 
     @staticmethod
     def submit_toko_script(
-            simulation_info: list[tuple[str, str, str]],
             local_batch_path: str,
             toko_batch_path: str,
-            n_tasks: int = 1
+            simulation_count: int,
+            n_threads: int = 1,
     ):
-        tasks = []
-        # Create a list of commands to run in parallel
-        for toko_nano_in, toko_sim_folder, local_sim_folder in simulation_info:
-            lammps_log = os.path.join(toko_sim_folder, "log.lammps")
-            tasks.append(
-                f"\"sh -c 'cd {toko_sim_folder}; {LAMMPS_TOKO_EXECUTABLE} -in {toko_nano_in} > {lammps_log}'\"")
         # Create a slurm script to run the commands in parallel
         local_slurm_sh = os.path.join(local_batch_path, config.SLURM_SH)
         toko_slurm_sh = os.path.join(toko_batch_path, config.SLURM_SH)
+
         slurm_code = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_multi_template(), {
-                "tasks": str(n_tasks),
-                "time": estimate_time(len(tasks), n_tasks),
-                "cmds": " ".join(tasks),
+                "tasks": str(n_threads),
+                "time": estimate_time(simulation_count, n_threads),
+                "cmd_args": TOKO_BATCH_INFO_PATH,
                 "cwd": toko_batch_path,
                 "partition": TOKO_PARTITION_TO_USE,
                 "output": os.path.join(toko_batch_path, "batch_run.out"),
@@ -321,21 +319,32 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
         logging.info(f"Copying {config.SLURM_SH} to toko...")
         TokoUtils.copy_file_to_toko(local_slurm_sh, toko_slurm_sh)
         logging.info("Queueing job in toko...")
-        return TokoUtils.run_cmd_for_toko(lambda user, toko_url: ["ssh", f"{user}@{toko_url}",
-                                                                  f"sh -c 'cd {toko_batch_path}; {config.TOKO_SBATCH} {config.SLURM_SH}'"])
+        return TokoUtils.run_cmd_for_toko(lambda user, toko_url: [
+            "ssh",
+            f"{user}@{toko_url}",
+            f"sh -c 'cd {toko_batch_path}; {config.TOKO_SBATCH} {config.SLURM_SH}'"
+        ])
+
+    @staticmethod
+    def get_tasks(simulation_info):
+        # Create a list of commands to run in parallel
+        for toko_nano_in, toko_sim_folder, local_sim_folder in simulation_info:
+            lammps_log = os.path.join(toko_sim_folder, "log.lammps")
+            yield f"sh -c 'cd {toko_sim_folder}; {LAMMPS_TOKO_EXECUTABLE} -in {toko_nano_in} > {lammps_log}'"
 
     def _simulate(self):
         simulations = self.queue
         local_batch_path, toko_batch_path, simulation_info = self.prepare_scripts(simulations)
         sbatch_output = TokoBatchedExecutionQueue.submit_toko_script(
-            simulation_info,
             local_batch_path,
             toko_batch_path,
-            n_tasks=self.batch_size
+            simulation_count=len(simulation_info),
+            n_threads=self.batch_size,
         )
         self.process_output(local_batch_path, sbatch_output, simulations, toko_batch_path)
 
-    def prepare_scripts(self, simulations):
+    @staticmethod
+    def prepare_scripts(simulations: list[SimulationTask]):
         """
         Create a folder in toko with the simulations and a multi.py file to run them in parallel
         Then, copy the folder to toko
@@ -347,24 +356,28 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
         batch_name = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
         local_batch_path = os.path.join(LOCAL_EXECUTION_PATH, batch_name)
         toko_batch_path = os.path.join(TOKO_EXECUTION_PATH, batch_name)
-        batch_info = os.path.join(local_batch_path, "batch_info.txt")
+        batch_info_path = os.path.join(local_batch_path, TOKO_BATCH_INFO_PATH)
         local_multi_py = config.LOCAL_MULTI_PY
         toko_multi_py = os.path.join(toko_batch_path, "multi.py")
         os.mkdir(local_batch_path)
-        write_local_file(batch_info, "\n".join(
-            [f"{i + 1}: {simulation.input_file}" for i, simulation in enumerate(simulations)]) + "\n")
+
         for i, simulation in enumerate(simulations):
             local_sim_folder: Path = Path(simulation.input_file).parent.absolute()
             toko_sim_folder: Path = Path(os.path.join(TOKO_EXECUTION_PATH, local_sim_folder.name))
             toko_nano_in: Path = Path(os.path.join(toko_sim_folder, Path(simulation.input_file).name))
-            logging.info(f"Creating simulation folder in toko ({i + 1}/{len(simulations)})...")
-            logging.debug(f"{toko_sim_folder=}")
-            logging.debug(f"{local_sim_folder=}")
-            logging.debug(f"{toko_nano_in=}")
-            logging.debug("Copying input file...")
+            logging.debug(f"Creating simulation folder in toko ({i + 1}/{len(simulations)})...")
             if i == 0:
+                logging.debug(f"{toko_sim_folder=}")
+                logging.debug(f"{local_sim_folder=}")
+                logging.debug(f"{toko_nano_in=}")
                 TokoUtils.copy_alloy_files(local_sim_folder, toko_sim_folder)
             simulation_info.append((toko_nano_in.as_posix(), toko_sim_folder.as_posix(), local_sim_folder.as_posix()))
+        tasks = TokoBatchedExecutionQueue.get_tasks(simulation_info)
+        write_local_file(batch_info_path, "\n".join([
+            f"{i + 1}: {os.path.basename(Path(simulation.input_file).parent.absolute())} # {shell}"
+            for i, (simulation, shell) in enumerate(zip(simulations, tasks))
+        ]) + "\n")
+
         TokoUtils.copy_file_multi_to_toko([folder for (_, _, folder) in simulation_info], TOKO_EXECUTION_PATH)
 
         TokoUtils.copy_file_to_toko(local_batch_path, toko_batch_path, is_folder=True)

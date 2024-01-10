@@ -79,7 +79,6 @@ def build_nanoparticles_to_execute(ignore: list[str], path: str, seed: int, seed
         if nano.is_random():
             for i in range(seed_count):
                 seeds = [random.randint(0, 100000) for _ in range(len(nano.seed_values))]
-                logging.debug(f"Using seeds {seeds}")
                 nanoparticles.append((key, nano.build(seeds)))
         else:
             nanoparticles.append((key, nano.build()))

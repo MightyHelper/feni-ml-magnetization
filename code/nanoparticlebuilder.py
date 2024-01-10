@@ -53,7 +53,6 @@ class NanoparticleBuilder:
 
     def register_region_name(self, region_name: str) -> int:
         self.region_name_map[region_name] = len(self.region_name_map.keys())
-        logging.debug(f"Registered region {region_name} as {self.region_name_map[region_name]}")
         return self.region_name_map[region_name]
 
     def get_region_id_by_name(self, region_name: str) -> int:
@@ -109,8 +108,6 @@ class NanoparticleBuilder:
         region_indices = [self.get_region_id_by_name(region) for region in regions]
         region_indices = [f"reg{i}" for i in region_indices]
         new_region_id = self.register_region_name(region_name)
-        logging.debug(f"Intersecting regions {region_indices} into {new_region_id}")
-        logging.debug(str(self.region_name_map))
         command = f"region reg{new_region_id} intersect {len(regions)} {' '.join(region_indices)} {' '.join(extra)}"
         self.atom_manipulation.append(command)
         return command
@@ -129,7 +126,6 @@ class NanoparticleBuilder:
         nano.region_name_map = self.region_name_map
         seed_count = self.get_seed_count()
         nano.atom_manipulation = self.replace_seeds(nano.atom_manipulation, seed_count, seeds)
-        logging.debug(nano.atom_manipulation)
         return nano
 
     def replace_seeds(self, atom_manipulation, seed_count, seeds):

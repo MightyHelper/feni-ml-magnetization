@@ -47,7 +47,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         elif region_type == "sphere":
             # region sphere 0 0 0 10 units box
@@ -63,7 +63,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         elif region_type == "plane":
             # region plane 0 0 0 0 0 1 units box
@@ -81,7 +81,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         elif region_type == "cone":
             # region_args = ['z', '0.0', '0.0', '18', '1', '-21', '21', 'units', 'box']
@@ -100,7 +100,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         elif region_type == "prism":
             # region 		sq prism -20 20 -3 3 -16 16 0 0 0 units box
@@ -121,7 +121,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         elif region_type == "intersect":
             # region		halfns intersect 2 sq ce units box
@@ -129,7 +129,7 @@ class PoorlyCodedParser:
             reg_ids = region_args[1:1 + n]
             extra = region_args[1 + n:]
             command = nano.add_intersect(reg_ids, region_name, extra)
-            logging.debug(command)
+            # logging.debug(command)
             return None
         elif region_type == "ellipsoid":
             # region ellipsoid 0 0 0 10 10 10 units box
@@ -147,7 +147,7 @@ class PoorlyCodedParser:
             assert PoorlyCodedParser.is_correct_parsing(line, shape.get_region(
                 region_name)), f"Region {region_name} is not parsed correctly: \n{PoorlyCodedParser.split_command(shape.get_region(region_name))} != \n{line}"
             nano.add_named_shape(shape, region_name, extra)
-            logging.debug(shape)
+            # logging.debug(shape)
             return shape
         else:
             raise ValueError(f"Unknown region type: {region_type}")
@@ -163,7 +163,7 @@ class PoorlyCodedParser:
                     and not parsed_command[x].startswith(nanoparticlebuilder.SEED_LOCATOR)
                     and abs(float(parsed_command[x]) - float(line[x])) > 0.0001
             ):
-                logging.debug(f"[red]{parsed_command[x]} != {line[x]}[/red]")
+                # logging.debug(f"[red]{parsed_command[x]} != {line[x]}[/red]")
                 return False
         return True
 
@@ -177,7 +177,7 @@ class PoorlyCodedParser:
         # Parse region
         if selector_type == "region":
             result = nano.add_create_atoms(atom_type, selector_args[0])
-            logging.debug(result)
+            # logging.debug(result)
             return
         else:
             raise ValueError(f"Unknown selector type: {selector_type}")
@@ -199,21 +199,21 @@ class PoorlyCodedParser:
             if prop == "type":
                 value = set_args[2]
                 result = nano.add_set_type_region(value, region_name)
-                logging.debug(result)
+                # logging.debug(result)
                 return
             elif prop == "type/subset":
                 value = set_args[2]
                 count = set_args[3]
                 seed = set_args[4]
                 result = nano.add_set_type_subset_region(value, region_name, count, seed)
-                logging.debug(result)
+                # logging.debug(result)
                 return
             elif prop == "type/ratio":
                 value = set_args[2]
                 ratio = set_args[3]
                 seed = set_args[4]
                 result = nano.add_set_type_ratio_region(value, region_name, ratio, seed)
-                logging.debug(result)
+                # logging.debug(result)
                 return
             else:
                 raise ValueError(f"Unknown set property: {prop}")
@@ -227,7 +227,7 @@ class PoorlyCodedParser:
                 result = nano.add_set_type_subset_group(value, group_name, count, seed)
                 assert PoorlyCodedParser.is_correct_parsing(line,
                                                             result), f"Set type subset group {group_name} is not parsed correctly: \n{result} != \n{line}"
-                logging.debug(result)
+                # logging.debug(result)
                 return
             elif prop == "type/ratio":
                 value = set_args[2]
@@ -236,7 +236,7 @@ class PoorlyCodedParser:
                 result = nano.add_set_type_ratio_group(value, group_name, ratio, seed)
                 assert PoorlyCodedParser.is_correct_parsing(line,
                                                             result), f"Set type ratio group {group_name} is not parsed correctly: \n{result} != \n{line}"
-                logging.debug(result)
+                # logging.debug(result)
                 return
             else:
                 raise ValueError(f"Unknown set property: {prop}")
@@ -255,12 +255,12 @@ class PoorlyCodedParser:
             assert \
                 PoorlyCodedParser.is_correct_parsing(line, result), \
                 f"Group type {group_name} is not parsed correctly: \n{result} != \n{line}"
-            logging.debug(result)
+            # logging.debug(result)
             return
         elif prop == "region":
             region_name = line[3]
             result = nano.add_group_region(region_name, group_name)
-            logging.debug(result)
+            # logging.debug(result)
             return
         else:
             raise ValueError(f"Unknown group property: {prop}")
@@ -277,7 +277,7 @@ class PoorlyCodedParser:
             # keywords = {keywords[i]: keywords[i + 1] for i in range(0, len(keywords), 2)}
             keywords = " ".join(keywords)
             result = nano.add_delete_atoms_region(region_name, keywords)
-            logging.debug(result)
+            # logging.debug(result)
             return
         else:
             raise ValueError(f"Unknown selector type: {selector_type}")
@@ -295,24 +295,25 @@ class PoorlyCodedParser:
     @staticmethod
     def parse_line(line: str, nano: nanoparticlebuilder.NanoparticleBuilder) -> None:
         if line.startswith("#"):
-            logging.debug(f"[blue]{line}[/blue]", extra={"markup": True})
+            # logging.debug(f"[blue]{line}[/blue]", extra={"markup": True})
+            pass
         elif line.startswith("region"):
-            logging.debug(f"[green]{line}[/green]", extra={"markup": True})
+            # logging.debug(f"[green]{line}[/green]", extra={"markup": True})
             PoorlyCodedParser.parse_region(line, nano)
         elif line.startswith("create_atoms"):
-            logging.debug(f"[magenta bold]{line}[/magenta bold]", extra={"markup": True})
+            # logging.debug(f"[magenta bold]{line}[/magenta bold]", extra={"markup": True})
             PoorlyCodedParser.parse_create_atoms(line, nano)
         elif line.startswith("set"):
-            logging.debug(f"[magenta]{line}[/magenta]", extra={"markup": True})
+            # logging.debug(f"[magenta]{line}[/magenta]", extra={"markup": True})
             PoorlyCodedParser.parse_set(line, nano)
         elif line.startswith("group"):
-            logging.debug(f"[grey]{line}[/grey]", extra={"markup": True})
+            # logging.debug(f"[grey]{line}[/grey]", extra={"markup": True})
             PoorlyCodedParser.parse_group(line, nano)
         elif line.startswith("delete_atoms"):
-            logging.debug(f"[red]{line}[/red]", extra={"markup": True})
+            # logging.debug(f"[red]{line}[/red]", extra={"markup": True})
             PoorlyCodedParser.parse_delete_atoms(line, nano)
         elif line.startswith("lattice"):
-            logging.debug(f"[yellow]{line}[/yellow]", extra={"markup": True})
+            # logging.debug(f"[yellow]{line}[/yellow]", extra={"markup": True})
             PoorlyCodedParser.lattice(line, nano)
         else:
             raise ValueError(f"Unknown line: {line}")
@@ -341,7 +342,7 @@ class PoorlyCodedParser:
         """
         replacements = replacements or {}
         with open(shape_path, "r") as f:
-            logging.debug(f"[yellow]=== {shape_path} ===[/yellow]", extra={"markup": True})
+            # logging.debug(f"[yellow]=== {shape_path} ===[/yellow]", extra={"markup": True})
             nano = nanoparticlebuilder.NanoparticleBuilder(title=shape_path)
             lines = f.readlines()
             if not full_file:

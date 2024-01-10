@@ -4,6 +4,7 @@ import re
 import subprocess
 import time
 import os
+from typing import Generator
 
 import pandas as pd
 
@@ -18,7 +19,8 @@ import random
 
 import toko_utils
 import utils
-from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM
+from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, BATCH_EXECUTION, \
+    NANOPARTICLE_IN
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
 from utils import drop_index, realpath
@@ -256,7 +258,7 @@ class Nanoparticle:
             },
             dumps := [f"iron.{i}.dump" for i in
                       ([0] if test_run else [*range(0, FULL_RUN_DURATION + 1, LAMMPS_DUMP_INTERVAL)])],
-            file_name=self.path + "nanoparticle.in"
+            file_name=self.path + NANOPARTICLE_IN
         )
         return dumps, lammps_run
 
@@ -389,7 +391,7 @@ class RunningExecutionLocator:
             yield folder_name, nano.run.get_current_step(), nano.title
 
     @staticmethod
-    def get_running_executions(in_toko: bool = False):
+    def get_running_executions(in_toko: bool = False) -> Generator[tuple[str, int, str], None, None]:
         if not in_toko:
             if platform.system() == "Windows":
                 yield from RunningExecutionLocator.get_running_windows(True)
@@ -443,39 +445,63 @@ class RunningExecutionLocator:
             if file_tag is None:
                 logging.debug("File tag not found")
                 continue
-            batch_info: str = os.path.join(os.path.dirname(file_tag), "batch_info.txt")
+            batch_info: str = os.path.join(os.path.dirname(file_tag), config.TOKO_BATCH_INFO_PATH)
             logging.debug(f"Batch info: {batch_info}")
             try:
                 batch_info_content: str = toko_utils.TokoUtils.read_file(batch_info)
             except FileNotFoundError:
-                batch_info_content: str = "1: " + os.path.join(os.path.dirname(file_tag), "nanoparticle.in")
-            files_to_read: list[tuple[str, str, str]] = []
-            for line in batch_info_content.split("\n"):
-                if line.strip() == "":
-                    continue
-                index, nano_in = line.split(": ")
-                f_name: str = os.path.basename(os.path.dirname(nano_in))
-                folder_name: str = os.path.join(config.TOKO_EXECUTION_PATH, f_name)
-                lammps_log: str = os.path.join(folder_name, "log.lammps")
-                remote_nano_in = os.path.join(folder_name, os.path.basename(nano_in))
-                files_to_read.append((folder_name, lammps_log, remote_nano_in))
-            file_output: dict[str, str] = {}
-            file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
-            file_contents = toko_utils.TokoUtils.read_multiple_files(file_names_to_read)
-            for i, content in enumerate(file_contents):
-                file_output[file_names_to_read[i]] = content
+                batch_info_content: str = "1: " + os.path.join(os.path.dirname(file_tag), NANOPARTICLE_IN)
+            file_read_output, files_to_read = RunningExecutionLocator._read_required_files(batch_info_content)
+            total_steps: int = 0
+            count: int = 0
+            for folder, step, title in RunningExecutionLocator._get_execution_data(file_read_output, files_to_read):
+                total_steps += step
+                count += 1
+                yield folder, step, title
+            if batch_info_content.count("\n") > 1:
+                logging.debug(f"Found Batch execution")
+                yield os.path.dirname(file_tag), total_steps, BATCH_EXECUTION + f" ({count})"
 
-            for folder_name, lammps_log, remote_nano_in in files_to_read:
-                try:
-                    lammps_log_content = file_output[lammps_log]
-                    if "Total wall time" in lammps_log_content:
-                        logging.debug(f"Found finished job {folder_name}")
-                        continue
-                    current_step = lr.LammpsRun.compute_current_step(lammps_log_content)
-                    logging.debug(f"Current step: {current_step} {folder_name}")
-                except subprocess.CalledProcessError:
-                    current_step = -1
-                    logging.debug(f"Error getting current step for {folder_name}")
-                code = file_output[remote_nano_in]
-                title = code.split("\n")[0][1:].strip()
-                yield folder_name, current_step, title
+
+    @staticmethod
+    def _read_required_files(batch_info_content):
+        files_to_read: list[tuple[str, str, str]] = list(
+            RunningExecutionLocator._process_files_to_read(batch_info_content)
+        )
+        file_read_output: dict[str, str] = {}
+        file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
+        file_contents = toko_utils.TokoUtils.read_multiple_files(file_names_to_read)
+        for i, content in enumerate(file_contents):
+            file_read_output[file_names_to_read[i]] = content
+        return file_read_output, files_to_read
+
+    @staticmethod
+    def _get_execution_data(file_read_output: dict[str, str], files_to_read: list[tuple[str, str, str]]):
+        for folder_name, lammps_log, remote_nano_in in files_to_read:
+            try:
+                lammps_log_content = file_read_output[lammps_log]
+                if "Total wall time" in lammps_log_content:
+                    logging.debug(f"Found finished job {folder_name}")
+                    continue
+                current_step = lr.LammpsRun.compute_current_step(lammps_log_content)
+                logging.debug(f"Current step: {current_step} {folder_name}")
+            except subprocess.CalledProcessError:
+                current_step = -1
+                logging.debug(f"Error getting current step for {folder_name}")
+            code = file_read_output[remote_nano_in]
+            title = code.split("\n")[0][1:].strip()
+            yield folder_name, current_step, title
+
+    @staticmethod
+    def _process_files_to_read(batch_info_content) -> Generator[tuple[str, str, str], None, None]:
+        for line in batch_info_content.split("\n"):
+            if line.strip() == "":
+                continue
+            index, nano_in = line.split(": ")
+            nano_in = nano_in.split(" # ")[0] + "/"
+            logging.debug(f"Found nano_in: {nano_in}")
+            f_name: str = os.path.basename(os.path.dirname(nano_in))
+            folder_name: str = os.path.join(config.TOKO_EXECUTION_PATH, f_name)
+            lammps_log: str = os.path.join(folder_name, "log.lammps")
+            remote_nano_in: str = os.path.join(folder_name, NANOPARTICLE_IN)
+            yield folder_name, lammps_log, remote_nano_in

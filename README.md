@@ -114,3 +114,9 @@ Pores
 - Pores.N[Size]      # N holes inside % [1, 2, 3]
 
 Void = Pores.1
+
+
+## TODO:
+Exec clean for toko
+Allow scp by single file in batch mode
+Properly test scp/rsync

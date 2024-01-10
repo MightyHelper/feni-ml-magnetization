@@ -22,7 +22,7 @@ TOKO_SBATCH = "/apps/slurm/bin/sbatch"
 TOKO_SQUEUE = "/apps/slurm/bin/squeue"
 TOKO_SCONTROL = "/apps/slurm/bin/scontrol"
 TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
-
+TOKO_BATCH_INFO_PATH = "batch_info.txt"
 SLURM_SH = "slurm.sh"
 
 # Lammps config; !!! DO NOT CHANGE !!! (Not reflected in the template)
@@ -30,6 +30,8 @@ FULL_RUN_DURATION = 300000
 LAMMPS_DUMP_INTERVAL = 100000
 FE_ATOM = 1
 NI_ATOM = 2
+BATCH_EXECUTION = "Batch execution"
+NANOPARTICLE_IN = "nanoparticle.in"
 
 # Stoichiometry config
 DESIRED_ATOM_COUNT = 1250
