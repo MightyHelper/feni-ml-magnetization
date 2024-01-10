@@ -33,23 +33,32 @@ class TokoUtils:
             content = content.replace(b'\r\n', b'\n')
             with open(local_path, 'wb') as f:
                 f.write(content)
+        if config.TOKO_COPY_SCRIPT == 'scp':
+            toko_folder = os.path.basename(toko_path)
+            local_folder = os.path.basename(local_path)
+            assert toko_folder == local_folder, f"toko_folder: {toko_folder}, local_folder: {local_folder}"
+            toko_path = os.path.dirname(toko_path)
+        if is_folder:
+            local_path = local_path + "/"
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url:
-            [config.TOKO_COPY_SCRIPT, "-r", local_path + "/", f"{user}@{toko_url}:{toko_path}/"] if is_folder else
-            [config.TOKO_COPY_SCRIPT, local_path, f"{user}@{toko_url}:{toko_path}"]
+            [config.TOKO_COPY_SCRIPT, "-r", local_path, f"{user}@{toko_url}:{toko_path}/"] if is_folder else
+            [config.TOKO_COPY_SCRIPT, local_path, f"{user}@{toko_url}:{toko_path}"],
         )
 
     @staticmethod
     def copy_file_multi_to_toko(local_paths: list[str], toko_path: str):
         logging.info(f"Copying {len(local_paths)} files to toko {toko_path}...")
         return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r', *local_paths, f"{user}@{toko_url}:{toko_path}"])
+            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r',
+                                    *local_paths, f"{user}@{toko_url}:{toko_path}"])
 
     @staticmethod
     def copy_file_multi_from_toko(toko_paths: list[str], local_path: str):
         logging.info(f"Copying {len(toko_paths)} files from toko to local {local_path}...")
         return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r', *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths],
+            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r',
+                                    *[f"{user}@{toko_url}:{toko_path}" for toko_path in toko_paths],
                                     local_path])
 
     @staticmethod
@@ -143,6 +152,27 @@ class TokoUtils:
         command = "echo -e \"" + DELIMITER.join([f"$(cat {filename})" for filename in filenames]) + "\""
         return TokoUtils.run_cmd_for_toko(
             lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}'"]).decode("utf-8").split(DELIMITER)
+
+    @staticmethod
+    def remove_files(*file_path: str):
+        return TokoUtils.run_cmd_for_toko(
+            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"rm {' '.join(file_path)}"]
+        )
+
+    @staticmethod
+    def list_files(toko_dir):
+        try:
+            return TokoUtils.run_cmd_for_toko(
+                lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"ls {toko_dir}"]
+            ).decode("utf-8").strip().split("\n")
+        except subprocess.CalledProcessError:
+            raise FileNotFoundError("TOKO: " + toko_dir)
+
+    @staticmethod
+    def remove_dir(toko_dir):
+        return TokoUtils.run_cmd_for_toko(
+            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"rmdir {toko_dir}"]
+        )
 
 
 class TokoExecutionQueue(SingleExecutionQueue):
