@@ -1,7 +1,6 @@
 import logging
-import multiprocessing
-
-from model.machine import Machine, SLURMMachine, get_toko_cores
+from model.machine import Machine
+from model.machine_factory import MachineFactory
 
 LOG_LEVEL = logging.WARNING  # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 LAMMPS_TEMPLATE_PATH = "../lammps.template"  # Local path pointing to the lammps template
@@ -21,20 +20,9 @@ TOKO_SCONTROL = "/apps/slurm/bin/scontrol"
 TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
 TOKO_BATCH_INFO_PATH = "batch_info.txt"
 SLURM_SH = "slurm.sh"
-MACHINES: list[Machine] = [
-    SLURMMachine(
-        name="toko",
-        hostname=TOKO_URL,
-        cores=get_toko_cores(TOKO_PARTITION_TO_USE),
-        user=TOKO_USER,
-        task_queue=[],
-        partition=TOKO_PARTITION_TO_USE,
-        node_id=1,
-    ), Machine(
-        name="local",
-        cores=multiprocessing.cpu_count,
-        task_queue=[],
-    )
+MACHINES = lambda: [
+    MachineFactory.local(),
+    MachineFactory.toko('mini'),
 ]
 FULL_RUN_DURATION = 300000
 LAMMPS_DUMP_INTERVAL = 100000

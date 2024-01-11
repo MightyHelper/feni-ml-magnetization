@@ -242,7 +242,7 @@ class TokoExecutionQueue(SingleExecutionQueue):
             raise ValueError(f"Is LAMMPS ({LAMMPS_EXECUTABLE}) installed?") from e
 
 
-def estimate_time(count, tasks):
+def estimate_time(count: int, tasks: int=1):
     """
     ceil(Count / tasks) * 45 min in d-hh:mm
     From SLURM docs:
@@ -253,8 +253,8 @@ def estimate_time(count, tasks):
     > - "days-hours"
     > - "days-hours:minutes"
     > - "days-hours:minutes:seconds"
-    :param count:
-    :param tasks:
+    :param count: Simulation count
+    :param tasks: Thread count
     :return:
     """
     minutes = int(np.ceil(count / tasks) * 45)
