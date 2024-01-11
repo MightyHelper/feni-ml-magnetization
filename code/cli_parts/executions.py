@@ -253,7 +253,7 @@ def inspect(
 
 
 @executions.command()
-def csv(paths: list[Path], output_csv_format: Path):
+def csv(paths: list[Path], output_csv_format: Path, concat: bool = False):
     my_csv = pd.read_csv(output_csv_format)
     dfs = []
     for path in paths:
@@ -261,7 +261,8 @@ def csv(paths: list[Path], output_csv_format: Path):
         dfs.append(nano.columns_for_dataset())
     my_df = pd.concat(dfs)
     my_df = my_df[my_csv.columns]  # Sort my_df columns to be in the order of my_csv
-    my_df = pd.concat([my_csv, my_df])  # Concat my_df and my_csv
+    if concat:
+        my_df = pd.concat([my_csv, my_df])  # Concat my_df and my_csv
     print(my_df.to_csv(index=False))  # raw print without row index
 
 

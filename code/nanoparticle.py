@@ -123,9 +123,10 @@ class Nanoparticle:
             'ni_s': drop_index(pd.DataFrame([self.ni_s], columns=["ni_s"])),
             'fe_c': drop_index(pd.DataFrame([self.fe_c], columns=["fe_c"])),
             'ni_c': drop_index(pd.DataFrame([self.ni_c], columns=["ni_c"])),
-            'n_fe': drop_index(pd.DataFrame([self.count_atoms_of_type(FE_ATOM)], columns=["n_fe"])),
-            'n_ni': drop_index(pd.DataFrame([self.count_atoms_of_type(NI_ATOM)], columns=["n_ni"])),
+            'n_fe': drop_index(pd.DataFrame([self.count_atoms_of_type(FE_ATOM)], columns=["n_fe"])) / self.total,
+            'n_ni': drop_index(pd.DataFrame([self.count_atoms_of_type(NI_ATOM)], columns=["n_ni"])) / self.total,
             'tmg': drop_index(pd.DataFrame([self.magnetism[0]], columns=["tmg"])),
+            'tmg_std': drop_index(pd.DataFrame([self.magnetism[1]], columns=["tmg_std"])),
         }.items():
             out += [v]
 
@@ -318,7 +319,9 @@ class Nanoparticle:
         return self.__str__()
 
     def get_descriptor_name(self):
-        return "/".join(self.title.replace("../Shapes", "Descriptors").split("/")[:-1])
+        result = self.title.split("/")[-1]
+        logging.debug(f"Descriptor name: {self.title} => {result}")
+        return result
 
     def get_full_coord(self):
         out = self.coord.copy()

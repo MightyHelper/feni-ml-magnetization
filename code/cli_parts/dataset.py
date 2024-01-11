@@ -10,40 +10,54 @@ from rich import print as rprint
 
 import config
 from cli_parts import ui_utils
-from nanoparticle_renamer import NanoparticleRenamer
+from nanoparticle_renamer import NanoparticleRenamer, BasicNanoparticleRenamer, NewNanoparticleRenamer
 from utils import assign_nanoparticle_name
 
 dataset = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
 
 
 @dataset.command()
-def rename(path: Path = Path("../Shapes")):
+def rename(path: Path = Path("../Shapes"), rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
     """
-    renames: list[tuple[str, str]] = NanoparticleRenamer.get_all_renames_for_folder(path.as_posix())
+    class_type = _get_renamer(rename_type)
+
+    renames: list[tuple[str, str]] = class_type.get_all_renames_for_folder(path.as_posix())
     if len(renames) == 0:
         rprint("[yellow]No renames found[/yellow]")
-    NanoparticleRenamer.output_renames(renames)
+    class_type.output_renames(renames)
+
+
+def _get_renamer(rename_type):
+    class_type = NanoparticleRenamer
+    if rename_type == "basic":
+        class_type = BasicNanoparticleRenamer
+    elif rename_type == "new":
+        class_type = NewNanoparticleRenamer
+    return class_type
 
 
 @dataset.command()
-def single(path: Path):
+def single(path: Path, rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
     """
-    nanoparticle = NanoparticleRenamer.get_new_nanoparticle_name(path.as_posix(), [])
+    class_type = _get_renamer(rename_type)
+    nanoparticle = class_type.get_new_nanoparticle_name(path.as_posix(), [])
     rprint(f"[green]{nanoparticle}[/green]")
 
 
 @dataset.command()
-def rename_in_dataset(dataset_path: Path, output_path: Path = None):
+def rename_in_dataset(dataset_path: Path, output_path: Path = None, rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
     """
+    class_type = _get_renamer(rename_type)
+
     dataset: pd.DataFrame = pd.read_csv(dataset_path)
     names = dataset['name'].tolist()
-    renames: list[tuple[str, str]] = NanoparticleRenamer.get_all_renames(names)
+    renames: list[tuple[str, str]] = class_type.get_all_renames(names)
     if len(renames) == 0:
         rprint("[yellow]No renames found[/yellow]")
     for old_name, new_name in renames:
