@@ -242,7 +242,7 @@ class TokoExecutionQueue(SingleExecutionQueue):
             raise ValueError(f"Is LAMMPS ({LAMMPS_EXECUTABLE}) installed?") from e
 
 
-def estimate_time(count: int, tasks: int=1):
+def estimate_time(count: int, tasks: int = 1):
     """
     ceil(Count / tasks) * 45 min in d-hh:mm
     From SLURM docs:
@@ -403,3 +403,9 @@ class TokoBatchedExecutionQueue(ExecutionQueue):
         for simulation, lammps_log in callback_info:
             self.run_callback(simulation, utils.read_local_file(lammps_log))
             self.completed.append(simulation)
+
+
+def toko_path_join(a: str, b: str):
+    if a.endswith("/"):
+        return a + b
+    return a + "/" + b

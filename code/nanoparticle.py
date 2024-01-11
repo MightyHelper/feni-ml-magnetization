@@ -22,6 +22,7 @@ from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL
     BATCH_EXECUTION, NANOPARTICLE_IN
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
+from toko_utils import toko_path_join
 from utils import drop_index, realpath
 
 FINISHED_JOB = "Finished job"
@@ -449,12 +450,12 @@ class RunningExecutionLocator:
             if file_tag is None:
                 logging.debug("File tag not found")
                 continue
-            batch_info: str = os.path.join(os.path.dirname(file_tag), config.TOKO_BATCH_INFO_PATH)
+            batch_info: str = toko_path_join(os.path.dirname(file_tag), config.TOKO_BATCH_INFO_PATH)
             logging.debug(f"Batch info: {batch_info}")
             try:
                 batch_info_content: str = toko_utils.TokoUtils.read_file(batch_info)
             except FileNotFoundError:
-                batch_info_content: str = "1: " + os.path.join(os.path.dirname(file_tag), NANOPARTICLE_IN)
+                batch_info_content: str = "1: " + toko_path_join(os.path.dirname(file_tag), NANOPARTICLE_IN)
             file_read_output, files_to_read = RunningExecutionLocator._read_required_files(batch_info_content)
             total_steps: int = 0
             count: int = 0
@@ -507,7 +508,7 @@ class RunningExecutionLocator:
             nano_in = nano_in.split(" # ")[0] + "/"
             logging.debug(f"Found nano_in: {nano_in}")
             f_name: str = os.path.basename(os.path.dirname(nano_in))
-            folder_name: str = os.path.join(config.TOKO_EXECUTION_PATH, f_name)
-            lammps_log: str = os.path.join(folder_name, "log.lammps")
-            remote_nano_in: str = os.path.join(folder_name, NANOPARTICLE_IN)
+            folder_name: str = toko_path_join(config.TOKO_EXECUTION_PATH, f_name)
+            lammps_log: str = toko_path_join(folder_name, "log.lammps")
+            remote_nano_in: str = toko_path_join(folder_name, NANOPARTICLE_IN)
             yield folder_name, lammps_log, remote_nano_in
