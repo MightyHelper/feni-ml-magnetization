@@ -49,9 +49,29 @@ class TokoUtils:
     @staticmethod
     def copy_file_multi_to_toko(local_paths: list[str], toko_path: str):
         logging.info(f"Copying {len(local_paths)} files to toko {toko_path}...")
-        return TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: [config.TOKO_COPY_SCRIPT, "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r',
-                                    *local_paths, f"{user}@{toko_url}:{toko_path}"])
+        max_len: int = 8000  # 8191 official limit
+        batches: list[list[str]] = []
+        batch: str = ""
+        batch_list: list[str] = []
+        for local_path in local_paths:
+            if len(batch) + len(local_path) + 1 > max_len:
+                batches.append(batch_list)
+                batch_list = []
+                batch = ""
+            batch += local_path + " "
+            batch_list.append(local_path)
+        if len(batch_list) > 0:
+            batches.append(batch_list)
+        cmd_out = ""
+        for b in batches:
+            cmd_out += TokoUtils.run_cmd_for_toko(
+                lambda user, toko_url: [
+                    config.TOKO_COPY_SCRIPT,
+                    "-ar" if config.TOKO_COPY_SCRIPT == 'rsync' else '-r',
+                    *b,
+                    f"{user}@{toko_url}:{toko_path}"
+                ]).decode("utf-8")
+        return cmd_out
 
     @staticmethod
     def copy_file_multi_from_toko(toko_paths: list[str], local_path: str):
