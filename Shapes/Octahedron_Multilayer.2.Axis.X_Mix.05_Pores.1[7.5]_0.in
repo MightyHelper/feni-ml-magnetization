@@ -32,7 +32,7 @@ region 		p10 plane 5 0 0 1 0 0 units box
 region		nickel intersect 2 octa p10 side in
 set			region nickel type 2
 
-region		p11 plane 15 0 0 1 0 0 units box
+region		p11 plane 16 0 0 1 0 0 units box
 region		iron intersect 2 octa p11 side in
 set 		region iron type 1
 
