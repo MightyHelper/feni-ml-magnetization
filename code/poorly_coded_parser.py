@@ -1,12 +1,9 @@
-import logging
 import re
 
 import nanoparticlebuilder
-import template
-
 import shapes as s
+import template
 from nanoparticle_locator import NanoparticleLocator
-from shapes import Cylinder, Sphere, Plane, Cone, Prism
 
 
 class PoorlyCodedParser:

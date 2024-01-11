@@ -1,13 +1,13 @@
 # Don't turn these signal into exceptions, just die.
-from rich.logging import RichHandler
 import logging
 import signal
 import sys
 
-from config import LOG_LEVEL
+from rich.logging import RichHandler
 
 
 def setup_logging():
+	global LOG_LEVEL
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
 	if hasattr(signal, "SIGPIPE"):
 		signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -21,6 +21,9 @@ def setup_logging():
 
 	if not sys.stdout.isatty():
 		logging.disable(logging.DEBUG)  # Disable debug and info messages
-	logging.getLogger("").setLevel(LOG_LEVEL)
+	if 'LOG_LEVEL' in globals():
+		logging.getLogger("").setLevel(LOG_LEVEL)
+	else:
+		logging.getLogger("").setLevel(logging.WARNING)
 	logging.getLogger("matplotlib").setLevel(logging.WARNING)
 	return logging.getLogger("rich")

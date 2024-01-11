@@ -1,6 +1,5 @@
 # Execute nanoparticle simulations in batch, with configurable execution queue
 
-import logging
 import random
 from typing import cast
 

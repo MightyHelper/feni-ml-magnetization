@@ -12,10 +12,10 @@ import nanoparticle_locator
 import poorly_coded_parser as parser
 import service.executor_service
 from cli_parts.number_highlighter import console
+from cli_parts.ui_utils import do_plots, correct_highlighter
 from nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
 from utils import parse_nanoparticle_name, dot_dot
-from cli_parts.ui_utils import do_plots, correct_highlighter
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 

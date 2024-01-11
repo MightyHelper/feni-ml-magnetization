@@ -1,29 +1,30 @@
 import logging
+import os
 import platform
+import random
 import re
 import subprocess
 import time
-import os
 from typing import Generator
 
 import pandas as pd
 
 import config
+import feni_mag
+import feni_ovito
 import lammpsrun as lr
 import opt
 import shapes
 import template
-import feni_mag
-import feni_ovito
-import random
-
 import toko_utils
 import utils
-from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, BATCH_EXECUTION, \
-    NANOPARTICLE_IN
+from config_base import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
+    BATCH_EXECUTION, NANOPARTICLE_IN
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
 from utils import drop_index, realpath
+
+FINISHED_JOB = "Finished job"
 
 
 class Nanoparticle:
@@ -435,9 +436,9 @@ class RunningExecutionLocator:
         # Read each simulation and get the current step
         # Return the current step
         job_ids: list[int] = toko_utils.TokoUtils.get_my_jobids()
-        logging.debug(f"Found {len(job_ids)} active jobs ({job_ids})")
+        logging.info(f"Found {len(job_ids)} active jobs ({job_ids})")
         for job_id in job_ids:
-            logging.debug(f"Getting info for job {job_id}")
+            logging.info(f"Getting info for job {job_id}")
             batch_script: str = toko_utils.TokoUtils.get_batch_script(job_id)
             logging.debug(f"Batch script: {batch_script}")
             file_tag: str | None = toko_utils.TokoUtils.get_file_tag(batch_script)
@@ -457,7 +458,8 @@ class RunningExecutionLocator:
             for folder, step, title in RunningExecutionLocator._get_execution_data(file_read_output, files_to_read):
                 total_steps += step
                 count += 1
-                yield folder, step, title
+                if title != FINISHED_JOB:
+                    yield folder, step, title
             if batch_info_content.count("\n") > 1:
                 logging.debug(f"Found Batch execution")
                 yield os.path.dirname(file_tag), total_steps, BATCH_EXECUTION + f" ({count})"
@@ -471,6 +473,7 @@ class RunningExecutionLocator:
         file_read_output: dict[str, str] = {}
         file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
         file_contents = toko_utils.TokoUtils.read_multiple_files(file_names_to_read)
+        logging.info(f"Read {len(file_contents)} files")
         for i, content in enumerate(file_contents):
             file_read_output[file_names_to_read[i]] = content
         return file_read_output, files_to_read
@@ -481,7 +484,7 @@ class RunningExecutionLocator:
             try:
                 lammps_log_content = file_read_output[lammps_log]
                 if "Total wall time" in lammps_log_content:
-                    logging.debug(f"Found finished job {folder_name}")
+                    yield folder_name, config.FULL_RUN_DURATION, FINISHED_JOB
                     continue
                 current_step = lr.LammpsRun.compute_current_step(lammps_log_content)
                 logging.debug(f"Current step: {current_step} {folder_name}")

@@ -1,18 +1,17 @@
 import logging
 import os
+from pathlib import Path
 from typing import Annotated
 
 import pandas as pd
 import typer
-from pathlib import Path
-
 from matplotlib import pyplot as plt
 from rich import print as rprint
 
 import config
 from cli_parts import ui_utils
 from nanoparticle_renamer import NanoparticleRenamer
-from utils import parse_nanoparticle_name
+from utils import assign_nanoparticle_name
 
 dataset = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
 
@@ -85,21 +84,9 @@ def dataset_info(
     """
     dataset = pd.read_csv(dataset_path)
     for i, row in dataset.iterrows():
-        shape, distribution, interface, pores, index = parse_nanoparticle_name(row['name'])
-        dataset.loc[i, 'Shape'] = shape
-        dist = distribution.split(".")
-        intf = interface.split(".")
-        prs = pores.split(".")
-        dataset.loc[i, 'Distribution'] = dist[0]
-        dataset.loc[i, 'Distribution_full'] = distribution
-        dataset.loc[i, 'Distribution_data'] = "" if len(dist) == 1 else ".".join(dist[1:])
-        dataset.loc[i, 'Interface'] = intf[0]
-        dataset.loc[i, 'Interface_full'] = interface
-        dataset.loc[i, 'Interface_data'] = "" if len(intf) == 1 else ".".join(intf[1:])
-        dataset.loc[i, 'Pores'] = prs[0]
-        dataset.loc[i, 'Pores_full'] = pores
-        dataset.loc[i, 'Pores_data'] = "" if len(prs) == 1 else ".".join(prs[1:])
-        dataset.loc[i, 'Index'] = int(index)
+        result = assign_nanoparticle_name(row['name'])
+        for key, value in result.items():
+            dataset.loc[i, key] = value
     for by_value in by.split(","):
         logging.info(f"Plotting {by_value}")
         fig: plt.Figure = ui_utils.multi_plots(

@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from nanoparticlebuilder import NanoparticleBuilder
 import shapes
+from nanoparticlebuilder import NanoparticleBuilder
 from poorly_coded_parser import PoorlyCodedParser
 from shapes import Cylinder, Sphere
 

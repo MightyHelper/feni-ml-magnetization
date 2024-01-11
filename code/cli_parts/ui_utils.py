@@ -3,10 +3,11 @@ import os
 import re
 
 import pandas as pd
-import config
 from matplotlib import pyplot as plt
 from rich.highlighter import RegexHighlighter
 from rich.progress import Progress, TaskID
+
+import config
 from cli_parts.number_highlighter import h
 
 
@@ -75,6 +76,27 @@ def multi_plots(
     fig.tight_layout()
     return fig
 
+
+def scatter(df: pd.DataFrame, by: str, x: str, y: str):
+    # Create a figure with a 1x2 grid (1 row, 2 columns)
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(15, 10))
+
+    # Get unique shapes from the DataFrame
+    unique_shapes = df[by].unique()
+
+    # Subplot 1: Stacked Histogram
+    for shape in unique_shapes:
+        axes.scatter(df[df[by] == shape][x], df[df[by] == shape][y], label=shape)
+    axes.set_title(f'Scatter plot of {x} and {y} by {by}')
+    axes.set_xlabel(f'{x} (Value)')
+    axes.set_ylabel(f'{y} (Value)')
+
+    # Adjust layout to prevent overlap
+    # Set title
+    fig.tight_layout()
+    # Add legend
+    axes.legend()
+    return fig
 
 def correct_highlighter(column: str, value) -> str:
     if value in ["True", "False"]:
@@ -174,3 +196,4 @@ def update_tasks(progress: Progress, running: list[tuple[str, int, str]], tasks:
 def create_tasks(progress: Progress, running: list[tuple[str, int, str]], tasks: dict[str, TaskID]):
     for folder, step, title in running:
         add_task(folder, progress, step, tasks, title)
+

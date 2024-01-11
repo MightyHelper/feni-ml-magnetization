@@ -1,6 +1,8 @@
 import logging
-import numpy
+import os
 from multiprocessing import Process
+
+import numpy
 
 XYZ_FILENAME = "XYZ.xyz"
 G_R_FILENAME = 'g(r).txt'
@@ -35,16 +37,16 @@ class FeNiOvitoParser:
 			**filenames
 		}
 		base_path = filenames['base_path']
-		dump = base_path + filenames['dump']
-		xyz = base_path + filenames['xyz']
-		gr = base_path + filenames['gr']
-		grp = base_path + filenames['grp']
-		coordh = base_path + filenames['coordh']
-		peh = base_path + filenames['peh']
-		coordhfe = base_path + filenames['coordhfe']
-		coordhni = base_path + filenames['coordhni']
-		proportion = base_path + filenames['proportion']
-		surface = base_path + filenames['surface']
+		dump = os.path.join(base_path, filenames['dump'])
+		xyz = os.path.join(base_path, filenames['xyz'])
+		gr = os.path.join(base_path, filenames['gr'])
+		grp = os.path.join(base_path, filenames['grp'])
+		coordh = os.path.join(base_path, filenames['coordh'])
+		peh = os.path.join(base_path, filenames['peh'])
+		coordhfe = os.path.join(base_path, filenames['coordhfe'])
+		coordhni = os.path.join(base_path, filenames['coordhni'])
+		proportion = os.path.join(base_path, filenames['proportion'])
+		surface = os.path.join(base_path, filenames['surface'])
 
 		data = import_file(dump)
 		datatemp = data.compute()

@@ -2,11 +2,14 @@ import logging
 import os
 import time
 from datetime import datetime
+from multiprocessing import Pool
 from pathlib import Path
+from typing import Annotated
 
 import pandas as pd
 import rich.table
 import typer
+from matplotlib import pyplot as plt
 from rich import print as rprint
 from rich.columns import Columns
 from rich.console import Group
@@ -19,17 +22,18 @@ import config
 import nanoparticle
 import poorly_coded_parser as parser
 import utils
-from service.executor_service import execute_nanoparticles
-from utils import resolve_path
+from cli_parts import ui_utils
+from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks, update_tasks, \
     create_tasks
-from cli_parts.number_highlighter import console
+from service.executor_service import execute_nanoparticles
+from utils import resolve_path
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
 @executions.command()
-def ls(count: bool = False, plot_magnetism: bool = False):
+def ls(count: bool = False, plot_magnetism: bool = False, save: Path = None, by: str = "Shape"):
     """
     List all executions that were done
     """
@@ -43,29 +47,59 @@ def ls(count: bool = False, plot_magnetism: bool = False):
     table.add_column("In Toko")
     df = pd.DataFrame(columns=["Shape", "magnetism_val", "magnetism_std"])
     if not count:
-        for i, folder in enumerate(sorted(execs)):
-            try:
-                info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
-                table.add_row(
-                    f"[green]{i}[/green]",
-                    f"[cyan]{folder}[/cyan]",
-                    f"[blue]{info.title}[/blue]",
-                    f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
-                    f"[magenta]{info.magnetism}[/magenta]",
-                    f"[red]{info.extra_replacements['in_toko']}[/red]"
-                )
-                shape, distribution, interface, pores, index = utils.parse_nanoparticle_name(info.title)
-                df = df._append({
-                    "Shape": shape,
-                    "magnetism_val": info.magnetism[0],
-                    "magnetism_std": info.magnetism[1]
-                }, ignore_index=True)
-            except Exception as e:
-                logging.debug(f"Error parsing {folder}: {e}")
-    if plot_magnetism:
-        cli_parts.ui_utils.do_plots(df, by="Shape", field="magnetism_val")
-        cli_parts.ui_utils.do_plots(df, by="Shape", field="magnetism_std")
+        with (Pool() as pool):
+            result = pool.starmap(_load_single_nanoparticle, enumerate(sorted(execs)))
+            for parts in result:
+                if parts is None:
+                    continue
+                data, tab = parts
+                df = df._append(data, ignore_index=True)
+                table.add_row(*tab)
+    df['magnetism_std_over_mag'] = df['magnetism_std'] / df['magnetism_val']
     console.print(table, highlight=True)
+    if plot_magnetism:
+        for by_value in by.split(","):
+            logging.info(f"Plotting {by_value}")
+            fig: plt.Figure = ui_utils.multi_plots(
+                df,
+                "Execution result",
+                (by_value, 'magnetism_val', None, None),
+                (by_value, "magnetism_std", None, None)
+            )
+            if save is not None:
+                fig.savefig(os.path.join(save.as_posix(), f"exec_result_{by_value}.png"))
+            else:
+                plt.show()
+            cli_parts.ui_utils.scatter(df, by=by_value, y="magnetism_std_over_mag", x="magnetism_val")
+            plt.show()
+            if save is not None:
+                fig.savefig(os.path.join(save.as_posix(), f"exec_result_scatter_{by_value}.png"))
+            else:
+                plt.show()
+
+
+
+
+def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, str], tuple[str, str, str, str, str, str]]:
+        try:
+            info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
+            row = (
+                f"[green]{i}[/green]",
+                f"[cyan]{folder}[/cyan]",
+                f"[blue]{info.title}[/blue]",
+                f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
+                f"[magenta]{info.magnetism}[/magenta]",
+                f"[red]{info.extra_replacements['in_toko']}[/red]"
+            )
+            out = utils.assign_nanoparticle_name(info.title)
+            data = {
+                **out,
+                "magnetism_val": info.magnetism[0],
+                "magnetism_std": info.magnetism[1]
+            }
+            return data, row
+        except Exception as e:
+            logging.debug(f"Error parsing {folder}: {e}")
 
 
 @executions.command()
@@ -94,18 +128,33 @@ def clean(keep_ok: bool = False, keep_full: bool = True, keep_batch: bool = True
 
 
 @executions.command()
-def live(in_toko: bool = False, listen_anyway: bool = False, only_running: bool = True):
+def live(
+        in_toko: Annotated[
+            bool,
+            "Whether to listen for executions in Toko"
+        ] = False,
+        listen_anyway: Annotated[
+            bool,
+            "Whether to listen for executions even if there are none"
+        ]= False,
+        only_running: Annotated[
+            bool,
+            "Whether to only listen for running executions"
+        ]= True
+):
     """
     Find live executions
     :param in_toko: Whether to listen for executions in Toko
     :param listen_anyway: Whether to listen for executions even if there are none
+    :param only_running: Whether to only listen for running executions
     """
     with Progress(
             SpinnerColumn(),
             *Progress.get_default_columns(),
             MofNCompleteColumn(),
             TimeElapsedColumn(),
-            expand=True
+            expand=True,
+            speed_estimate_period=600,
     ) as progress:
         running: list[tuple[str, int, str]] = get_running_executions(in_toko, only_running)
         tasks: dict[str, TaskID] = {}
@@ -214,3 +263,37 @@ def csv(paths: list[Path], output_csv_format: Path):
     my_df = my_df[my_csv.columns]  # Sort my_df columns to be in the order of my_csv
     my_df = pd.concat([my_csv, my_df])  # Concat my_df and my_csv
     print(my_df.to_csv(index=False))  # raw print without row index
+
+
+@executions.command()
+def raw_parse_completed(reparse: bool = False):
+    """
+    Parse all completed nanoparticle simulations
+    """
+    with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            expand=True,
+            refresh_per_second=20
+    ) as progress:
+        to_parse = []
+        to_analyse = os.listdir(config.LOCAL_EXECUTION_PATH)
+        gather_task = progress.add_task("Gathering", total=len(to_analyse))
+        for i, folder in enumerate(to_analyse):
+            if not os.path.exists(
+                    os.path.join(config.LOCAL_EXECUTION_PATH, folder, f"iron.{config.FULL_RUN_DURATION}.dump")):
+                continue
+            if not reparse and os.path.exists(os.path.join(config.LOCAL_EXECUTION_PATH, folder, "magnetism.txt")):
+                continue
+            to_parse.append(folder)
+            progress.update(gather_task, completed=i, total=len(to_parse))
+        progress.remove_task(gather_task)
+        task_id = progress.add_task("Parsing", total=len(to_parse))
+        for i, folder in enumerate(to_parse):
+            logging.info(f"Parsing {folder}")
+            nano = nanoparticle.Nanoparticle.from_executed(os.path.join(config.LOCAL_EXECUTION_PATH, folder))
+            nano.on_post_execution("Some non-empty result")
+            progress.update(task_id, completed=i, total=len(to_parse))
+        progress.remove_task(task_id)

@@ -1,12 +1,10 @@
 import os.path
+import shutil
+import unittest
 from pathlib import Path
 
-import cli_parts.shapefolder as shapefolder
 import cli_parts.executions as executions
-import unittest
-
-import shutil
-
+import cli_parts.shapefolder as shapefolder
 import nanoparticle_locator
 from nanoparticle import Nanoparticle
 

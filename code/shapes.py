@@ -1,7 +1,8 @@
-from numpy import pi
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 import numpy as np
+from numpy import pi
 
 BOX_SIZE = 25
 

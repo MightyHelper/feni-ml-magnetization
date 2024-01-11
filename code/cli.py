@@ -1,9 +1,10 @@
 import typer
+
 import setup_logging
-from cli_parts.executions import executions
-from cli_parts.shapefolder import shapefolder
-from cli_parts.fuzzer import fuzzer
 from cli_parts.dataset import dataset
+from cli_parts.executions import executions
+from cli_parts.fuzzer import fuzzer
+from cli_parts.shapefolder import shapefolder
 
 setup_logging.setup_logging()
 

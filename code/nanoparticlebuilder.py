@@ -1,4 +1,3 @@
-import logging
 import typing
 
 from typing_extensions import deprecated

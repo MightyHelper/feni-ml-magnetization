@@ -134,3 +134,24 @@ def get_matching(distributions: dict[str, T], processed_name: str, error: str) -
         if key in processed_name:
             return value
     raise Exception(error)
+
+
+def assign_nanoparticle_name(name: str) -> dict[str, int | str]:
+    shape, distribution, interface, pores, index = parse_nanoparticle_name(name)
+    dist = distribution.split(".")
+    intf = interface.split(".")
+    prs = pores.split(".")
+    out = {
+        'Shape': shape,
+        'Distribution': dist[0],
+        'Distribution_full': distribution,
+        'Distribution_data': "" if len(dist) == 1 else ".".join(dist[1:]),
+        'Interface': intf[0],
+        'Interface_full': interface,
+        'Interface_data': "" if len(intf) == 1 else ".".join(intf[1:]),
+        'Pores': prs[0],
+        'Pores_full': pores,
+        'Pores_data': "" if len(prs) == 1 else ".".join(prs[1:]),
+        'Index': int(index)
+    }
+    return out
