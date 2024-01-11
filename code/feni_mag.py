@@ -3,7 +3,7 @@ from io import StringIO
 
 import pandas as pd
 
-from config_base import LOCAL_EXECUTION_PATH
+from config import LOCAL_EXECUTION_PATH
 
 LAST_N_MAGNETISM_AVG = 100_000
 DATA_START_PATTERN = re.compile("Step\\s+Temp")

@@ -10,7 +10,7 @@ import numpy as np
 
 import config
 import utils
-from config_base import LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, LAMMPS_TOKO_EXECUTABLE, TOKO_EXECUTION_PATH, \
+from config import LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, LAMMPS_TOKO_EXECUTABLE, TOKO_EXECUTION_PATH, \
     TOKO_PARTITION_TO_USE, TOKO_URL, TOKO_USER, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_BATCH_INFO_PATH
 from execution_queue import ExecutionQueue, SingleExecutionQueue
 from simulation_task import SimulationTask

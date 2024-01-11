@@ -18,7 +18,7 @@ import shapes
 import template
 import toko_utils
 import utils
-from config_base import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
+from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     BATCH_EXECUTION, NANOPARTICLE_IN
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask

@@ -1,4 +1,4 @@
-from config_base import LAMMPS_TEMPLATE_PATH, SLURM_TEMPLATE_PATH, SLURM_MULTI_TEMPLATE_PATH
+from config import LAMMPS_TEMPLATE_PATH, SLURM_TEMPLATE_PATH, SLURM_MULTI_TEMPLATE_PATH
 from utils import read_local_file
 
 

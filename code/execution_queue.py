@@ -5,7 +5,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from multiprocessing.pool import ThreadPool
 
-from config_base import LAMMPS_EXECUTABLE
+from config import LAMMPS_EXECUTABLE
 from simulation_task import SimulationTask
 
 
