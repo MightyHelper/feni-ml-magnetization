@@ -168,13 +168,30 @@ class TokoUtils:
         :return:
         """
         # Temp separate files by a DELIMITER, and then split
-        DELIMITER = "\n===============================\n"
-        command = "echo -e \"" + DELIMITER.join([f"$(cat {filename})" for filename in filenames]) + "\""
-        result: list[str] = TokoUtils.run_cmd_for_toko(
-            lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}' 2> /dev/null"]).decode(
-            "utf-8").split(DELIMITER)
-        logging.debug(f"Read {len(result)} files from toko")
-        return result
+        max_len: int = 8000  # 8191 official limit
+        DELIMITER = "\n================\n"
+        batches: list[list[str]] = []
+        batch: str = ""
+        batch_list: list[str] = []
+        for filename in filenames:
+            if len(batch) + len(filename) + 1 > max_len:
+                batches.append(batch_list)
+                batch_list = []
+                batch = ""
+            batch += filename + DELIMITER + "cat $ ()\"\""
+            batch_list.append(filename)
+        if len(batch_list) > 0:
+            batches.append(batch_list)
+        out: list[str] = []
+        for b in batches:
+            logging.debug(f"Reading {len(b)} files from toko...")
+            command = "echo -e \"" + DELIMITER.join([f"$(cat {filename})" for filename in b]) + "\""
+            result: list[str] = TokoUtils.run_cmd_for_toko(
+                lambda user, toko_url: ["ssh", f"{user}@{toko_url}", f"sh -c '{command}' 2> /dev/null"]).decode(
+                "utf-8").split(DELIMITER)
+            out.extend(result)
+            logging.debug(f"Read {len(result)} files from toko")
+        return out
 
     @staticmethod
     def remove_files(*file_path: str):
