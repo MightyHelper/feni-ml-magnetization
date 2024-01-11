@@ -388,9 +388,11 @@ class RunningExecutionLocator:
             path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
         result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"],
                                          stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
+        logging.debug(f"WMIC Result: {result}")
         result = [x.strip() for x in result if x.strip() != ""]
         for execution in {x for result in result if
                           "-in" in result and (x := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
+            logging.debug(f"Found execution: {execution}")
             folder_name = RunningExecutionLocator.get_nth_path_element(execution.replace("\\", "/"), -1)
             nano = Nanoparticle.from_executed(folder_name)
             yield folder_name, nano.run.get_current_step(), nano.title
