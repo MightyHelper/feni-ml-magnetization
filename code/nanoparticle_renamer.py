@@ -1,6 +1,7 @@
 import os
 import re
 from abc import abstractmethod, ABC
+from pathlib import Path
 from typing import Callable
 
 import nanoparticle_locator
@@ -42,8 +43,10 @@ class NanoparticleRenamer(ABC):
 
     @classmethod
     def output_renames(cls, renames: list[tuple[str, str]]) -> None:
-        for old_name, new_name in renames:
-            cls.output_rename(old_name, new_name)
+        for i, (old_name, new_name) in enumerate(renames):
+            cls.output_rename(old_name, f"/tmp/deleteme_{i}")
+        for i, (old_name, new_name) in enumerate(renames):
+            cls.output_rename(f"/tmp/deleteme_{i}", new_name)
 
     @classmethod
     @abstractmethod
