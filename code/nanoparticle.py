@@ -16,13 +16,13 @@ import lammpsrun as lr
 import opt
 import shapes
 import template
-import toko_utils
+from remote import toko_utils
 import utils
 from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     BATCH_EXECUTION, NANOPARTICLE_IN
 from execution_queue import ExecutionQueue
 from simulation_task import SimulationTask
-from toko_utils import toko_path_join
+from remote.toko_utils import toko_path_join
 from utils import drop_index, realpath
 
 FINISHED_JOB = "Finished job"

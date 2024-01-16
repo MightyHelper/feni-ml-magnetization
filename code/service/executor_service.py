@@ -7,7 +7,7 @@ import execution_queue
 import nanoparticle
 import nanoparticlebuilder
 import poorly_coded_parser as parser
-import toko_utils
+from remote import toko_utils
 from nanoparticle import Nanoparticle
 from simulation_task import SimulationTask
 

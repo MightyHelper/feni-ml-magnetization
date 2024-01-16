@@ -5,7 +5,7 @@ from multiprocessing.pool import Pool
 from unittest import TestCase
 
 import config
-import toko_utils
+from remote import toko_utils
 import utils
 
 LOCAL_TEST_FILE = "test_{}.txt"

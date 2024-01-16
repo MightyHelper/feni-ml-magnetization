@@ -1,14 +1,13 @@
 import typer
 
 import config
-from model.machine import Machine, SSHMachine
-from model.machine_factory import MachineFactory
+from model.machine import Machine
 from nanoparticle import Nanoparticle
 from rich import print as rprint
 from service import executor_service
 from service.scheduler_service import SchedulerService
 from simulation_task import SimulationTask
-from toko_utils import estimate_time
+from remote.toko_utils import estimate_time
 
 sched = typer.Typer(add_completion=False, no_args_is_help=True, name="sched")
 
