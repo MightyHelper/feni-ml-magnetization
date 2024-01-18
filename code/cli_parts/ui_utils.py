@@ -49,7 +49,7 @@ def multi_plots(
 
         # Subplot 1: Stacked Histogram
         hist_data = [df[df[by] == shape][field] for shape in unique_shapes]
-        axes[0].hist(hist_data, bins=len(df) // 20, stacked=True, label=unique_shapes)
+        axes[0].hist(hist_data, bins=max(len(df) // 20, 5), stacked=True, label=unique_shapes)
         axes[0].set_title(f'Distribution of {field} by {by}')
         axes[0].set_xlabel(f'{field} (Value)')
         axes[0].set_ylabel('Count')

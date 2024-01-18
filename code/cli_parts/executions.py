@@ -1,4 +1,5 @@
 import logging
+from multiprocessing.pool import ThreadPool
 import os
 import time
 from datetime import datetime
@@ -46,7 +47,7 @@ def ls(count: bool = False, plot_magnetism: bool = False, save: Path = None, by:
     table.add_column("In Toko")
     df = pd.DataFrame(columns=["Shape", "magnetism_val", "magnetism_std"])
     if not count:
-        with (Pool() as pool):
+        with (ThreadPool() as pool):
             result = pool.starmap(_load_single_nanoparticle, enumerate(sorted(execs)))
             for parts in result:
                 if parts is None:

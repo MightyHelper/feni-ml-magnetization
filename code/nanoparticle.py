@@ -384,8 +384,8 @@ class RunningExecutionLocator:
             path = "wmic.exe"
         else:
             path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
-        result = subprocess.check_output([path, "process", "where", "name='python.exe'", "get", "commandline"],
-                                         stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
+        result = subprocess.check_output([path, "process", "where", "name='lmp.exe'", "get", "commandline"],
+                                         stderr=subprocess.DEVNULL).decode('utf-8').split("\r\r\n")
         logging.debug(f"WMIC Result: {result}")
         result = [x.strip() for x in result if x.strip() != ""]
         xv: str = ""

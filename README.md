@@ -89,6 +89,9 @@ Valid Shapes:
 - Ellipsoid
 - Cylinder
 - Octahedron
+- Cross
+- Scale
+- Toroid
 
 Distribution:
 - Janus
