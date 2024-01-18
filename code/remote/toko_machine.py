@@ -154,11 +154,11 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
             TemplateUtils.get_slurm_multi_template(), {
                 "tasks": str(n_threads),
                 "time": estimate_time(simulation_count, n_threads),
-                "cmd_args": BATCH_INFO_PATH,
-                "cwd": toko_batch_path,
+                "cmd_args": BATCH_INFO_PATH.as_posix(),
+                "cwd": toko_batch_path.as_posix(),
                 "partition": self.remote.partition_to_use,
-                "output": os.path.join(toko_batch_path, "batch_run.out"),
-                "file_tag": toko_slurm_sh
+                "output": (toko_batch_path / "batch_run.out").as_posix(),
+                "file_tag": toko_slurm_sh.as_posix()
             }
         )
         assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
