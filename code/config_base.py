@@ -20,6 +20,7 @@ LAMMPS_EXECUTABLE = Path(
     "/home/federico/sistemas_complejos/lammps/lammps/build6/lmp")  # Path to the lammps executable in local
 LOCAL_EXECUTION_PATH = Path("../executions")  # Path in local where the simulations will be stored
 LOCAL_MULTI_PY = Path("../multi.py")  # Path in local to the multi.py file
+LOCAL_LAMMPS_NAME_WINDOWS = "lmp.exe"
 LAMMPS_TOKO_EXECUTABLE = PurePath(
     "/scratch/fwilliamson/lammps_compile/lammps/build1/lmp")  # Path to the lammps executable in toko
 TOKO_EXECUTION_PATH = PurePath(

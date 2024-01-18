@@ -243,7 +243,8 @@ class Nanoparticle:
             feni_mag.MagnetismExtractor.extract_magnetism(self.get_lammps_log_path(),
                                                           out_mag=self.local_path / "magnetism.txt", digits=4)
             feni_ovito.FeNiOvitoParser.parse(
-                filenames={'base_path': self.local_path, 'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)})
+                filenames={'base_path': self.local_path,
+                           'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)})
             self.magnetism = self.get_magnetism()
 
     def get_lammps_log_path(self) -> Path:
@@ -384,8 +385,17 @@ class RunningExecutionLocator:
             path = "wmic.exe"
         else:
             path = "/mnt/c/Windows/System32/Wbem/wmic.exe"
-        result = subprocess.check_output([path, "process", "where", "name='lmp.exe'", "get", "commandline"],
-                                         stderr=subprocess.DEVNULL).decode('utf-8').split("\r\r\n")
+        result = subprocess.check_output(
+            [
+                path,
+                "process",
+                "where",
+                f"name='{config.LOCAL_LAMMPS_NAME_WINDOWS}'",
+                "get",
+                "commandline"
+            ],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').replace("\r", "").split("\n")
         logging.debug(f"WMIC Result: {result}")
         result = [x.strip() for x in result if x.strip() != ""]
         xv: str = ""
@@ -412,7 +422,6 @@ class RunningExecutionLocator:
         else:
             yield from config.MACHINES()['mini'].get_running_tasks()
 
-
     @staticmethod
     def get_nth_path_element(path: str, n: int) -> str:
         return path.split("/")[n]
@@ -420,5 +429,3 @@ class RunningExecutionLocator:
     @staticmethod
     def get_upto_nth_path_element(path: str, n: int) -> str:
         return "/".join(path.split("/")[:n])
-
-

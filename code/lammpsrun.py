@@ -35,6 +35,9 @@ class LammpsRun:
 	def get_lammps_log_filename(self) -> Path:
 		return self.cwd / "log.lammps"
 
+	def get_bak_lammps_log_filename(self) -> Path:
+		return self.cwd / "log.lammps.bak"
+
 	@staticmethod
 	def compute_current_step(lammps_log_contents: str) -> int:
 		"""
@@ -54,8 +57,12 @@ class LammpsRun:
 		"""
 		Get the current step of a lammps log file
 		"""
-		try:
+		bak_file: Path = self.get_bak_lammps_log_filename()
+		if bak_file.exists():
+			filename: Path = bak_file
+		else:
 			filename: Path = self.get_lammps_log_filename()
+		try:
 			contents: str = utils.read_local_file(filename)
 			return LammpsRun.compute_current_step(contents)
 		except FileNotFoundError:
