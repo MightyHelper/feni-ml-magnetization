@@ -1,8 +1,9 @@
+from pathlib import Path
 from unittest import TestCase
 
 import nanoparticle_locator
 
-PATH = "../Shapes"
+PATH = Path("../Shapes")
 
 
 class TestNanoparticleLocator(TestCase):

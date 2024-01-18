@@ -1,19 +1,19 @@
 import dataclasses
 import os
+import utils
 from dataclasses import field
 from pathlib import Path
 from typing import Callable, Any, Optional
-
 from opt import GPUOpt, MPIOpt, OMPOpt
 
 
 @dataclasses.dataclass
 class SimulationTask:
-    input_file: str = field(default_factory=str)
+    local_input_file: Path = field(default_factory=str)
     gpu: GPUOpt = field(default_factory=GPUOpt)
     mpi: MPIOpt = field(default_factory=MPIOpt)
     omp: OMPOpt = field(default_factory=OMPOpt)
-    cwd: str = field(default_factory=str)
+    local_cwd: Path = field(default_factory=str)
     is_test_run: bool = field(default_factory=lambda: False)
     callbacks: list[Callable[[str], None]] = field(default_factory=list)
     ok: bool = field(default_factory=lambda: True)
@@ -38,11 +38,11 @@ class SimulationWrapper:
 
     @staticmethod
     def get_task(
-            input_file: str = "in.melt",
+            input_file: Path,
+            cwd: Path,
             gpu: GPUOpt = None,
             mpi: MPIOpt = None,
             omp: OMPOpt = None,
-            cwd: str = './lammps_output',
     ) -> SimulationTask:
         if gpu is None: gpu = GPUOpt()
         if mpi is None: mpi = MPIOpt()
@@ -50,7 +50,7 @@ class SimulationWrapper:
         return SimulationTask(input_file, gpu, mpi, omp, cwd)
 
     @staticmethod
-    def generate(code: str, sim_params: dict[str, Any] = None, file_to_use: str = '/tmp/in.melt') -> SimulationTask:
+    def generate(code: str, file_to_use: Path, sim_params: dict[str, Any] = None) -> SimulationTask:
         """
         Generate the local folder structure and return a simulation task
         :param code:
@@ -59,11 +59,6 @@ class SimulationWrapper:
         :return:
         """
         assert "{{" not in code, "Not all templates were replaced"
-        path = Path(file_to_use)
-        if not path.parent.exists():
-            if not path.parent.parent.exists():
-                os.mkdir(path.parent.parent)
-            os.mkdir(path.parent)
-        with open(file_to_use, 'w') as f:
-            f.write(code)
+        os.makedirs(file_to_use.parent, exist_ok=True)
+        utils.write_local_file(file_to_use, code)
         return SimulationWrapper.get_task(input_file=file_to_use, **sim_params)

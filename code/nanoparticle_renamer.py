@@ -18,7 +18,7 @@ SHAPES = [
     'Octahedron',
 ]
 
-
+# TODO: Move to pathlib
 class NanoparticleRenamer(ABC):
     @classmethod
     def get_all_renames(cls, nanoparticles: list[str]) -> list[tuple[str, str]]:
@@ -33,9 +33,9 @@ class NanoparticleRenamer(ABC):
         return out
 
     @classmethod
-    def get_all_renames_for_folder(cls, folder: str = "../Shapes") -> list[tuple[str, str]]:
+    def get_all_renames_for_folder(cls, folder: Path = Path("../Shapes")) -> list[tuple[str, str]]:
         nanoparticles = nanoparticle_locator.NanoparticleLocator.sorted_search(folder)
-        return cls.get_all_renames(list(nanoparticles))
+        return cls.get_all_renames([path.resolve().as_posix() for path in nanoparticles])
 
     @classmethod
     def output_rename(cls, old_name: str, new_name: str) -> None:
@@ -251,9 +251,9 @@ class NewNanoparticleRenamer(NanoparticleRenamer):
             raise Exception(f"Couldn\'t find an index for {old_name} in {str(other_names)}")
 
     @classmethod
-    def get_all_renames_for_folder(cls, folder: str = "../Shapes") -> list[tuple[str, str]]:
+    def get_all_renames_for_folder(cls, folder: Path = Path("../Shapes")) -> list[tuple[str, str]]:
         nanoparticles = nanoparticle_locator.NanoparticleLocator.sorted_search(folder)
-        return cls.get_all_renames(list(nanoparticles))
+        return cls.get_all_renames([path.resolve().as_posix() for path in nanoparticles])
 
     @classmethod
     def _assemble_nanoparticle_name(cls, shape, distribution, interface, pores, index, base_path):

@@ -1,5 +1,4 @@
 import os.path
-
 import typer
 
 if os.path.exists("config_local.py"):

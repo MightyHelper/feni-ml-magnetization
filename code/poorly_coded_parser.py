@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import nanoparticlebuilder
 import shapes as s
@@ -321,14 +322,14 @@ class PoorlyCodedParser:
             PoorlyCodedParser.parse_line(line, nano)
 
     @staticmethod
-    def load_shapes(path: str, ignore: list[str]) -> dict[str, nanoparticlebuilder.NanoparticleBuilder]:
+    def load_shapes(path: Path, ignore: list[str]) -> dict[str, nanoparticlebuilder.NanoparticleBuilder]:
         for shape in NanoparticleLocator.sorted_search(path):
             if any([section in shape for section in ignore]):  # Ignore
                 continue
             yield PoorlyCodedParser.parse_single_shape(shape)
 
     @staticmethod
-    def parse_single_shape(shape_path: str, full_file: bool = False, replacements: dict | None = None) -> tuple[
+    def parse_single_shape(shape_path: Path, full_file: bool = False, replacements: dict | None = None) -> tuple[
         str, nanoparticlebuilder.NanoparticleBuilder]:
         """
         Parses a single shape file
@@ -340,14 +341,14 @@ class PoorlyCodedParser:
         replacements = replacements or {}
         with open(shape_path, "r") as f:
             # logging.debug(f"[yellow]=== {shape_path} ===[/yellow]", extra={"markup": True})
-            nano = nanoparticlebuilder.NanoparticleBuilder(title=shape_path)
+            nano = nanoparticlebuilder.NanoparticleBuilder(title=shape_path.name)
             lines = f.readlines()
             if not full_file:
                 lines = PoorlyCodedParser.locate_relevant_lines(lines)
             lines = [template.TemplateUtils.replace_templates(ll.strip(), replacements) for line in lines if
                      (ll := line.strip()) != ""]
             PoorlyCodedParser.parse_shape(lines, nano)
-            return shape_path, nano
+            return shape_path.resolve().as_posix(), nano
 
     @staticmethod
     def locate_relevant_lines(lines):

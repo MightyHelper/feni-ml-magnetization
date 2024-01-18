@@ -17,7 +17,7 @@ class TestShapefolder(unittest.TestCase):
     #     shapefolder.shrink()
 
     def test_parse_all(self):
-        expected: int = len([*nanoparticle_locator.NanoparticleLocator.search("../Shapes", ".in")])
+        expected: int = len([*nanoparticle_locator.NanoparticleLocator.search(Path("../Shapes"), ".in")])
         actual: list[tuple[str, Nanoparticle]] = shapefolder.parseshapes(test=True, seed_count=1, at="local:16")
         ok = [x for x, y in actual if y.is_ok()]
         self.assertEqual(expected, len(actual), "Lost some executions")
@@ -29,8 +29,8 @@ class TestExec(unittest.TestCase):
         executions.ls()
 
     def test_execute(self):
-        ironsphere_in = "../Shapes/Test/Cone_Multilayer.2.Axis.X_05_Full_0.in"
-        execution_result: str | None = executions.execute(
+        ironsphere_in = Path("../Shapes/Test/Cone_Multilayer.2.Axis.X_05_Full_0.in")
+        execution_result: Path | None = executions.execute(
             path=Path(ironsphere_in),
             plot=False,
             test=True,
@@ -53,5 +53,5 @@ class TestExec(unittest.TestCase):
         result = nano.asdict()
         for key, value in expected.items():
             self.assertEqual(value, result[key])
-        self.assertIn(ironsphere_in, nano.title)
+        self.assertIn(ironsphere_in.name, nano.title)
         shutil.rmtree(execution_result)

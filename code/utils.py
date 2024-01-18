@@ -1,9 +1,10 @@
 import base64
+import logging
 import os
 import random
 import re
 from pathlib import Path
-from typing import TypeVar, Callable
+from typing import TypeVar, Callable, Any, cast
 
 
 def get_current_step(lammps_log):
@@ -60,19 +61,6 @@ def get_path_elements(path: str, f: int, t: int) -> str:
     return "/".join(path.split("/")[f:t])
 
 
-def dot_dot(path: str):
-    return get_path_elements(path, 0, -1)
-
-
-def resolve_path(path: Path) -> str:
-    """
-    Returns the absolute path to the file or directory
-    :param path: path to resolve
-    :return: absolute path
-    """
-    return path.absolute().as_posix()
-
-
 def get_file_name(input_file):
     return "/".join(input_file.split("/")[-2:])
 
@@ -104,12 +92,12 @@ def realpath(path):
     return os.path.realpath(path)
 
 
-def write_local_file(path, slurm_code):
+def write_local_file(path: Path | str, content: str):
     with open(path, "w") as f:
-        f.write(slurm_code)
+        f.write(content)
 
 
-def read_local_file(path) -> str | None:
+def read_local_file(path: Path | str) -> str | None:
     try:
         with open(path, "r") as template:
             return template.read()
@@ -155,3 +143,15 @@ def assign_nanoparticle_name(name: str) -> dict[str, int | str]:
         'Index': int(index)
     }
     return out
+
+
+def set_type(typ: type[T], item: Any) -> T:
+    assert isinstance(typ, type), f"typ must be a type, got {typ}"
+    assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
+    return cast(typ, item)
+
+
+def assert_type(typ: type[T], item: T) -> T:
+    assert isinstance(typ, type), f"typ must be a type, got {typ}"
+    assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
+    return item

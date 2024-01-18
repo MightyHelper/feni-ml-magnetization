@@ -1,8 +1,9 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
 
+import utils
 from utils import get_index, opt, column_values_as_float
 
 
@@ -10,16 +11,18 @@ class LammpsDump:
     """
     Functions to parse a dump file
     """
+    path: Path
+    dump: dict[str, any]
 
-    def __init__(self, path):
+    def __init__(self, path: Path):
         self.path = path
         self.dump = self._parse()
 
     def _parse(self):
-        if not os.path.exists(self.path):
+        if not self.path.exists():
             raise FileNotFoundError(f"Dump file {self.path} does not exist!")
-        with open(self.path, "r") as f:
-            lines = f.readlines()
+        lines = utils.read_local_file(self.path).strip().split("\n")
+        try:
             return {
                 "timestep": opt(
                     get_index(lines, "TIMESTEP", "ITEM: "),
@@ -44,6 +47,8 @@ class LammpsDump:
                     ])
                 )
             }
+        except ValueError as e:
+            raise Exception(f"Could not parse dump file {self.path}!") from e
 
     def plot(self):
         t = self.dump['atoms'][:, DUMP_ATOM_TYPE]
@@ -52,6 +57,7 @@ class LammpsDump:
         z = self.dump['atoms'][:, DUMP_ATOM_Z]
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+        # noinspection SpellCheckingInspection
         ax.scatter(x, y, z, c=t, marker='.', cmap='coolwarm')
         ax.set_box_aspect((1, 1, 1))
         ax.set_xlim(self.dump['box_bounds'][0][0], self.dump['box_bounds'][0][1])

@@ -1,14 +1,16 @@
 # Execute nanoparticle simulations in batch, with configurable execution queue
 
 import random
+from pathlib import Path
 from typing import cast
 
 import execution_queue
 import nanoparticle
 import nanoparticlebuilder
 import poorly_coded_parser as parser
-from remote import toko_utils
+from config import MACHINES
 from nanoparticle import Nanoparticle
+from remote import toko_machine
 from simulation_task import SimulationTask
 
 
@@ -19,13 +21,13 @@ def get_executor(at: str) -> execution_queue.ExecutionQueue:
     :return:
     """
     if at == "local":
-        return execution_queue.LocalExecutionQueue()
+        return execution_queue.LocalExecutionQueue(MACHINES()['local'])
     elif at.startswith("local:"):
-        return execution_queue.ThreadedLocalExecutionQueue(int(at.split(":")[1]))
+        return execution_queue.ThreadedLocalExecutionQueue(MACHINES()['local'], int(at.split(":")[1]))
     elif at == "toko":
-        return toko_utils.TokoExecutionQueue()
+        return toko_machine.SlurmExecutionQueue(MACHINES()['mini'])
     elif at.startswith("toko:"):
-        return toko_utils.TokoBatchedExecutionQueue(int(at.split(":")[1]))
+        return toko_machine.SlurmBatchedExecutionQueue(MACHINES()['mini'], int(at.split(":")[1]))
     else:
         raise ValueError(f"Unknown queue {at}")
 
@@ -43,32 +45,32 @@ def execute_nanoparticles(
     :return:
     """
     queue: execution_queue.ExecutionQueue = get_executor(at)
-    for path, nanoparticle in nanoparticles:
-        nanoparticle.schedule_execution(execution_queue=queue, test_run=test)
+    for path, np in nanoparticles:
+        np.schedule_execution(execution_queue=queue, test_run=test)
     tasks: list[SimulationTask] = queue.run()
-    out_nanos: list[tuple[str, Nanoparticle]] = [(task.nanoparticle.path, task.nanoparticle) for task in tasks]
+    out_nanos: list[tuple[str, Nanoparticle]] = [(task.nanoparticle.local_path, task.nanoparticle) for task in tasks]
     return out_nanos
 
 
 def execute_single_nanoparticle(
-        nanoparticle: tuple[str, Nanoparticle],
+        np: tuple[str, Nanoparticle],
         at: str = "local",
         test: bool = False
 ) -> tuple[str, Nanoparticle]:
     """
     Execute only a single nanoparticle
-    :param nanoparticle:
+    :param np:
     :param at:
     :param test:
     :return:
     """
-    result: list[tuple[str, Nanoparticle]] = execute_nanoparticles([nanoparticle], at=at, test=test)
+    result: list[tuple[str, Nanoparticle]] = execute_nanoparticles([np], at=at, test=test)
     if len(result) == 0:
-        raise Exception(f"Execution of nanoparticle {nanoparticle} Failed.")
+        raise Exception(f"Execution of nanoparticle {np} Failed.")
     return result[0]
 
 
-def build_nanoparticles_to_execute(ignore: list[str], path: str, seed: int, seed_count: int) -> list[
+def build_nanoparticles_to_execute(ignore: list[str], path: Path, seed: int, seed_count: int) -> list[
     tuple[str, nanoparticle.Nanoparticle]]:
     nano_builders = parser.PoorlyCodedParser.load_shapes(path, ignore)
     nanoparticles = []

@@ -49,7 +49,7 @@ def multi_plots(
 
         # Subplot 1: Stacked Histogram
         hist_data = [df[df[by] == shape][field] for shape in unique_shapes]
-        axes[0].hist(hist_data, bins=len(df) // 20, stacked=True, label=unique_shapes)
+        axes[0].hist(hist_data, bins=max(len(df) // 20, 5), stacked=True, label=unique_shapes)
         axes[0].set_title(f'Distribution of {field} by {by}')
         axes[0].set_xlabel(f'{field} (Value)')
         axes[0].set_ylabel('Count')
@@ -125,7 +125,7 @@ def correct_highlighter(column: str, value) -> str:
 
 
 class ZeroHighlighter(RegexHighlighter):
-    """Apply style to anything that looks like non zero."""
+    """Apply style to anything that looks like non-zero."""
     base_style = "zero."
     highlights = [
         r"(^(?P<zero>0+(.0+)))|([^.\d](?P<zero_1>0+(.0+))$)|(^(?P<zero_2>0+(.0+))$)|([^.\d](?P<zero_3>0+(.0+))[^.\d])"]

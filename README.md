@@ -89,6 +89,9 @@ Valid Shapes:
 - Ellipsoid
 - Cylinder
 - Octahedron
+- Cross
+- Scale
+- Toroid
 
 Distribution:
 - Janus
@@ -120,3 +123,19 @@ Void = Pores.1
 Exec clean for toko
 Allow scp by single file in batch mode
 Properly test scp/rsync
+
+
+## Note about Paths in pathlib
+
+Paths in pathlib are not strings, they are objects.
+This means that you can't just concatenate them with strings.
+You need to use the `/` operator.
+
+
+We try to be platform agnostic,
+`Path` objects are used to represent paths in a platform agnostic way.
+
+However sometimes specific platform code is required.
+For example when sshing to a machine we need to use PosixPath, however if we are on windows this raises an error.
+So we instead use `PurePosixPath` which is a platform agnostic representation of a Posix path.
+
