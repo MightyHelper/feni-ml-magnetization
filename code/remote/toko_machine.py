@@ -4,6 +4,7 @@ import random
 import re
 import subprocess
 import time
+import typing
 from pathlib import Path, PurePath, PurePosixPath
 from typing import cast
 
@@ -31,14 +32,14 @@ class SlurmExecutionQueue(SingleExecutionQueue):
         toko_slurm_sh: PurePosixPath = toko_sim_folder / config.SLURM_SH
         slurm_code = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_template(), {
-                "lammps_exec": self.remote.lammps_executable,
+                "lammps_exec": self.remote.lammps_executable.as_posix(),
                 "tasks": "1",
                 "time": "00:45:00",
-                "lammps_input": toko_nano_in,
-                "lammps_output": toko_sim_folder / "log.lammps",
-                "cwd": toko_sim_folder,
+                "lammps_input": toko_nano_in.as_posix(),
+                "lammps_output": (toko_sim_folder / "log.lammps.bak").as_posix(),
+                "cwd": toko_sim_folder.as_posix(),
                 "partition": self.remote.partition_to_use,
-                "file_tag": toko_slurm_sh
+                "file_tag": toko_slurm_sh.as_posix()
             }
         )
         assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
@@ -52,7 +53,7 @@ class SlurmExecutionQueue(SingleExecutionQueue):
     def simulate_in_toko(self, simulation_task: SimulationTask) -> str:
         input_path = Path(simulation_task.local_input_file)
         local_sim_folder: Path = input_path.parent.resolve()
-        toko_sim_folder: PurePosixPath = cast(PurePosixPath, self.remote.execution_path / input_path.parent.name)
+        toko_sim_folder: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / input_path.parent.name
         toko_nano_in: PurePosixPath = toko_sim_folder / input_path.name
         logging.info("Creating simulation folder in toko...")
         logging.debug(f"{toko_sim_folder=}")
@@ -174,7 +175,7 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
     def get_tasks(self, simulation_info):
         # Create a list of commands to run in parallel
         for toko_nano_in, toko_sim_folder, local_sim_folder in simulation_info:
-            lammps_log = os.path.join(toko_sim_folder, "log.lammps")
+            lammps_log = toko_sim_folder / "log.lammps.bak"
             yield f"sh -c 'cd {toko_sim_folder}; {self.remote.lammps_executable} -in {toko_nano_in} > {lammps_log}'"
 
     def _simulate(self):
@@ -195,7 +196,7 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
         :param simulations: List of simulations to run
         :return:
         """
-        simulation_info = []
+        simulation_info: list[tuple[PurePosixPath, PurePosixPath, Path]] = []
         # Make new dir in remote execution path "batch_<timestamp>_<random[0-1000]>"
         batch_name: PurePath = PurePath(f"batch_{int(time.time())}_{random.randint(0, 1000)}")
         local_batch_path: Path = LOCAL_EXECUTION_PATH / batch_name
@@ -207,15 +208,15 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
 
         for i, simulation in enumerate(simulations):
             local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
-            toko_sim_folder: PurePath = self.remote.execution_path / local_sim_folder.name
-            toko_nano_in: PurePath = toko_sim_folder / simulation.local_input_file.name
+            toko_sim_folder: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / local_sim_folder.name
+            toko_nano_in: PurePosixPath = toko_sim_folder / simulation.local_input_file.name
             logging.debug(f"Creating simulation folder in toko ({i + 1}/{len(simulations)})...")
             if i == 0:
                 logging.debug(f"{toko_sim_folder=}")
                 logging.debug(f"{local_sim_folder=}")
                 logging.debug(f"{toko_nano_in=}")
                 self.remote.copy_alloy_files(local_sim_folder, toko_sim_folder)
-            simulation_info.append((toko_nano_in.as_posix(), toko_sim_folder.as_posix(), local_sim_folder.as_posix()))
+            simulation_info.append((toko_nano_in, toko_sim_folder, local_sim_folder))
         tasks = self.get_tasks(simulation_info)
         write_local_file(batch_info_path, "\n".join([
             f"{i + 1}: {os.path.basename(Path(simulation.local_input_file).parent.resolve())} # {shell}"
@@ -240,16 +241,10 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
             local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
             toko_sim_folder: Path = Path(os.path.join(self.remote.execution_path, local_sim_folder.name))
             # TokoUtils.copy_file_from_toko(toko_sim_folder.as_posix(), local_sim_folder.as_posix(), is_folder=True)
-            local_lammps_log = os.path.join(local_sim_folder, "log.lammps")
+            local_lammps_log: Path = local_sim_folder / "log.lammps"
             files_to_copy_back.append(toko_sim_folder.as_posix())
             callback_info.append((simulation, local_lammps_log))
         self.remote.cp_multi_from([folder for folder in files_to_copy_back], LOCAL_EXECUTION_PATH)
         for simulation, lammps_log in callback_info:
             self.run_callback(simulation, utils.read_local_file(lammps_log))
             self.completed.append(simulation)
-
-
-def toko_path_join(a: str, b: str):
-    if a.endswith("/"):
-        return a + b
-    return a + "/" + b

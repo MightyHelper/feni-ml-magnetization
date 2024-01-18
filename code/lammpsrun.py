@@ -47,7 +47,6 @@ class LammpsRun:
 			split = re.split(r" +", lines[-1])
 			step = int(split[0])
 		except Exception:
-			logging.debug(f"Could not parse step from {lines}")
 			pass
 		return step
 
@@ -56,7 +55,9 @@ class LammpsRun:
 		Get the current step of a lammps log file
 		"""
 		try:
-			LammpsRun.compute_current_step(utils.read_local_file(self.get_lammps_log_filename()))
+			filename: Path = self.get_lammps_log_filename()
+			contents: str = utils.read_local_file(filename)
+			return LammpsRun.compute_current_step(contents)
 		except FileNotFoundError:
 			pass
 		return -1
@@ -83,7 +84,6 @@ class LammpsRun:
 		for dump in self.expect_dumps:
 			logging.debug(f"Parsing dump {dump}")
 			result = LammpsDump(dump)
-			logging.debug("Result: " + str(result))
 			dumps[result.dump['timestep']] = result
 		return dumps
 

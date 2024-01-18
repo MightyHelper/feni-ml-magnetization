@@ -35,10 +35,10 @@ class SSHMachine(Machine):
             user: str,
             remote_url: str,
             copy_script: PurePath = 'rsync',
-            lammps_executable: PurePath = 'lmp',
-            execution_path: PurePath = '~/magnetism/simulations'
+            lammps_executable: PurePath = PurePath('lmp'),
+            execution_path: PurePath = PurePath('~/magnetism/simulations')
     ):
-        super().__init__(name, cores, lammps_executable, execution_path)
+        super().__init__(name, cores, execution_path, lammps_executable)
         self.user = user
         self.remote_url = remote_url
         self.copy_script = copy_script
@@ -62,6 +62,8 @@ class SSHMachine(Machine):
         # Convert Potential CRLF to LF
         local_path_posix: str = ""
         remote_path_posix: str = ""
+        utils.assert_type(Path, local_path)
+        utils.assert_type(PurePosixPath, remote_path)
         if not is_folder:
             self.convert_crlf_to_lf(local_path)
         if self.copy_script == 'scp':

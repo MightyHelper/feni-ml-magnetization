@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -35,9 +36,10 @@ def ls(path: Path = Path("../Shapes")):
     table.add_column("R")
     for i, (path, nano) in enumerate(parser.PoorlyCodedParser.load_shapes(path, [])):
         shape, distribution, interface, pores, index = parse_nanoparticle_name(path)
+        pathl = Path(path)
         table.add_row(
             f"[green]{i}[/green]",
-            f"[cyan]{path}[/cyan]",
+            f"[cyan]{os.path.relpath(pathl.resolve(), Path.cwd())}[/cyan]",
             f"[blue]{shape}[/blue]",
             f"[blue]{distribution}[/blue]",
             f"[blue]{interface}[/blue]",

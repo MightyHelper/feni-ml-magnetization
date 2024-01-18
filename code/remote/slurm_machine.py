@@ -36,8 +36,9 @@ class SLURMMachine(SSHMachine):
             cores: int,
             user: str,
             remote_url: str,
-            copy_script: PurePath = 'rsync',
-            lammps_executable: PurePosixPath = 'lmp',
+            copy_script: PurePath = PurePath('rsync'),
+            lammps_executable: PurePosixPath = PurePosixPath('lmp'),
+            execution_path: PurePosixPath = PurePosixPath(''),
             partition_to_use: str = TOKO_PARTITION_TO_USE,
             node_id: int = 1,
             sbatch_path: PurePath = TOKO_SBATCH,
@@ -45,7 +46,7 @@ class SLURMMachine(SSHMachine):
             scontrol_path: PurePath = TOKO_SCONTROL,
             sinfo_path: PurePath = TOKO_SINFO,
     ):
-        super().__init__(name, cores, user, remote_url, copy_script, lammps_executable)
+        super().__init__(name, cores, user, remote_url, copy_script, lammps_executable, execution_path)
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path
         self.sbatch_path = sbatch_path
@@ -162,7 +163,7 @@ class SLURMMachine(SSHMachine):
             logging.debug(f"Found nano_in: {nano_in}")
             f_name: str = nano_in.parent.name
             folder_name: PurePath = config.TOKO_EXECUTION_PATH / f_name
-            lammps_log: PurePath = folder_name / "log.lammps"
+            lammps_log: PurePath = folder_name / "log.lammps.bak"
             remote_nano_in: PurePath = folder_name / config.NANOPARTICLE_IN
             yield folder_name, lammps_log, remote_nano_in
 

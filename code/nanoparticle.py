@@ -410,7 +410,7 @@ class RunningExecutionLocator:
             else:
                 raise Exception(f"Unknown system: {platform.system()}")
         else:
-            yield from config.MACHINES()['toko'].get_running_tasks()
+            yield from config.MACHINES()['mini'].get_running_tasks()
 
 
     @staticmethod

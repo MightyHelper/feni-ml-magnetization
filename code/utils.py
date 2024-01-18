@@ -1,9 +1,10 @@
 import base64
+import logging
 import os
 import random
 import re
 from pathlib import Path
-from typing import TypeVar, Callable
+from typing import TypeVar, Callable, Any, cast
 
 
 def get_current_step(lammps_log):
@@ -142,3 +143,15 @@ def assign_nanoparticle_name(name: str) -> dict[str, int | str]:
         'Index': int(index)
     }
     return out
+
+
+def set_type(typ: type[T], item: Any) -> T:
+    assert isinstance(typ, type), f"typ must be a type, got {typ}"
+    assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
+    return cast(typ, item)
+
+
+def assert_type(typ: type[T], item: T) -> T:
+    assert isinstance(typ, type), f"typ must be a type, got {typ}"
+    assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
+    return item

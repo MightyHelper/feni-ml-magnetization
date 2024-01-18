@@ -68,4 +68,5 @@ class LocalMachine(Machine):
                 nano = Nanoparticle.from_executed(folder_name)
                 yield folder_name, nano.run.get_current_step(), nano.title
             except Exception:
+                logging.debug(f"Could not parse {folder_name}")
                 pass

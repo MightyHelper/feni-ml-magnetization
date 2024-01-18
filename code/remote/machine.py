@@ -1,9 +1,10 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import PurePath
+from pathlib import PurePath, Path
 from typing import Callable, Generator
 
+import utils
 from model.live_execution import LiveExecution
 from simulation_task import SimulationTask
 
@@ -39,50 +40,50 @@ class Machine(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def mkdir(self, remote_path: str):
+    def mkdir(self, remote_path: PurePath):
         pass
 
     @abstractmethod
-    def cp_to(self, local_path: str, remote_path: str, is_folder: bool):
+    def cp_to(self, local_path: Path, remote_path: PurePath, is_folder: bool):
         pass
 
     @abstractmethod
-    def cp_multi_to(self, local_paths: list[str], remote_path: str):
+    def cp_multi_to(self, local_paths: list[Path], remote_path: PurePath):
         pass
 
     @abstractmethod
-    def cp_multi_from(self, remote_paths: list[str], local_path: str):
+    def cp_multi_from(self, remote_paths: list[PurePath], local_path: Path):
         pass
 
     @abstractmethod
-    def cp_from(self, remote_path: str, local_path: str, is_folder: bool):
+    def cp_from(self, remote_path: PurePath, local_path: Path, is_folder: bool):
         pass
 
     @abstractmethod
-    def read_file(self, filename: str) -> str:
+    def read_file(self, filename: PurePath) -> str:
         pass
 
     @abstractmethod
-    def read_multiple_files(self, filenames: list[str]) -> list[str]:
+    def read_multiple_files(self, filenames: list[PurePath]) -> list[str]:
         pass
 
     @abstractmethod
-    def rm(self, file_path: str):
+    def rm(self, file_path: PurePath):
         pass
 
     @abstractmethod
-    def ls(self, remote_dir: str) -> list[str]:
+    def ls(self, remote_dir: PurePath) -> list[str]:
         pass
 
     @abstractmethod
-    def remove_dir(self, remote_dir: str):
+    def remove_dir(self, remote_dir: PurePath):
         pass
 
-    def copy_alloy_files(self, local_sim_folder: PurePath, remote_sim_folder: PurePath):
-        local_alloy_file: PurePath = local_sim_folder.parent.parent / "FeCuNi.eam.alloy"
-        remote_alloy_file: PurePath = remote_sim_folder.parent.parent / "FeCuNi.eam.alloy"
+    def copy_alloy_files(self, local_sim_folder: Path, remote_sim_folder: PurePath):
+        local_alloy_file: Path = utils.assert_type(Path, local_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
+        remote_alloy_file: PurePath = utils.assert_type(PurePath, remote_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
         logging.info("Copying alloy files...")
-        self.cp_to(local_alloy_file.as_posix(), remote_alloy_file.as_posix(), False)
+        self.cp_to(local_alloy_file, remote_alloy_file, False)
 
     @abstractmethod
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:

@@ -83,7 +83,8 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
             try:
                 result = self._simulate(task)
             except Exception as e:
-                logging.error(f"Error in {type(self)}: {e}", stack_info=False)
+                logging.error(f"Error in {type(self)}: {e}")
+                logging.debug(f"Error in {type(self)}: {e}", exc_info=e, stack_info=True)
             finally:
                 self.completed.append(result[0])
                 self.run_callback(result[0], result[1])
