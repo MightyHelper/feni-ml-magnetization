@@ -1,5 +1,5 @@
 import logging
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PurePosixPath
 
 
 def load_machines():
@@ -27,10 +27,10 @@ TOKO_EXECUTION_PATH = PurePath(
 TOKO_PARTITION_TO_USE = "mini"
 TOKO_URL = "toko.uncu.edu.ar"
 TOKO_USER = "fwilliamson"
-TOKO_SBATCH = PurePath("/apps/slurm/bin/sbatch")
-TOKO_SQUEUE = PurePath("/apps/slurm/bin/squeue")
-TOKO_SCONTROL = PurePath("/apps/slurm/bin/scontrol")
-TOKO_SINFO = PurePath("/apps/slurm/bin/sinfo")
+TOKO_SBATCH = PurePosixPath("/apps/slurm/bin/sbatch")
+TOKO_SQUEUE = PurePosixPath("/apps/slurm/bin/squeue")
+TOKO_SCONTROL = PurePosixPath("/apps/slurm/bin/scontrol")
+TOKO_SINFO = PurePosixPath("/apps/slurm/bin/sinfo")
 TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
 BATCH_INFO_PATH = PurePath("batch_info.txt")
 SLURM_SH = PurePath("slurm.sh")
