@@ -15,9 +15,8 @@ from service import executor_service
 fuzzer = typer.Typer(add_completion=False, no_args_is_help=True, name="fuzzer")
 
 
-def get_full_function(path: str) -> tuple[list, Callable]:
-    with open(path, 'r') as f:
-        contents = f.read()
+def get_full_function(path: Path) -> tuple[list, Callable]:
+    contents = utils.read_local_file(path)
     keys = re.findall(r"{{(.*?)}}", contents)
 
     def fuzz(**kwargs):
@@ -58,7 +57,6 @@ def bayes(
     [gray][bold]Note 3[/bold]: Files in [yellow]../Shapes/Test[/yellow] are ignored by other commands by default because of the different syntax.[/gray]
     """
     rprint(f"Using bayesian search to find the correct value for a parameter in a nanoparticle")
-    path = utils.resolve_path(path)
     keys, run_fuzzer = get_full_function(path)
     target_values = [target_atom_count, target_ratio]
     target_importance = [target_atom_count_importance, target_ratio_importance]

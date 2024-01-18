@@ -42,7 +42,7 @@ def schedule(
         machines=config.MACHINES(),
         tasks=tasks
     )
-    matchines, longest_queue = execution_plan
-    for machine in matchines:
+    machines, longest_queue = execution_plan
+    for machine in machines:
         rprint(str(machine))
     rprint(f"Longest queue: {longest_queue} = {estimate_time(longest_queue)}")

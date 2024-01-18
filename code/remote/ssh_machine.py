@@ -1,17 +1,17 @@
 import logging
-import os
 import random
 import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Generator
+from typing import Generator, cast
 
 import config
 import utils
 from config import BATCH_INFO_PATH, LOCAL_EXECUTION_PATH
 from execution_queue import ExecutionQueue
 from model.live_execution import LiveExecution
+from remote.local_machine import LocalMachine
 from remote.machine import Machine
 from simulation_task import SimulationTask
 from template import TemplateUtils
@@ -35,8 +35,8 @@ class SSHMachine(Machine):
             user: str,
             remote_url: str,
             copy_script: PurePath = 'rsync',
-            lammps_executable: PurePosixPath = 'lmp',
-            execution_path: PurePosixPath = '~/magnetism/simulations'
+            lammps_executable: PurePath = 'lmp',
+            execution_path: PurePath = '~/magnetism/simulations'
     ):
         super().__init__(name, cores, lammps_executable, execution_path)
         self.user = user
@@ -48,13 +48,13 @@ class SSHMachine(Machine):
         logging.debug(f"Running {command=}")
         return subprocess.check_output(command)
 
-    def mkdir(self, remote_path) -> bytes:
+    def mkdir(self, remote_path: PurePosixPath) -> bytes:
         return self.run_cmd(
             lambda user, remote_url: [
                 "ssh",
                 f"{user}@{remote_url}",
                 f"mkdir",
-                f"{remote_path}"
+                f"{remote_path.as_posix()}"
             ]
         )
 
@@ -86,19 +86,20 @@ class SSHMachine(Machine):
         with open(local_path, 'wb') as f:
             f.write(content)
 
-    def cp_multi_to(self, local_paths: list[str], remote_path: str) -> str:
+    def cp_multi_to(self, local_paths: list[Path], remote_path: PurePosixPath) -> str:
         logging.info(f"Copying {len(local_paths)} files to remote {remote_path}...")
         max_len: int = 8000  # 8191 official limit
         batches: list[list[str]] = []
         batch: str = ""
         batch_list: list[str] = []
         for local_path in local_paths:
-            if len(batch) + len(local_path) + 1 > max_len:
+            local_path_posix: str = local_path.as_posix()
+            if len(batch) + len(local_path_posix) + 1 > max_len:
                 batches.append(batch_list)
                 batch_list = []
                 batch = ""
-            batch += local_path + " "
-            batch_list.append(local_path)
+            batch += local_path_posix + " "
+            batch_list.append(local_path_posix)
         if len(batch_list) > 0:
             batches.append(batch_list)
         cmd_out = ""
@@ -221,6 +222,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     queue: list[SimulationTask]
     completed: list[SimulationTask]
     remote: SSHMachine
+    local: LocalMachine
 
     def enqueue(self, simulation_task: SimulationTask):
         assert isinstance(simulation_task, SimulationTask)
@@ -239,10 +241,11 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
             logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
         return self.completed
 
-    def __init__(self, remote: SSHMachine, batch_size: int = 10):
+    def __init__(self, remote: SSHMachine, local: LocalMachine, batch_size: int = 10):
         super().__init__()
         self.batch_size = batch_size
         self.remote = remote
+        self.local = local
         self.queue = []
         self.completed = []
 
@@ -301,13 +304,13 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         """
         simulation_info = []
         # Make new dir in remote execution path "batch_<timestamp>_<random[0-1000]>"
-        batch_name = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
-        local_batch_path = LOCAL_EXECUTION_PATH / batch_name
-        remote_batch_path = self.remote.execution_path / batch_name
-        batch_info_path = os.path.join(local_batch_path, BATCH_INFO_PATH)
-        local_multi_py = config.LOCAL_MULTI_PY
-        remote_multi_py = remote_batch_path / "multi.py"
-        self.remote.mkdir(local_batch_path)
+        batch_name: Path = Path(f"batch_{int(time.time())}_{random.randint(0, 1000)}")
+        local_batch_path: Path = LOCAL_EXECUTION_PATH / batch_name
+        remote_batch_path: PurePosixPath = cast(PurePosixPath, self.remote.execution_path) / batch_name
+        batch_info_path: Path = local_batch_path / BATCH_INFO_PATH
+        local_multi_py: Path = config.LOCAL_MULTI_PY
+        remote_multi_py: PurePosixPath = remote_batch_path / "multi.py"
+        self.local.mkdir(local_batch_path)
 
         for i, simulation in enumerate(simulations):
             local_sim_folder: Path = simulation.local_input_file
@@ -327,7 +330,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
             for i, (simulation, shell) in enumerate(zip(simulations, tasks))
         ]) + "\n")
 
-        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], self.remote.execution_path.as_posix())
+        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], cast(PurePosixPath, self.remote.execution_path))
 
         self.remote.cp_to(local_batch_path, remote_batch_path, is_folder=True)
         self.remote.cp_to(local_multi_py, remote_multi_py)

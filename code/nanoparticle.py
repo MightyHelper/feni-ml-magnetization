@@ -135,6 +135,7 @@ class Nanoparticle:
         row_count = df.shape[0]
         if row_count > expected_row_count:
             logging.debug("Expanding " + name)
+            # noinspection PyTypeChecker
             df["index"] = df.index // (row_count / expected_row_count)
             df = df.groupby("index").mean()
             df.reset_index(inplace=True)
@@ -233,8 +234,8 @@ class Nanoparticle:
         :return:
         """
         if result is None:
-            lammps_log_path: str = self.get_lammps_log_path()
-            print(f"{self.local_path=} {lammps_log_path}")
+            lammps_log_path: Path = self.get_lammps_log_path()
+            logging.info(f"{self.local_path=} {lammps_log_path}")
             lammps_log: str = utils.read_local_file(lammps_log_path)
             logging.warning(f"Run for nanoparticle {self.title} failed. LAMMPS Log:\n{lammps_log}")
             return
@@ -387,6 +388,7 @@ class RunningExecutionLocator:
                                          stderr=subprocess.DEVNULL).decode('utf-8').split("\n")
         logging.debug(f"WMIC Result: {result}")
         result = [x.strip() for x in result if x.strip() != ""]
+        xv: str = ""
         for execution in {xv for result in result if
                           "-in" in result and (xv := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""}:
             logging.debug(f"Found execution: {execution}")

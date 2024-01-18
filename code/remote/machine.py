@@ -1,7 +1,7 @@
 import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import PurePath, PurePosixPath
+from pathlib import PurePath
 from typing import Callable, Generator
 
 from model.live_execution import LiveExecution
@@ -19,8 +19,8 @@ class Machine(metaclass=ABCMeta):
 
     task_queue: list[list[SimulationTask]] = field(init=False, default_factory=list)
 
-    lammps_executable: PurePosixPath
-    execution_path: PurePosixPath
+    lammps_executable: PurePath
+    execution_path: PurePath
 
     def __str__(self) -> str:
         return f"Machine: {self.name} ({self.cores} cores) with {sum([len(queue) for queue in self.task_queue])} tasks"
@@ -28,7 +28,7 @@ class Machine(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return str(self)
 
-    def __init__(self, name: str, cores: int, execution_path: PurePosixPath, lammps_executable: PurePosixPath):
+    def __init__(self, name: str, cores: int, execution_path: PurePath, lammps_executable: PurePath):
         self.name = name
         self.cores = cores
         self.lammps_executable = lammps_executable

@@ -4,7 +4,8 @@ import random
 import re
 import subprocess
 import time
-from pathlib import Path
+from pathlib import Path, PurePath, PurePosixPath
+from typing import cast
 
 import numpy as np
 
@@ -25,16 +26,16 @@ class SlurmExecutionQueue(SingleExecutionQueue):
         super().__init__()
         self.remote = remote
 
-    def submit_toko_script(self, toko_nano_in: str, toko_sim_folder: str, local_sim_folder: str):
-        local_slurm_sh = os.path.join(local_sim_folder, config.SLURM_SH)
-        toko_slurm_sh = os.path.join(toko_sim_folder, config.SLURM_SH)
+    def submit_toko_script(self, toko_nano_in: PurePosixPath, toko_sim_folder: PurePosixPath, local_sim_folder: Path):
+        local_slurm_sh: Path = local_sim_folder / config.SLURM_SH
+        toko_slurm_sh: PurePosixPath = toko_sim_folder / config.SLURM_SH
         slurm_code = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_template(), {
                 "lammps_exec": self.remote.lammps_executable,
                 "tasks": "1",
                 "time": "00:45:00",
                 "lammps_input": toko_nano_in,
-                "lammps_output": toko_sim_folder + "/log.lammps",
+                "lammps_output": toko_sim_folder / "log.lammps",
                 "cwd": toko_sim_folder,
                 "partition": self.remote.partition_to_use,
                 "file_tag": toko_slurm_sh
@@ -51,17 +52,16 @@ class SlurmExecutionQueue(SingleExecutionQueue):
     def simulate_in_toko(self, simulation_task: SimulationTask) -> str:
         input_path = Path(simulation_task.local_input_file)
         local_sim_folder: Path = input_path.parent.resolve()
-        toko_sim_folder: Path = Path(os.path.join(self.remote.execution_path, input_path.parent.name))
-        toko_nano_in: Path = Path(os.path.join(toko_sim_folder, input_path.name))
+        toko_sim_folder: PurePosixPath = cast(PurePosixPath, self.remote.execution_path / input_path.parent.name)
+        toko_nano_in: PurePosixPath = toko_sim_folder / input_path.name
         logging.info("Creating simulation folder in toko...")
         logging.debug(f"{toko_sim_folder=}")
         logging.debug(f"{local_sim_folder=}")
         logging.debug(f"{toko_nano_in=}")
         logging.debug("Copying input file...")
-        self.remote.cp_to(local_sim_folder.as_posix(), toko_sim_folder.as_posix(), is_folder=True)
+        self.remote.cp_to(local_sim_folder, toko_sim_folder, is_folder=True)
         self.remote.copy_alloy_files(local_sim_folder, toko_sim_folder)
-        sbatch_output = self.submit_toko_script(toko_nano_in.as_posix(), toko_sim_folder.as_posix(),
-                                                local_sim_folder.as_posix())
+        sbatch_output = self.submit_toko_script(toko_nano_in, toko_sim_folder, local_sim_folder)
         jobid = re.match(r"Submitted batch job (\d+)", sbatch_output.decode('utf-8')).group(1)
         self.remote.wait_for_slurm_execution(jobid)
         logging.info("Copying output files from toko to local machine...")
@@ -140,14 +140,14 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
 
     def submit_toko_script(
             self,
-            local_batch_path: str,
-            toko_batch_path: str,
+            local_batch_path: Path,
+            toko_batch_path: PurePosixPath,
             simulation_count: int,
             n_threads: int = 1,
     ):
         # Create a slurm script to run the commands in parallel
-        local_slurm_sh = os.path.join(local_batch_path, config.SLURM_SH)
-        toko_slurm_sh = os.path.join(toko_batch_path, config.SLURM_SH)
+        local_slurm_sh: Path = local_batch_path / config.SLURM_SH
+        toko_slurm_sh: PurePosixPath = toko_batch_path / config.SLURM_SH
 
         slurm_code = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_multi_template(), {
@@ -197,18 +197,18 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
         """
         simulation_info = []
         # Make new dir in remote execution path "batch_<timestamp>_<random[0-1000]>"
-        batch_name = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
-        local_batch_path = os.path.join(LOCAL_EXECUTION_PATH, batch_name)
-        toko_batch_path = self.remote.execution_path / batch_name
-        batch_info_path = os.path.join(local_batch_path, BATCH_INFO_PATH)
-        local_multi_py = config.LOCAL_MULTI_PY
-        toko_multi_py = toko_batch_path / "multi.py"
+        batch_name: PurePath = PurePath(f"batch_{int(time.time())}_{random.randint(0, 1000)}")
+        local_batch_path: Path = LOCAL_EXECUTION_PATH / batch_name
+        toko_batch_path: PurePosixPath = cast(PurePosixPath, self.remote.execution_path / batch_name)
+        batch_info_path: Path = local_batch_path / BATCH_INFO_PATH
+        local_multi_py: Path = config.LOCAL_MULTI_PY
+        toko_multi_py: PurePosixPath = toko_batch_path / "multi.py"
         os.mkdir(local_batch_path)
 
         for i, simulation in enumerate(simulations):
             local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
-            toko_sim_folder: Path = self.remote.execution_path / local_sim_folder.name
-            toko_nano_in: Path = toko_sim_folder / simulation.local_input_file.name
+            toko_sim_folder: PurePath = self.remote.execution_path / local_sim_folder.name
+            toko_nano_in: PurePath = toko_sim_folder / simulation.local_input_file.name
             logging.debug(f"Creating simulation folder in toko ({i + 1}/{len(simulations)})...")
             if i == 0:
                 logging.debug(f"{toko_sim_folder=}")
@@ -222,7 +222,7 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
             for i, (simulation, shell) in enumerate(zip(simulations, tasks))
         ]) + "\n")
 
-        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], self.remote.execution_path)
+        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], cast(PurePosixPath, self.remote.execution_path))
 
         self.remote.cp_to(local_batch_path, toko_batch_path, is_folder=True)
         self.remote.cp_to(local_multi_py, toko_multi_py)

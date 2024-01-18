@@ -6,7 +6,6 @@ from pathlib import Path, PurePosixPath
 from unittest import TestCase
 
 import config
-from remote import toko_machine
 import utils
 from remote.slurm_machine import SLURMMachine
 
@@ -49,7 +48,7 @@ class TestTokoUtils(TestCase):
         assert copy_result == b'', f"[{copy_style}] copy_result: {copy_result}"
 
         # Try to copy again to assess that a new folder is not created inside
-        copy_result: bytes = toko.cp_to(local_dir, toko_dir, is_folder=True)
+        toko.cp_to(local_dir, toko_dir, is_folder=True)
         list_result: list[str] = toko.ls(toko_dir)
         assert len(list_result) == 10, f"[{copy_style}] list_result: {list_result}"
 

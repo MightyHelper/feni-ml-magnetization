@@ -13,17 +13,17 @@ from cli_parts import ui_utils
 from nanoparticle_renamer import NanoparticleRenamer, BasicNanoparticleRenamer, NewNanoparticleRenamer
 from utils import assign_nanoparticle_name
 
-dataset = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
+dat = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
 
 
-@dataset.command()
+@dat.command()
 def rename(path: Path = Path("../Shapes"), rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
     """
     class_type = _get_renamer(rename_type)
 
-    renames: list[tuple[str, str]] = class_type.get_all_renames_for_folder(path.as_posix())
+    renames: list[tuple[str, str]] = class_type.get_all_renames_for_folder(path)
     if len(renames) == 0:
         rprint("[yellow]No renames found[/yellow]")
     class_type.output_renames(renames)
@@ -38,7 +38,7 @@ def _get_renamer(rename_type):
     return class_type
 
 
-@dataset.command()
+@dat.command()
 def single(path: Path, rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
@@ -48,7 +48,7 @@ def single(path: Path, rename_type: str = "basic"):
     rprint(f"[green]{nanoparticle}[/green]")
 
 
-@dataset.command()
+@dat.command()
 def rename_in_dataset(dataset_path: Path, output_path: Path = None, rename_type: str = "basic"):
     """
     Output nanoparticle renames for a folder
@@ -67,7 +67,7 @@ def rename_in_dataset(dataset_path: Path, output_path: Path = None, rename_type:
         dataset.to_csv(output_path, index=False)
 
 
-@dataset.command()
+@dat.command()
 def normalize_ratios(input_path: Path, output_path: Path = None):
     """
     Output nanoparticle renames for a folder
@@ -87,7 +87,7 @@ def normalize_ratios(input_path: Path, output_path: Path = None):
         dataset.to_csv(output_path, index=False)
 
 
-@dataset.command()
+@dat.command()
 def dataset_info(
         dataset_path: Annotated[Path, typer.Argument(help="Path to dataset")],
         by: Annotated[str, typer.Option(help="Csv of Fields to group by", show_default=True)] = "Shape",

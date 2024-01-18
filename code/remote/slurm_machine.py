@@ -2,8 +2,8 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass
-from pathlib import PurePath
-from typing import Generator
+from pathlib import PurePath, PurePosixPath
+from typing import Generator, cast
 
 import config
 from config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
@@ -37,7 +37,7 @@ class SLURMMachine(SSHMachine):
             user: str,
             remote_url: str,
             copy_script: PurePath = 'rsync',
-            lammps_executable: PurePath = 'lmp',
+            lammps_executable: PurePosixPath = 'lmp',
             partition_to_use: str = TOKO_PARTITION_TO_USE,
             node_id: int = 1,
             sbatch_path: PurePath = TOKO_SBATCH,
@@ -122,7 +122,7 @@ class SLURMMachine(SSHMachine):
             batch_info: PurePath = file_tag.parent / config.BATCH_INFO_PATH
             logging.debug(f"Batch info: {batch_info}")
             try:
-                batch_info_content: str = self.read_file(batch_info.as_posix())
+                batch_info_content: str = self.read_file(cast(PurePosixPath, batch_info))
             except FileNotFoundError:
                 batch_info_content: str = "1: " + (file_tag.parent / config.NANOPARTICLE_IN).as_posix()
             file_read_output, files_to_read = self._read_required_files(batch_info_content)
@@ -131,7 +131,7 @@ class SLURMMachine(SSHMachine):
             for folder, step, title in self._get_execution_data(file_read_output, files_to_read):
                 total_steps += step
                 count += 1
-                if title != FINISHED_JOB:
+                if title != config.FINISHED_JOB:
                     yield folder, step, title
             if batch_info_content.count("\n") > 1:
                 logging.debug(f"Found Batch execution")
@@ -142,7 +142,7 @@ class SLURMMachine(SSHMachine):
             try:
                 lammps_log_content = file_read_output[lammps_log]
                 if "Total wall time" in lammps_log_content:
-                    yield folder_name, config.FULL_RUN_DURATION, FINISHED_JOB
+                    yield folder_name, config.FULL_RUN_DURATION, config.FINISHED_JOB
                     continue
                 current_step = LammpsRun.compute_current_step(lammps_log_content)
                 logging.debug(f"Current step: {current_step} {folder_name}")

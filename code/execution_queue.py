@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from multiprocessing.pool import ThreadPool
 from pathlib import PurePath
 
-from config import LAMMPS_EXECUTABLE
 from remote.local_machine import LocalMachine
 from simulation_task import SimulationTask
 
@@ -62,7 +61,7 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         assert simulation_task not in self.queue
         self.queue.append(simulation_task)
 
-    def _get_next_task(self) -> SimulationTask:
+    def _get_next_task(self) -> SimulationTask | None:
         if len(self.queue) == 0:
             return None
         element = self.queue[0]

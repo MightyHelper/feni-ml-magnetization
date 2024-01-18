@@ -22,26 +22,26 @@ class LocalMachine(Machine):
         logging.debug(f"Running {command=}")
         return subprocess.check_output(command)
 
-    def mkdir(self, remote_path: str):
+    def mkdir(self, remote_path: Path):
         os.makedirs(remote_path, exist_ok=True)
 
-    def cp_to(self, local_path: str, remote_path: str, is_folder: bool):
-        if Path(local_path) == Path(remote_path):
+    def cp_to(self, local_path: Path, remote_path: Path, is_folder: bool):
+        if local_path == remote_path:
             return
         if is_folder:
             self.run_cmd(lambda: ["cp", "-r", local_path, remote_path])
         else:
             self.run_cmd(lambda: ["cp", local_path, remote_path])
 
-    def cp_multi_to(self, local_paths: list[str], remote_path: str):
+    def cp_multi_to(self, local_paths: list[Path], remote_path: Path):
         for local_path in local_paths:
-            self.cp_to(local_path, (Path(remote_path) / Path(local_path).name).as_posix(), is_folder=True)
+            self.cp_to(local_path, remote_path / local_path.name, is_folder=True)
 
-    def cp_multi_from(self, remote_paths: list[str], local_path: str):
+    def cp_multi_from(self, remote_paths: list[Path], local_path: Path):
         for remote_path in remote_paths:
-            self.cp_from(remote_path, (Path(local_path) / Path(remote_path).name).as_posix(), is_folder=True)
+            self.cp_from(remote_path, local_path / remote_path.name, is_folder=True)
 
-    def cp_from(self, remote_path: str, local_path: str, is_folder: bool):
+    def cp_from(self, remote_path: Path, local_path: Path, is_folder: bool):
         self.cp_to(remote_path, local_path, is_folder)
 
     def read_file(self, filename: str) -> str:
@@ -60,7 +60,7 @@ class LocalMachine(Machine):
         os.rmdir(remote_dir)
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
-        from nanoparticle import RunningExecutionLocator, Nanoparticle
+        from nanoparticle import Nanoparticle
         ps_result = os.popen("ps -ef | grep " + self.lammps_executable.as_posix()).readlines()
         for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
             folder_name = Path(execution).parent
