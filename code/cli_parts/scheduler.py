@@ -1,13 +1,15 @@
+from pathlib import Path
+
 import typer
 
 import config
-from model.machine import Machine
+from remote.machine import Machine
 from nanoparticle import Nanoparticle
 from rich import print as rprint
 from service import executor_service
 from service.scheduler_service import SchedulerService
 from simulation_task import SimulationTask
-from remote.toko_utils import estimate_time
+from remote.toko_machine import estimate_time
 
 sched = typer.Typer(add_completion=False, no_args_is_help=True, name="sched")
 
@@ -30,7 +32,7 @@ def schedule(
     """
     nanoparticles: list[tuple[str, Nanoparticle]] = executor_service.build_nanoparticles_to_execute(
         [],
-        "../Shapes",
+        Path("../Shapes"),
         seed,
         seed_count
     )

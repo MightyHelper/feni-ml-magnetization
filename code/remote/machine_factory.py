@@ -1,6 +1,5 @@
-import multiprocessing
-
-from model.machine import Machine, SLURMMachine
+from remote.machine import Machine
+from remote.slurm_machine import SLURMMachine
 
 
 def get_toko_cores(partition: str = "mini") -> int:
@@ -13,20 +12,13 @@ def get_toko_cores(partition: str = "mini") -> int:
 
 class MachineFactory:
     @staticmethod
-    def local() -> Machine:
-        return Machine(
-            name="local",
-            cores=multiprocessing.cpu_count(),
-        )
-
-    @staticmethod
     def toko(partition: str, node_id: int = 1) -> Machine:
         from config import TOKO_URL, TOKO_USER
         return SLURMMachine(
             name="toko",
-            hostname=TOKO_URL,
+            remote_url=TOKO_URL,
             cores=get_toko_cores(partition),
+            partition_to_use=partition,
             user=TOKO_USER,
-            partition=partition,
             node_id=node_id,
         )

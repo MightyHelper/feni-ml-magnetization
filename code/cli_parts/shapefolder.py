@@ -1,4 +1,4 @@
-import logging
+from pathlib import Path
 from typing import Annotated
 
 import matplotlib.pyplot as plt
@@ -8,20 +8,19 @@ import typer
 from rich import print as rprint
 
 import config
-import nanoparticle_locator
 import poorly_coded_parser as parser
 import service.executor_service
 from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import do_plots, correct_highlighter
 from nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
-from utils import parse_nanoparticle_name, dot_dot
+from utils import parse_nanoparticle_name
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 
 
 @shapefolder.command()
-def ls(path: str = "../Shapes"):
+def ls(path: Path = Path("../Shapes")):
     """
     List available nanoparticles in folder
     """
@@ -52,12 +51,12 @@ def ls(path: str = "../Shapes"):
 @shapefolder.command()
 def parseshapes(
         path: Annotated[
-            str,
+            Path,
             typer.Option(
                 help="Path to folder with nanoparticle shapes",
                 show_default=True
             )
-        ] = "../Shapes",
+        ] = Path("../Shapes"),
         test: Annotated[
             bool,
             typer.Option(
@@ -150,7 +149,7 @@ def parseshapes(
         df = df.sort_values(by=["title"], ignore_index=True)
     elif sort_by == "errors":
         df = df.sort_values(by=[ratio_ok_col, count_ok_col, "title"], ignore_index=True, ascending=[False, False, True])
-    # if all df['mag'] == (None, None) dont show the column
+    # if all df['mag'] == (None, None) don't show the column
     if all(df['mag'] == (None, None)):
         df.drop(columns=["mag"], inplace=True)
     for column in df.columns:
@@ -222,7 +221,7 @@ def parseshapes(
     console.print(table, highlight=True)
     if plot_ni_distribution:
         # Plot ratio_ni
-        fig: plt.Figure = do_plots(
+        _: plt.Figure = do_plots(
             df,
             "Shape",
             "ratio_ni",
@@ -235,7 +234,7 @@ def parseshapes(
 
 
 @shapefolder.command()
-def inspect(path: str):
+def inspect(path: Path):
     """
     Inspect a nanoparticle
     """
@@ -246,23 +245,3 @@ def inspect(path: str):
     rprint(f"[bold underline green]Can seeds be modified?[/bold underline green] {is_random}")
     rprint(nano)
     rprint(region)
-
-
-@shapefolder.command(deprecated=True, hidden=True)
-def shrink():
-    """
-    Shrink all nanoparticle shapes (Deprecated - Do not use
-    )
-    """
-    for path in nanoparticle_locator.NanoparticleLocator.sorted_search("../Shapes"):
-        _, nano = parser.PoorlyCodedParser.parse_single_shape(path)
-        nano = nano.build()
-        region = nano.get_region()
-        shrink_path = dot_dot(path) + "/nano.shrink"
-        with open(shrink_path, "w") as f:
-            f.write(region)
-        _, parsed = parser.PoorlyCodedParser.parse_single_shape(shrink_path, True)
-        parsed = parsed.build()
-        parsed_region = parsed.get_region()
-        assert parsed_region == region, f"Regions are not equal:\n{parsed_region}\n{region}"
-        logging.info(f"Shrunk {path}")

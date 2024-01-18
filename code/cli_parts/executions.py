@@ -27,7 +27,6 @@ from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks, update_tasks, \
     create_tasks
 from service.executor_service import execute_nanoparticles
-from utils import resolve_path
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
@@ -82,7 +81,7 @@ def ls(count: bool = False, plot_magnetism: bool = False, save: Path = None, by:
 
 def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, str], tuple[str, str, str, str, str, str]]:
         try:
-            info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH + "/" + folder)
+            info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
             row = (
                 f"[green]{i}[/green]",
                 f"[cyan]{folder}[/cyan]",
@@ -119,7 +118,7 @@ def clean(keep_ok: bool = False, keep_full: bool = True, keep_batch: bool = True
         for file in listdir:
             full_path = os.path.join(config.LOCAL_EXECUTION_PATH, execution, file)
             os.remove(full_path)
-        os.rmdir(config.LOCAL_EXECUTION_PATH + "/" + execution)
+        os.rmdir(config.LOCAL_EXECUTION_PATH / execution)
         total += 1
     if total == 0:
         rprint(f"[red]No executions to remove[/red].")
@@ -185,11 +184,11 @@ def get_running_executions(in_toko: bool, only_running: bool) -> list[tuple[str,
 
 
 @executions.command()
-def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local") -> str | None:
+def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local") -> Path | None:
     """
     Execute a nanoparticle simulation
     """
-    abs_path: str = resolve_path(path)
+    abs_path: Path = Path(path).resolve()
     path, nano_builder = parser.PoorlyCodedParser.parse_single_shape(abs_path)
     nano: nanoparticle.Nanoparticle = nano_builder.build()
     result: list[tuple[str, nanoparticle.Nanoparticle]] = execute_nanoparticles([(path, nano)], at, test)
@@ -198,7 +197,7 @@ def execute(path: Path, plot: bool = False, test: bool = True, at: str = "local"
         rprint(nano.asdict())
         if plot:
             nano.plot()
-        return nano.path
+        return nano.local_path
     except IndexError:
         logging.error("Execution failed.")
         return None
@@ -218,7 +217,7 @@ def inspect(
     Inspect a complete nanoparticle simulation
     """
     for path in paths:
-        nano = nanoparticle.Nanoparticle.from_executed(resolve_path(path))
+        nano = nanoparticle.Nanoparticle.from_executed(path)
 
         reh = ZeroHighlighter()
         r = ReprHighlighter()
@@ -257,7 +256,7 @@ def csv(paths: list[Path], output_csv_format: Path, concat: bool = False):
     my_csv = pd.read_csv(output_csv_format)
     dfs = []
     for path in paths:
-        nano = nanoparticle.Nanoparticle.from_executed(resolve_path(path))
+        nano = nanoparticle.Nanoparticle.from_executed(path)
         dfs.append(nano.columns_for_dataset())
     my_df = pd.concat(dfs)
     my_df = my_df[my_csv.columns]  # Sort my_df columns to be in the order of my_csv
@@ -294,7 +293,7 @@ def raw_parse_completed(reparse: bool = False):
         task_id = progress.add_task("Parsing", total=len(to_parse))
         for i, folder in enumerate(to_parse):
             logging.info(f"Parsing {folder}")
-            nano = nanoparticle.Nanoparticle.from_executed(os.path.join(config.LOCAL_EXECUTION_PATH, folder))
+            nano = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
             nano.on_post_execution("Some non-empty result")
             progress.update(task_id, completed=i, total=len(to_parse))
         progress.remove_task(task_id)

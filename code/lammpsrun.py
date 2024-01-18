@@ -1,7 +1,10 @@
 import logging
 import os
 import re
+from pathlib import Path
+from typing import Any
 
+import utils
 from lammpsdump import LammpsDump
 from simulation_task import SimulationTask, SimulationWrapper
 from utils import generate_random_filename
@@ -11,24 +14,29 @@ class LammpsRun:
 	"""
 	Functions to execute a lammps run
 	"""
+	output: str
+	code: str
+	sim_params: dict[str, Any]
+	file_name: Path
+	cwd: Path
+	expect_dumps: list[Path]
+	dumps: dict[int, LammpsDump]
 
-	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: str = None):
+	def __init__(self, code: str, sim_params: dict, expect_dumps: list = None, file_name: Path = None):
 		self.output = ""
 		self.code = code
 		self.sim_params = sim_params
-		self.file_name = f'/tmp/in.{generate_random_filename()}.lammps' if file_name is None else file_name
+		self.file_name = Path(f'/tmp/in.{generate_random_filename()}.lammps') if file_name is None else file_name
 		self.expect_dumps = [] if expect_dumps is None else expect_dumps
-		if 'cwd' in sim_params and sim_params['cwd'] is not None:
-			self.expect_dumps = [f"{sim_params['cwd']}/{dump}" for dump in self.expect_dumps]
-		else:
-			logging.warning("No CWD passed to sim_params!")
+		self.cwd = Path(sim_params['cwd']).resolve() if 'cwd' in sim_params and sim_params['cwd'] is not None else Path.cwd().resolve()
+		self.expect_dumps = [self.cwd / dump for dump in self.expect_dumps]
 		self.dumps: dict[int, LammpsDump] = {}
 
-	def get_lammps_log_filename(self):
-		return self.sim_params['cwd'] + "/log.lammps"
+	def get_lammps_log_filename(self) -> Path:
+		return self.cwd / "log.lammps"
 
 	@staticmethod
-	def compute_current_step(lammps_log_contents: str):
+	def compute_current_step(lammps_log_contents: str) -> int:
 		"""
 		Get the current step of a lammps log file
 		"""
@@ -43,13 +51,12 @@ class LammpsRun:
 			pass
 		return step
 
-	def get_current_step(self):
+	def get_current_step(self) -> int:
 		"""
 		Get the current step of a lammps log file
 		"""
 		try:
-			with open(self.get_lammps_log_filename(), "r") as f:
-				return LammpsRun.compute_current_step(f.read())
+			LammpsRun.compute_current_step(utils.read_local_file(self.get_lammps_log_filename()))
 		except FileNotFoundError:
 			pass
 		return -1
@@ -58,7 +65,7 @@ class LammpsRun:
 		"""
 		Get a simulation task for this run
 		"""
-		sim_task = SimulationWrapper.generate(self.code, self.sim_params, file_to_use=self.file_name)
+		sim_task = SimulationWrapper.generate(self.code, file_to_use=self.file_name, sim_params=self.sim_params)
 		sim_task.add_callback(self.on_post_execution)
 		return sim_task
 
@@ -81,12 +88,11 @@ class LammpsRun:
 		return dumps
 
 	@staticmethod
-	def from_path(path):
-		files = os.listdir(path)
-		nano_in = [path + "/" + file for file in files if file.endswith(".in")][0]
-		with open(nano_in, "r") as f:
-			code = f.read()
-		dumps = [file for file in files if file.endswith(".dump")]
+	def from_path(path: Path):
+		files: list[str] = os.listdir(path)
+		nano_in: Path = [path / file for file in files if file.endswith(".in")][0]
+		code: str = utils.read_local_file(nano_in)
+		dumps: list[Path] = [path / file for file in files if file.endswith(".dump")]
 		lr = LammpsRun(code, {'cwd': path}, dumps, nano_in)
 		lr.dumps = lr._parse_dumps()
 		return lr
