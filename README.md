@@ -121,8 +121,8 @@ Void = Pores.1
 
 ## TODO:
 Exec clean for toko
-Allow scp by single file in batch mode
-Properly test scp/rsync
+Allow exec execute multiple nanoparticles at a time
+
 
 
 ## Note about Paths in pathlib

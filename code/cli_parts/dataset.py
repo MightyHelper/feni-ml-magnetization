@@ -17,9 +17,9 @@ dat = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")
 
 
 @dat.command()
-def rename(path: Path = Path("../Shapes"), rename_type: str = "basic"):
+def rename(path: Annotated[Path, typer.Option(help="Path to the folder", show_default=True)], rename_type: Annotated[str, typer.Option(help="Type of renaming to be done", show_default=True)] = "basic"):
     """
-    Output nanoparticle renames for a folder
+    Outputs the renamed nanoparticles for a given folder.
     """
     class_type = _get_renamer(rename_type)
 
@@ -30,6 +30,9 @@ def rename(path: Path = Path("../Shapes"), rename_type: str = "basic"):
 
 
 def _get_renamer(rename_type):
+    """
+    Returns the appropriate renamer class based on the rename_type.
+    """
     class_type = NanoparticleRenamer
     if rename_type == "basic":
         class_type = BasicNanoparticleRenamer
@@ -39,9 +42,9 @@ def _get_renamer(rename_type):
 
 
 @dat.command()
-def single(path: Path, rename_type: str = "basic"):
+def single(path: Annotated[Path, typer.Option(help="Path to the folder", show_default=True)], rename_type: Annotated[str, typer.Option(help="Type of renaming to be done", show_default=True)] = "basic"):
     """
-    Output nanoparticle renames for a folder
+    Outputs the renamed nanoparticle for a single folder.
     """
     class_type = _get_renamer(rename_type)
     nanoparticle = class_type.get_new_nanoparticle_name(path.as_posix(), [])
@@ -49,9 +52,9 @@ def single(path: Path, rename_type: str = "basic"):
 
 
 @dat.command()
-def rename_in_dataset(dataset_path: Path, output_path: Path = None, rename_type: str = "basic"):
+def rename_in_dataset(dataset_path: Annotated[Path, typer.Option(help="Path to the dataset", show_default=True)], output_path: Annotated[Path, typer.Option(help="Path to output the renamed dataset", show_default=True)] = None, rename_type: Annotated[str, typer.Option(help="Type of renaming to be done", show_default=True)] = "basic"):
     """
-    Output nanoparticle renames for a folder
+    Outputs the renamed nanoparticles for a dataset.
     """
     class_type = _get_renamer(rename_type)
 
@@ -68,9 +71,9 @@ def rename_in_dataset(dataset_path: Path, output_path: Path = None, rename_type:
 
 
 @dat.command()
-def normalize_ratios(input_path: Path, output_path: Path = None):
+def normalize_ratios(input_path: Annotated[Path, typer.Option(help="Path to the input dataset", show_default=True)], output_path: Annotated[Path, typer.Option(help="Path to output the normalized dataset", show_default=True)] = None):
     """
-    Output nanoparticle renames for a folder
+    Normalizes the ratios in the dataset and outputs the result.
     """
     dataset: pd.DataFrame = pd.read_csv(input_path)
     rprint("[magenta]Before[/magenta]")
@@ -91,10 +94,10 @@ def normalize_ratios(input_path: Path, output_path: Path = None):
 def dataset_info(
         dataset_path: Annotated[Path, typer.Argument(help="Path to dataset")],
         by: Annotated[str, typer.Option(help="Csv of Fields to group by", show_default=True)] = "Shape",
-        save: Path = None
+        save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None
 ):
     """
-    Output nanoparticle renames for a folder
+    Outputs information about the dataset grouped by the specified fields.
     """
     dataset = pd.read_csv(dataset_path)
     for i, row in dataset.iterrows():

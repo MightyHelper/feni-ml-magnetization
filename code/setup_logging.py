@@ -4,6 +4,7 @@ import signal
 import sys
 
 from rich.logging import RichHandler
+
 from config import LOG_LEVEL
 
 

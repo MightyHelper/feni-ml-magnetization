@@ -1,4 +1,4 @@
-from pathlib import PurePath, PurePosixPath
+from pathlib import PurePosixPath
 
 from remote.machine import Machine
 from remote.slurm_machine import SLURMMachine

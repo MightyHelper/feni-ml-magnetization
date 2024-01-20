@@ -6,7 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/code" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/executions" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="3.10 @ Ubuntu" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

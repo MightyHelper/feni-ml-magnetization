@@ -12,7 +12,6 @@ from model.live_execution import LiveExecution
 from remote.ssh_machine import SSHMachine
 
 
-
 @dataclass
 class SLURMMachine(SSHMachine):
     """

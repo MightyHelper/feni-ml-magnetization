@@ -1,15 +1,15 @@
 from pathlib import Path
 
 import typer
+from rich import print as rprint
 
 import config
-from remote.machine import Machine
 from nanoparticle import Nanoparticle
-from rich import print as rprint
+from remote.machine import Machine
+from remote.toko_machine import estimate_time
 from service import executor_service
 from service.scheduler_service import SchedulerService
 from simulation_task import SimulationTask
-from remote.toko_machine import estimate_time
 
 sched = typer.Typer(add_completion=False, no_args_is_help=True, name="sched")
 

@@ -1,4 +1,5 @@
 import logging
+from multiprocessing.pool import ThreadPool
 from pathlib import Path, PurePath, PurePosixPath
 
 
@@ -36,6 +37,7 @@ TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
 BATCH_INFO_PATH = PurePath("batch_info.txt")
 SLURM_SH = PurePath("slurm.sh")
 RUN_SH = PurePath("run.sh")
+EXEC_LS_POOL_TYPE = ThreadPool
 MACHINES = load_machines
 FULL_RUN_DURATION = 300000
 LAMMPS_DUMP_INTERVAL = 100000
