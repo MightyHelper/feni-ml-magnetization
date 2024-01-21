@@ -180,7 +180,7 @@ def get_running_executions(in_toko: bool, only_running: bool) -> list[tuple[str,
 
 @executions.command()
 def execute(
-        paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
+        paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
         plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
         test: Annotated[bool, typer.Option(help="Whether to run in test mode or not", show_default=True)] = True,
         at: Annotated[str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
@@ -188,14 +188,15 @@ def execute(
         seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 0
 ) -> list[Path | None]:
     """
-    Execute a nanoparticle simulation
+    This command executes a list of nanoparticle simulations.
     """
-    result_paths: list[Path | None] = []
     builders: list[tuple[str, NanoparticleBuilder]] = list(parser.PoorlyCodedParser.load_shapes_from_paths(paths))
     nanoparticles: list[tuple[str, Nanoparticle]] = add_extra_nanoparticles(builders, seed, seed_count)
     results: list[tuple[str, nanoparticle.Nanoparticle]] = execute_nanoparticles(nanoparticles, at, test)
     for path, nano in results:
         rprint(nano.asdict())
+    result_paths: list[Path | None] = []
+    for path, nano in results:
         if plot:
             nano.plot()
         result_paths.append(nano.local_path)

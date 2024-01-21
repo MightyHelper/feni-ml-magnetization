@@ -4,4 +4,5 @@ ovito==3.9.1
 pandas==2.0.3
 rich==13.6.0
 typer==0.9.0
- bayesian-optimization==1.4.3
+bayesian-optimization==1.4.3
+paramiko==3.4.0

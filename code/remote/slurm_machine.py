@@ -35,6 +35,7 @@ class SLURMMachine(SSHMachine):
             cores: int,
             user: str,
             remote_url: str,
+            port: int = 22,
             copy_script: PurePath = PurePath('rsync'),
             lammps_executable: PurePosixPath = PurePosixPath('lmp'),
             execution_path: PurePosixPath = PurePosixPath(''),
@@ -45,7 +46,7 @@ class SLURMMachine(SSHMachine):
             scontrol_path: PurePath = TOKO_SCONTROL,
             sinfo_path: PurePath = TOKO_SINFO,
     ):
-        super().__init__(name, cores, user, remote_url, copy_script, lammps_executable, execution_path)
+        super().__init__(name, cores, user, remote_url, port, copy_script, lammps_executable, execution_path)
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path
         self.sbatch_path = sbatch_path

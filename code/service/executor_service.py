@@ -11,7 +11,26 @@ import poorly_coded_parser as parser
 from config import MACHINES
 from nanoparticle import Nanoparticle
 from remote import toko_machine
+from remote.local_machine import LocalMachine
+from remote.machine import Machine
+from remote.machine_factory import MachineFactory
+from remote.slurm_machine import SLURMMachine
+from remote.ssh_machine import SSHMachine, SSHBatchedExecutionQueue
 from simulation_task import SimulationTask
+
+def get_execution_queue(machine: Machine, n_threads: int, local_machine: LocalMachine):
+    if isinstance(machine, LocalMachine):
+        if n_threads is None:
+            return execution_queue.LocalExecutionQueue(machine)
+        return execution_queue.ThreadedLocalExecutionQueue(machine, n_threads)
+    elif isinstance(machine, SLURMMachine):
+        if n_threads is None:
+            return toko_machine.SlurmExecutionQueue(machine)
+        return toko_machine.SlurmBatchedExecutionQueue(machine, n_threads)
+    elif isinstance(machine, SSHMachine):
+        if n_threads is None:
+            n_threads = 1
+        return SSHBatchedExecutionQueue(machine, local_machine, n_threads)
 
 
 def get_executor(at: str) -> execution_queue.ExecutionQueue:
@@ -21,16 +40,13 @@ def get_executor(at: str) -> execution_queue.ExecutionQueue:
     :param at: A string that determines the type of ExecutionQueue to return.
     :return: An instance of ExecutionQueue.
     """
-    if at == "local":
-        return execution_queue.LocalExecutionQueue(MACHINES()['local'])
-    elif at.startswith("local:"):
-        return execution_queue.ThreadedLocalExecutionQueue(MACHINES()['local'], int(at.split(":")[1]))
-    elif at == "toko":
-        return toko_machine.SlurmExecutionQueue(MACHINES()['mini'])
-    elif at.startswith("toko:"):
-        return toko_machine.SlurmBatchedExecutionQueue(MACHINES()['mini'], int(at.split(":")[1]))
-    else:
-        raise ValueError(f"Unknown queue {at}")
+    machine_name, *threads = at.split(":")
+    n_threads: int | None = int(threads[0]) if len(threads) > 0 else None
+    machines = MACHINES()
+    for name, machine in machines.items():
+        if machine_name == name:
+            return get_execution_queue(machine, n_threads, machines["local"])
+    raise ValueError(f"Unknown queue {at} (known queues: {list(machines.keys())})")
 
 
 def execute_nanoparticles(

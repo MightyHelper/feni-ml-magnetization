@@ -2,9 +2,10 @@ import logging
 import random
 import subprocess
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Generator, cast
+from typing import Generator, cast, Callable, TypeVar, Any
 
 import config
 import utils
@@ -17,6 +18,62 @@ from simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import write_local_file
 
+T = TypeVar('T')
+
+class CopyProvider(ABC):
+    @abstractmethod
+    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        pass
+
+    @abstractmethod
+    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        pass
+
+class SCPCopyProvider(CopyProvider):
+    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        def gen_cmd(user: str, remote_url: str, remote_port: int):
+            return [
+                "scp",
+                "-P",
+                f"{remote_port}",
+                "-r",
+                *[f"{user}@{remote_url}:{remote_path}" for remote_path in remote_paths],
+                local_path.as_posix()
+            ]
+        return gen_cmd
+
+    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        def gen_cmd(user: str, remote_url: str, remote_port: int):
+            return [
+                "scp",
+                "-P",
+                f"{remote_port}",
+                "-r",
+                *[str(local_path) for local_path in local_paths],
+                f"{user}@{remote_url}:{remote_path}"
+            ]
+        return gen_cmd
+
+class RsyncCopyProvider(CopyProvider):
+    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        def gen_cmd(user: str, remote_url: str, remote_port: int):
+            return [
+                "rsync",
+                "-ar",
+                *[f"rsync://{user}@{remote_url}:{remote_port}/{remote_path}" for remote_path in remote_paths],
+                local_path.as_posix()
+            ]
+        return gen_cmd
+
+    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[[str, str, int], list[str]]:
+        def gen_cmd(user: str, remote_url: str, remote_port: int):
+            return [
+                "rsync",
+                "-ar",
+                *[str(local_path) for local_path in local_paths],
+                f"rsync://{user}@{remote_url}:{remote_port}/{remote_path}"
+            ]
+        return gen_cmd
 
 @dataclass
 class SSHMachine(Machine):
@@ -26,7 +83,10 @@ class SSHMachine(Machine):
 
     user: str
     remote_url: str
+    port: int
     copy_script: PurePath
+
+    copy_provider: CopyProvider
 
     def __init__(
             self,
@@ -34,6 +94,7 @@ class SSHMachine(Machine):
             cores: int,
             user: str,
             remote_url: str,
+            port: int = 22,
             copy_script: PurePath = 'rsync',
             lammps_executable: PurePath = PurePath('lmp'),
             execution_path: PurePath = PurePath('~/magnetism/simulations')
@@ -41,17 +102,20 @@ class SSHMachine(Machine):
         super().__init__(name, cores, execution_path, lammps_executable)
         self.user = user
         self.remote_url = remote_url
+        self.port = port
         self.copy_script = copy_script
+        self.copy_provider = SCPCopyProvider() if copy_script == 'scp' else RsyncCopyProvider()
 
-    def run_cmd(self, command_getter) -> bytes:
-        command = command_getter(self.user, self.remote_url)
+    def run_cmd(self, command_getter: Callable[[str, str, int], list[str]]) -> bytes:
+        command = command_getter(self.user, self.remote_url, self.port)
         logging.debug(f"Running {command=}")
         return subprocess.check_output(command)
 
     def mkdir(self, remote_path: PurePosixPath) -> bytes:
         return self.run_cmd(
-            lambda user, remote_url: [
+            lambda user, remote_url, remote_port: [
                 "ssh",
+                f"-p", f"{remote_port}",
                 f"{user}@{remote_url}",
                 f"mkdir",
                 f"{remote_path.as_posix()}"
@@ -59,27 +123,9 @@ class SSHMachine(Machine):
         )
 
     def cp_to(self, local_path: Path, remote_path: PurePosixPath, is_folder: bool = False) -> bytes:
-        # Convert Potential CRLF to LF
-        local_path_posix: str = ""
-        remote_path_posix: str = ""
-        utils.assert_type(Path, local_path)
-        utils.assert_type(PurePosixPath, remote_path)
-        if not is_folder:
-            self.convert_crlf_to_lf(local_path)
-        if self.copy_script == 'scp':
-            remote_folder = remote_path.parent
-            local_folder = local_path.parent
-            assert remote_folder == local_folder, f"remote_folder: {remote_folder}, local_folder: {local_folder}"
-            remote_path = remote_path.name
-        local_path_posix = local_path.as_posix()
-        remote_path_posix = remote_path.as_posix()
-        if is_folder and not local_path_posix.endswith("/"):
-            local_path_posix = local_path_posix + "/"
-        return self.run_cmd(
-            lambda user, remote_url:
-            [self.copy_script, "-r", local_path_posix, f"{user}@{remote_url}:{remote_path_posix}/"] if is_folder else
-            [self.copy_script, local_path_posix, f"{user}@{remote_url}:{remote_path_posix}"],
-        )
+        self.cp_multi_to([local_path], remote_path)
+        cmd = self.copy_provider.get_copy_to([local_path], remote_path, is_folder)
+        return self.run_cmd(cmd)
 
     def convert_crlf_to_lf(self, local_path: Path):
         with open(local_path, 'rb') as f:
@@ -88,50 +134,43 @@ class SSHMachine(Machine):
         with open(local_path, 'wb') as f:
             f.write(content)
 
-    def cp_multi_to(self, local_paths: list[Path], remote_path: PurePosixPath) -> str:
-        logging.info(f"Copying {len(local_paths)} files to remote {remote_path}...")
-        max_len: int = 8000  # 8191 official limit
-        batches: list[list[str]] = []
-        batch: str = ""
-        batch_list: list[str] = []
+    def cp_multi_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool = False) -> str:
         for local_path in local_paths:
-            local_path_posix: str = local_path.as_posix()
-            if len(batch) + len(local_path_posix) + 1 > max_len:
-                batches.append(batch_list)
-                batch_list = []
-                batch = ""
-            batch += local_path_posix + " "
-            batch_list.append(local_path_posix)
-        if len(batch_list) > 0:
-            batches.append(batch_list)
+            utils.assert_type(Path, local_path)
+        utils.assert_type(PurePosixPath, remote_path)
+        logging.info(f"Copying {len(local_paths)} files to remote {remote_path}...")
         cmd_out = ""
-        for b in batches:
-            cmd_out += self.run_cmd(
-                lambda user, remote_url: [
-                    self.copy_script,
-                    "-ar" if self.copy_script == 'rsync' else '-r',
-                    *b,
-                    f"{user}@{remote_url}:{remote_path}"
-                ]).decode("utf-8")
+        for batch in self._batch_copies(local_paths, 8000):  # 8191 official limit
+            for local_path in batch:
+                if local_path.is_file():
+                    self.convert_crlf_to_lf(local_path)
+            cmd = self.copy_provider.get_copy_to(batch, remote_path, recursive)
+            cmd_out += self.run_cmd(cmd).decode("utf-8")
         return cmd_out
 
-    def cp_multi_from(self, remote_paths: list[str], local_path: str) -> bytes:
+    def cp_multi_from(self, remote_paths: list[PurePosixPath], local_path: Path) -> bytes:
         logging.info(f"Copying {len(remote_paths)} files from remote to local {local_path}...")
-        return self.run_cmd(
-            lambda user, remote_url: [
-                self.copy_script,
-                "-ar" if self.copy_script == 'rsync' else '-r',
-                *[f"{user}@{remote_url}:{remote_path}" for remote_path in remote_paths],
-                local_path
-            ]
-        )
+        cmd_out = b""
+        for batch in self._batch_copies(remote_paths, 8000):  # 8191 official limit
+            cmd = self.copy_provider.get_copy_from(batch, local_path, recursive=True)
+            cmd_out += self.run_cmd(cmd)
+        return cmd_out
 
-    def cp_from(self, remote_path: str, local_path: str, is_folder: bool = False) -> bytes:
-        return self.run_cmd(
-            lambda user, remote_url:
-            [self.copy_script, "-r", f"{user}@{remote_url}:{remote_path}/*", local_path] if is_folder else
-            [self.copy_script, f"{user}@{remote_url}:{remote_path}", local_path]
-        )
+    def _batch_copies(self, paths: list[T], max_len) -> Generator[list[T], None, None]:
+        batch_list: list[PurePath] = []
+        expected_length: int = 0
+        for path in paths:
+            local_path_posix: str = path.as_posix()
+            if expected_length + len(local_path_posix) + 1 > max_len:
+                yield batch_list
+                expected_length, batch_list = 0, []
+            expected_length += len(local_path_posix) + 1
+            batch_list.append(path)
+        if len(batch_list) > 0:
+            yield batch_list
+
+    def cp_from(self, remote_path: PurePosixPath, local_path: Path, is_folder: bool = False) -> bytes:
+        return self.cp_multi_from([remote_path], local_path)
 
     def read_file(self, filename: PurePosixPath) -> str:
         """
@@ -140,8 +179,9 @@ class SSHMachine(Machine):
         :return:
         """
         try:
-            return self.run_cmd(lambda user, remote_url: [
+            return self.run_cmd(lambda user, remote_url, remote_port: [
                 "ssh",
+                f"-p", f"{remote_port}",
                 f"{user}@{remote_url}",
                 f"cat {filename.as_posix()}"
             ]).decode("utf-8")
@@ -175,8 +215,9 @@ class SSHMachine(Machine):
             logging.debug(f"Reading {len(b)} files from remote...")
             command = "echo -e \"" + delimiter.join([f"$(cat {filename})" for filename in b]) + "\""
             result: list[str] = self.run_cmd(
-                lambda user, remote_url: [
+                lambda user, remote_url, remote_port: [
                     "ssh",
+                    f"-p", f"{remote_port}",
                     f"{user}@{remote_url}",
                     f"sh -c '{command}' 2> /dev/null"
                 ]).decode("utf-8").split(delimiter)
@@ -186,8 +227,9 @@ class SSHMachine(Machine):
 
     def rm(self, *file_paths: PurePosixPath) -> bytes:
         return self.run_cmd(
-            lambda user, remote_url: [
+            lambda user, remote_url, remote_port: [
                 "ssh",
+                f"-p", f"{remote_port}",
                 f"{user}@{remote_url}",
                 f"rm {' '.join([path.as_posix() for path in file_paths])}"
             ]
@@ -196,8 +238,9 @@ class SSHMachine(Machine):
     def ls(self, remote_dir: PurePosixPath) -> list[str]:
         try:
             return self.run_cmd(
-                lambda user, remote_url: [
+                lambda user, remote_url, remote_port: [
                     "ssh",
+                    f"-p", f"{remote_port}",
                     f"{user}@{remote_url}",
                     f"ls {remote_dir.as_posix()}"
                 ]
@@ -207,8 +250,9 @@ class SSHMachine(Machine):
 
     def remove_dir(self, remote_dir: PurePosixPath) -> bytes:
         return self.run_cmd(
-            lambda user, remote_url: [
+            lambda user, remote_url, remote_port: [
                 "ssh",
+                f"-p", f"{remote_port}",
                 f"{user}@{remote_url}",
                 f"rmdir {remote_dir.as_posix()}"
             ]
@@ -216,8 +260,6 @@ class SSHMachine(Machine):
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
         raise NotImplementedError("get_running_tasks not implemented in SSHMachine")
-
-
 
 
 class SSHBatchedExecutionQueue(ExecutionQueue):
@@ -275,8 +317,9 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         logging.info(f"Copying run script to {self}...")
         self.remote.cp_to(local_run_script_path, remote_run_script_path)
         logging.info(f"Queueing job in {self}...")
-        return self.remote.run_cmd(lambda user, remote_url: [
+        return self.remote.run_cmd(lambda user, remote_url, remote_port: [
             "ssh",
+            f"-p", f"{remote_port}",
             f"{user}@{remote_url}",
             f"sh -c 'cd {remote_batch_path}; sh {config.RUN_SH}'"
         ])
@@ -332,7 +375,8 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
             for i, (simulation, shell) in enumerate(zip(simulations, tasks))
         ]) + "\n")
 
-        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], cast(PurePosixPath, self.remote.execution_path))
+        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info],
+                                cast(PurePosixPath, self.remote.execution_path))
 
         self.remote.cp_to(local_batch_path, remote_batch_path, is_folder=True)
         self.remote.cp_to(local_multi_py, remote_multi_py)
@@ -341,14 +385,14 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     def process_output(self, local_batch_path, simulations, remote_batch_path):
         logging.info("Copying output files from remote to local machine...")
         self.remote.cp_from(remote_batch_path, local_batch_path, is_folder=True)
-        files_to_copy_back = []
-        callback_info = []
+        files_to_copy_back: list[PurePosixPath] = []
+        callback_info: list[tuple[Any, Path]] = []
         for i, simulation in enumerate(simulations):
             # Copy each simulation output to the local machine
             local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
-            remote_sim_path: PurePath = self.remote.execution_path / local_sim_folder.name
+            remote_sim_path: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / local_sim_folder.name
             local_lammps_log: Path = local_sim_folder / "log.lammps"
-            files_to_copy_back.append(remote_sim_path.as_posix())
+            files_to_copy_back.append(remote_sim_path)
             callback_info.append((simulation, local_lammps_log))
         self.remote.cp_multi_from([folder for folder in files_to_copy_back], LOCAL_EXECUTION_PATH)
         for simulation, lammps_log in callback_info:
