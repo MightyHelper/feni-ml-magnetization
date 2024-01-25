@@ -35,7 +35,14 @@ def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0):
 
 def minutes_to_slurm(minutes: float):
     """
-    ceil(Count / tasks) * 45 min
+    From SLURM docs:
+    > Acceptable time formats include
+    > - "minutes"
+    > - "minutes:seconds"
+    > - "hours:minutes:seconds"
+    > - "days-hours"
+    > - "days-hours:minutes"
+    > - "days-hours:minutes:seconds"
     :param minutes: Minutes to convert
     :return:
     """
@@ -48,14 +55,7 @@ def minutes_to_slurm(minutes: float):
 
 def estimate_minutes(count: int, tasks: int, machine_power: float) -> float:
     """
-    From SLURM docs:
-    > Acceptable time formats include
-    > - "minutes"
-    > - "minutes:seconds"
-    > - "hours:minutes:seconds"
-    > - "days-hours"
-    > - "days-hours:minutes"
-    > - "days-hours:minutes:seconds"
+    ceil(Count / tasks) * SINGLE_SIMULATION_TIME min
     :param count: Simulation count
     :param machine_power: Machine power multiplier
     :param tasks: Thread count
