@@ -110,7 +110,7 @@ def clean(
         keep_ok: Annotated[bool, typer.Option(help="Whether to keep OK executions", show_default=True)] = False,
         keep_full: Annotated[bool, typer.Option(help="Whether to keep full executions", show_default=True)] = True,
         keep_batch: Annotated[bool, typer.Option(help="Whether to keep batch executions", show_default=True)] = True,
-        keep_remote_local: Annotated[bool, typer.Option(help="Whether to keep remote - local executions", show_default=True)] = True
+        keep_remote_local: Annotated[bool, typer.Option(help="Whether to keep remote - local executions", show_default=True)] = False
 ):
     """
     Clean all executions
