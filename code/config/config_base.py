@@ -1,11 +1,11 @@
 import logging
 from multiprocessing.pool import ThreadPool
-from pathlib import Path, PurePath, PurePosixPath
+from pathlib import Path, PurePosixPath
 
 
 def load_machines():
-    from remote.local_machine import LocalMachine
-    from remote.machine_factory import MachineFactory
+    from remote.machine.local_machine import LocalMachine
+    from remote.machine.machine_factory import MachineFactory
     return {
         'local': LocalMachine(Path(LOCAL_EXECUTION_PATH), Path(LAMMPS_EXECUTABLE)),
         'mini': MachineFactory.toko('mini'),

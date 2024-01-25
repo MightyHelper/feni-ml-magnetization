@@ -1,12 +1,10 @@
-import logging
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import PurePath, Path
-from typing import Callable, Generator
+from pathlib import PurePath
+from typing import Generator
 
-import utils
 from model.live_execution import LiveExecution
-from simulation_task import SimulationTask
+from lammps.simulation_task import SimulationTask
 
 
 @dataclass

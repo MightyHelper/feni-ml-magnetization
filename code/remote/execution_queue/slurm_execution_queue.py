@@ -1,24 +1,21 @@
 import logging
 import os
-import random
 import re
 import subprocess
-import time
-from pathlib import Path, PurePath, PurePosixPath
-from typing import cast
+from pathlib import Path, PurePosixPath
 
 import asyncssh
 import numpy as np
 from asyncssh import SSHCompletedProcess
 
-import config
 import utils
-from config import LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, BATCH_INFO
-from execution_queue import ExecutionQueue, SingleExecutionQueue
-from remote.local_machine import LocalMachine
-from remote.slurm_machine import SLURMMachine
-from remote.ssh_machine import SSHBatchedExecutionQueue
-from simulation_task import SimulationTask
+from config.config import LAMMPS_EXECUTABLE, BATCH_INFO
+from config import config
+from remote.execution_queue.execution_queue import SingleExecutionQueue
+from remote.machine.local_machine import LocalMachine
+from remote.machine.slurm_machine import SLURMMachine
+from remote.machine.ssh_machine import SSHBatchedExecutionQueue
+from lammps.simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import write_local_file
 

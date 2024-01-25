@@ -4,29 +4,26 @@ import random
 from pathlib import Path
 from typing import cast
 
-import execution_queue
-import nanoparticle
-import nanoparticlebuilder
-import poorly_coded_parser as parser
-from config import MACHINES
-from nanoparticle import Nanoparticle
-from remote import toko_machine
-from remote.local_machine import LocalMachine
-from remote.machine import Machine
-from remote.machine_factory import MachineFactory
-from remote.slurm_machine import SLURMMachine
-from remote.ssh_machine import SSHMachine, SSHBatchedExecutionQueue
-from simulation_task import SimulationTask
+from remote.execution_queue import local_execution_queue, execution_queue, slurm_execution_queue
+from lammps import nanoparticle, poorly_coded_parser as parser, nanoparticlebuilder
+from config.config import MACHINES
+from lammps.nanoparticle import Nanoparticle
+from remote.machine.local_machine import LocalMachine
+from remote.machine.machine import Machine
+from remote.machine.slurm_machine import SLURMMachine
+from remote.machine.ssh_machine import SSHMachine, SSHBatchedExecutionQueue
+from lammps.simulation_task import SimulationTask
 
 def get_execution_queue(machine: Machine, n_threads: int, local_machine: LocalMachine):
     if isinstance(machine, LocalMachine):
         if n_threads is None:
-            return execution_queue.LocalExecutionQueue(machine)
-        return execution_queue.ThreadedLocalExecutionQueue(machine, n_threads)
+            return local_execution_queue.LocalExecutionQueue(machine)
+        return local_execution_queue.ThreadedLocalExecutionQueue(machine, n_threads)
     elif isinstance(machine, SLURMMachine):
         if n_threads is None:
-            return toko_machine.SlurmExecutionQueue(machine)
-        return toko_machine.SlurmBatchedExecutionQueue(machine, local_machine, n_threads)
+            # return slurm_execution_queue.SlurmExecutionQueue(machine)
+            n_threads = 1
+        return slurm_execution_queue.SlurmBatchedExecutionQueue(machine, local_machine, n_threads)
     elif isinstance(machine, SSHMachine):
         if n_threads is None:
             n_threads = 1

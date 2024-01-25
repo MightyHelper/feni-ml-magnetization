@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from pathlib import PurePath, PurePosixPath
 from typing import Generator, cast
 
-from asyncssh import SSHClient, SSHClientConnection
+from asyncssh import SSHClientConnection
 
-import config
-from config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
-from lammpsrun import LammpsRun
+from config.config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
+from config import config
+from lammps.lammpsrun import LammpsRun
 from model.live_execution import LiveExecution
-from remote.ssh_machine import SSHMachine
+from remote.machine.ssh_machine import SSHMachine
 
 
 @dataclass
@@ -49,7 +49,16 @@ class SLURMMachine(SSHMachine):
             scontrol_path: PurePath = TOKO_SCONTROL,
             sinfo_path: PurePath = TOKO_SINFO,
     ):
-        super().__init__(name, cores, user, remote_url, port, password, copy_script, lammps_executable, execution_path)
+        super().__init__(
+            name=name,
+            cores=cores,
+            user=user,
+            remote_url=remote_url,
+            port=port,
+            password=password,
+            lammps_executable=lammps_executable,
+            execution_path=execution_path
+        )
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path
         self.sbatch_path = sbatch_path

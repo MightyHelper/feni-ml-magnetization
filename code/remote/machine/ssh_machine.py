@@ -2,140 +2,35 @@ import asyncio
 import logging
 import random
 import time
-from abc import ABC, abstractmethod
 from asyncio import Task
 from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Generator, Callable, TypeVar, Any
+from typing import Generator, Any
 
 import asyncssh
 
-import config
 import utils
-from config import BATCH_INFO
-from execution_queue import ExecutionQueue
+from config.config import BATCH_INFO
+from config import config
+from remote.execution_queue.execution_queue import ExecutionQueue
 from model.live_execution import LiveExecution
-from remote.local_machine import LocalMachine
-from remote.machine import Machine
-from simulation_task import SimulationTask
+from remote.machine.local_machine import LocalMachine
+from remote.machine.machine import Machine
+from lammps.simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import set_type
 from utils import write_local_file
-
-T = TypeVar('T')
-
-
-class CopyProvider(ABC):
-    @abstractmethod
-    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        pass
-
-    @abstractmethod
-    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        pass
-
-
-class SCPCopyProvider(CopyProvider):
-    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        def gen_cmd(user: str, remote_url: str, remote_port: int):
-            return [
-                "scp",
-                "-P",
-                f"{remote_port}",
-                "-r",
-                *[f"{user}@{remote_url}:{remote_path}" for remote_path in remote_paths],
-                local_path.as_posix()
-            ]
-
-        return gen_cmd
-
-    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        def gen_cmd(user: str, remote_url: str, remote_port: int):
-            return [
-                "scp",
-                "-P",
-                f"{remote_port}",
-                "-r",
-                *[str(local_path) for local_path in local_paths],
-                f"{user}@{remote_url}:{remote_path}"
-            ]
-
-        return gen_cmd
-
-
-class RsyncCopyProvider(CopyProvider):
-    def get_copy_from(self, remote_paths: list[PurePosixPath], local_path: Path, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        def gen_cmd(user: str, remote_url: str, remote_port: int):
-            return [
-                "rsync",
-                "-ar",
-                *[f"rsync://{user}@{remote_url}:{remote_port}/{remote_path}" for remote_path in remote_paths],
-                local_path.as_posix()
-            ]
-
-        return gen_cmd
-
-    def get_copy_to(self, local_paths: list[Path], remote_path: PurePosixPath, recursive: bool) -> Callable[
-        [str, str, int], list[str]]:
-        def gen_cmd(user: str, remote_url: str, remote_port: int):
-            return [
-                "rsync",
-                "-ar",
-                *[str(local_path) for local_path in local_paths],
-                f"rsync://{user}@{remote_url}:{remote_port}/{remote_path}"
-            ]
-
-        return gen_cmd
-
 
 @dataclass
 class SSHMachine(Machine):
     """
     A remote machine with a number of cores that we can SSH into
     """
-
-    def mkdir(self, remote_path: PurePath):
-        pass
-
-    def cp_to(self, local_path: Path, remote_path: PurePath, is_folder: bool):
-        pass
-
-    def cp_multi_to(self, local_paths: list[Path], remote_path: PurePath):
-        pass
-
-    def cp_multi_from(self, remote_paths: list[PurePath], local_path: Path):
-        pass
-
-    def cp_from(self, remote_path: PurePath, local_path: Path, is_folder: bool):
-        pass
-
-    def read_file(self, filename: PurePath) -> str:
-        pass
-
-    def read_multiple_files(self, filenames: list[PurePath]) -> list[str]:
-        pass
-
-    def rm(self, file_path: PurePath):
-        pass
-
-    def ls(self, remote_dir: PurePath) -> list[str]:
-        pass
-
-    def remove_dir(self, remote_dir: PurePath):
-        pass
-
     user: str
     remote_url: str
     port: int
     password: str | None
     copy_script: PurePath
-
-    copy_provider: CopyProvider
 
     def __init__(
             self,
@@ -145,7 +40,6 @@ class SSHMachine(Machine):
             remote_url: str,
             port: int,
             password: str | None = None,
-            copy_script: PurePath = PurePath("rsync"),
             lammps_executable: PurePath = PurePath(),
             execution_path: PurePath = PurePath()
     ):
@@ -154,8 +48,6 @@ class SSHMachine(Machine):
         self.remote_url = remote_url
         self.port = port
         self.password = password
-        self.copy_script = copy_script
-        self.copy_provider = SCPCopyProvider() if copy_script == 'scp' else RsyncCopyProvider()
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
         raise NotImplementedError("get_running_tasks not implemented in SSHMachine")

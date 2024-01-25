@@ -1,5 +1,5 @@
-from remote.machine import Machine
-from simulation_task import SimulationTask
+from remote.machine.machine import Machine
+from lammps.simulation_task import SimulationTask
 
 
 class SchedulerService:

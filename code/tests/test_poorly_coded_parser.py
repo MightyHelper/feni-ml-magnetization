@@ -1,9 +1,9 @@
 from unittest import TestCase
 
-import shapes
-from nanoparticlebuilder import NanoparticleBuilder
-from poorly_coded_parser import PoorlyCodedParser
-from shapes import Cylinder, Sphere
+from lammps import shapes
+from lammps.nanoparticlebuilder import NanoparticleBuilder
+from lammps.poorly_coded_parser import PoorlyCodedParser
+from lammps.shapes import Cylinder, Sphere
 
 
 class TestPoorlyCodedParser(TestCase):

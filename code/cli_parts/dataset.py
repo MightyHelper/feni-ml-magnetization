@@ -8,9 +8,9 @@ import typer
 from matplotlib import pyplot as plt
 from rich import print as rprint
 
-import config
+from config import config
 from cli_parts import ui_utils
-from nanoparticle_renamer import NanoparticleRenamer, BasicNanoparticleRenamer, NewNanoparticleRenamer
+from lammps.nanoparticle_renamer import NanoparticleRenamer, BasicNanoparticleRenamer, NewNanoparticleRenamer
 from utils import assign_nanoparticle_name
 
 dat = typer.Typer(add_completion=False, no_args_is_help=True, name="dataset")

@@ -7,21 +7,16 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Generator
-
 import pandas as pd
-
-import config
-import feni_mag
-import feni_ovito
-import lammpsrun as lr
+from config import config
+from lammps import feni_mag, feni_ovito, lammpsrun as lr, shapes
 import opt
-import shapes
 import template
 import utils
-from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
+from config.config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     NANOPARTICLE_IN
-from execution_queue import ExecutionQueue
-from simulation_task import SimulationTask
+from remote.execution_queue.execution_queue import ExecutionQueue
+from lammps.simulation_task import SimulationTask
 from utils import drop_index
 
 

@@ -2,10 +2,9 @@ import re
 from pathlib import Path
 from typing import Generator
 
-import nanoparticlebuilder
-import shapes as s
+from lammps import nanoparticlebuilder, shapes as s
 import template
-from nanoparticle_locator import NanoparticleLocator
+from lammps.nanoparticle_locator import NanoparticleLocator
 
 
 class PoorlyCodedParser:

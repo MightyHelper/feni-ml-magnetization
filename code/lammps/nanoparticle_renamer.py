@@ -4,9 +4,8 @@ from abc import abstractmethod, ABC
 from pathlib import Path
 from typing import Callable
 
-import nanoparticle_locator
-import poorly_coded_parser
 import utils
+from lammps import nanoparticle_locator, poorly_coded_parser
 from utils import get_matching
 
 SHAPES = [

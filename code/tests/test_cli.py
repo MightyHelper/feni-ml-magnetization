@@ -5,8 +5,8 @@ from pathlib import Path
 
 import cli_parts.executions as executions
 import cli_parts.shapefolder as shapefolder
-import nanoparticle_locator
-from nanoparticle import Nanoparticle
+from lammps import nanoparticle_locator
+from lammps.nanoparticle import Nanoparticle
 
 
 class TestShapefolder(unittest.TestCase):

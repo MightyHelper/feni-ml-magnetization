@@ -1,7 +1,7 @@
 from pathlib import PurePosixPath
 
-from remote.machine import Machine
-from remote.slurm_machine import SLURMMachine
+from remote.machine.machine import Machine
+from remote.machine.slurm_machine import SLURMMachine
 
 
 def get_toko_cores(partition: str = "mini") -> int:
@@ -15,7 +15,7 @@ def get_toko_cores(partition: str = "mini") -> int:
 class MachineFactory:
     @staticmethod
     def toko(partition: str, user: str | None = None, node_id: int = 1, copy_script: str = 'rsync') -> Machine:
-        from config import TOKO_URL, TOKO_USER
+        from config.config import TOKO_URL, TOKO_USER
         user = user if user is not None else TOKO_USER
         return SLURMMachine(
             name="toko",

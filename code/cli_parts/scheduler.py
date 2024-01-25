@@ -3,13 +3,13 @@ from pathlib import Path
 import typer
 from rich import print as rprint
 
-import config
-from nanoparticle import Nanoparticle
-from remote.machine import Machine
-from remote.toko_machine import estimate_time
+from config import config
+from lammps.nanoparticle import Nanoparticle
+from remote.machine.machine import Machine
+from remote.execution_queue.slurm_execution_queue import estimate_time
 from service import executor_service
 from service.scheduler_service import SchedulerService
-from simulation_task import SimulationTask
+from lammps.simulation_task import SimulationTask
 
 sched = typer.Typer(add_completion=False, no_args_is_help=True, name="sched")
 

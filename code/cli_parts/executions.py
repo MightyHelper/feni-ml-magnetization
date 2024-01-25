@@ -17,16 +17,15 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn, TaskID
 
 import cli_parts.ui_utils
-import config
-import nanoparticle
-import poorly_coded_parser as parser
+from config import config
+from lammps import nanoparticle, poorly_coded_parser as parser
 import utils
 from cli_parts import ui_utils
 from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks, update_tasks, \
     create_tasks
-from nanoparticle import Nanoparticle
-from nanoparticlebuilder import NanoparticleBuilder
+from lammps.nanoparticle import Nanoparticle
+from lammps.nanoparticlebuilder import NanoparticleBuilder
 from service.executor_service import execute_nanoparticles, add_extra_nanoparticles
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)

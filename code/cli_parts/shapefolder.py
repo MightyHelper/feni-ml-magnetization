@@ -8,12 +8,12 @@ import rich.table
 import typer
 from rich import print as rprint
 
-import config
-import poorly_coded_parser as parser
+from config import config
+from lammps import poorly_coded_parser as parser
 import service.executor_service
 from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import do_plots, correct_highlighter
-from nanoparticle import Nanoparticle
+from lammps.nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
 from utils import parse_nanoparticle_name
 

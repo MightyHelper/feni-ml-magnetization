@@ -10,7 +10,7 @@ from typing import Callable, Generator
 
 import utils
 from model.live_execution import LiveExecution
-from remote.machine import Machine
+from remote.machine.machine import Machine
 
 
 @dataclass
@@ -72,7 +72,7 @@ class LocalMachine(Machine):
         shutil.rmtree(remote_dir)
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
-        from nanoparticle import Nanoparticle
+        from lammps.nanoparticle import Nanoparticle
         ps_result = os.popen("ps -ef | grep " + self.lammps_executable.as_posix()).readlines()
         for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
             folder_name = Path(execution).parent

@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from rich.highlighter import RegexHighlighter
 from rich.progress import Progress, TaskID
 
-import config
+from config import config
 from cli_parts.number_highlighter import h
 
 

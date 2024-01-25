@@ -1,9 +1,7 @@
 import typing
-
 from typing_extensions import deprecated
-
-import shapes
-from nanoparticle import Nanoparticle
+from lammps import shapes
+from lammps.nanoparticle import Nanoparticle
 
 SEED_LOCATOR = "zeed:"
 
