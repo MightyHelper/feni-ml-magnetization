@@ -14,16 +14,17 @@ def get_toko_cores(partition: str = "mini") -> int:
 
 class MachineFactory:
     @staticmethod
-    def toko(partition: str, node_id: int = 1, copy_script: str = 'rsync') -> Machine:
+    def toko(partition: str, user: str | None = None, node_id: int = 1, copy_script: str = 'rsync') -> Machine:
         from config import TOKO_URL, TOKO_USER
+        user = user if user is not None else TOKO_USER
         return SLURMMachine(
             name="toko",
             remote_url=TOKO_URL,
             cores=get_toko_cores(partition),
             partition_to_use=partition,
             copy_script=PurePosixPath(copy_script),
-            execution_path=PurePosixPath("~/scratch/projects/magnetism/simulations/"),
+            execution_path=PurePosixPath("/scratch/fwilliamson/projects/magnetism/simulations/"),
             lammps_executable=PurePosixPath("/scratch/fwilliamson/lammps_compile/lammps/build1/lmp"),
-            user=TOKO_USER,
+            user=user,
             node_id=node_id,
         )

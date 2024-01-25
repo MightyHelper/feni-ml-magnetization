@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import PurePath, PurePosixPath
 from typing import Generator, cast
 
+from asyncssh import SSHClient, SSHClientConnection
+
 import config
 from config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
 from lammpsrun import LammpsRun
@@ -36,6 +38,7 @@ class SLURMMachine(SSHMachine):
             user: str,
             remote_url: str,
             port: int = 22,
+            password: str | None = None,
             copy_script: PurePath = PurePath('rsync'),
             lammps_executable: PurePosixPath = PurePosixPath('lmp'),
             execution_path: PurePosixPath = PurePosixPath(''),
@@ -46,7 +49,7 @@ class SLURMMachine(SSHMachine):
             scontrol_path: PurePath = TOKO_SCONTROL,
             sinfo_path: PurePath = TOKO_SINFO,
     ):
-        super().__init__(name, cores, user, remote_url, port, copy_script, lammps_executable, execution_path)
+        super().__init__(name, cores, user, remote_url, port, password, copy_script, lammps_executable, execution_path)
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path
         self.sbatch_path = sbatch_path
@@ -54,28 +57,17 @@ class SLURMMachine(SSHMachine):
         self.node_id = node_id
         self.partition_to_use = partition_to_use
 
-    def wait_for_slurm_execution(self, jobid):
+    async def wait_for_slurm_execution(self, connection: SSHClientConnection, jobid: int):
         logging.info("Waiting for execution to finish in remote...")
-        self.run_cmd(lambda user, remote_url: [
-            "ssh",
-            "-o",
-            "ServerAliveInterval=10",
-            f"{user}@{remote_url}",
-            f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'"
-        ])
+        return await connection.run(f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'")
 
-    def get_slurm_jobids(self, of_user: str) -> list[int]:
+    async def get_slurm_jobids(self, connection: SSHClientConnection, of_user: str) -> list[int]:
         """
         Get the job ids of the current user
         Runs: `squeue -u <USER> -h -o %i`
         :return:
         """
-        return [int(jobid) for jobid in self.run_cmd(
-            lambda user, remote_url: [
-                "ssh",
-                f"{user}@{remote_url}",
-                f"sh -c '{self.squeue_path} -u {of_user} -h -o %i'"
-            ]).decode("utf-8").split("\n") if jobid]
+        return [int(jobid) for jobid in (await connection.run(f"sh -c '{self.squeue_path} -u {of_user} -h -o %i'").stdout).split("\n") if jobid]
 
     def get_slurm_executing_job_submit_code(self, job_id: int) -> str:
         """
@@ -120,7 +112,7 @@ class SLURMMachine(SSHMachine):
             if file_tag is None:
                 logging.debug("File tag not found")
                 continue
-            batch_info: PurePath = file_tag.parent / config.BATCH_INFO_PATH
+            batch_info: PurePath = file_tag.parent / config.BATCH_INFO
             logging.debug(f"Batch info: {batch_info}")
             try:
                 batch_info_content: str = self.read_file(cast(PurePosixPath, batch_info))

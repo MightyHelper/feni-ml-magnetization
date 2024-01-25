@@ -1,9 +1,12 @@
+import asyncio
 import base64
 import os
 import random
 import re
 from pathlib import Path
 from typing import TypeVar, Callable, Any, cast
+
+from asyncssh import SSHClientConnection
 
 
 def get_current_step(lammps_log):
@@ -14,6 +17,7 @@ def get_current_step(lammps_log):
     try:
         with open(lammps_log, "r") as f:
             lines = f.readlines()
+            # noinspection PyBroadException
             try:
                 split = re.split(r" +", lines[-1].strip())
                 step = int(split[0])
@@ -41,6 +45,7 @@ def filter_empty(l: list) -> list:
 
 def parse_nanoparticle_name(key: str) -> tuple[str, str, str, str, str]:
     shape, distribution, interface, pores, index = None, None, None, None, None
+    # noinspection PyBroadException
     try:
         filename = os.path.basename(key)
         if filename.endswith(".in"):
@@ -154,3 +159,8 @@ def assert_type(typ: type[T], item: T) -> T:
     assert isinstance(typ, type), f"typ must be a type, got {typ}"
     assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
     return item
+
+def ssh_task(func):
+    def wrapper(conn: SSHClientConnection, *args, **kwargs) -> asyncio.Task:
+        return asyncio.create_task(conn.run(func(*args, **kwargs)))
+    return wrapper

@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 import os
 import re
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,14 +51,25 @@ class LocalMachine(Machine):
     def read_multiple_files(self, filenames: list[str]) -> list[str]:
         return [self.read_file(filename) for filename in filenames]
 
-    def rm(self, file_path: str):
+    def rm(self, file_path: Path | str):
         os.remove(file_path)
 
-    def ls(self, remote_dir: str) -> list[str]:
+    def ls(self, remote_dir: Path | str) -> list[str]:
         return os.listdir(remote_dir)
 
-    def remove_dir(self, remote_dir: str):
-        os.rmdir(remote_dir)
+
+    def copy_alloy_files(self, local_sim_folder: Path, remote_sim_folder: Path):
+        local_alloy_file: Path = utils.assert_type(Path, local_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
+        remote_alloy_file: Path = utils.assert_type(Path, remote_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
+        logging.info("Copying alloy files...")
+        self.cp_to(local_alloy_file, remote_alloy_file, False)
+
+    def remove_dir(self, remote_dir: Path | str):
+        # os.rmtree(remote_dir)
+        remote_dir = Path(remote_dir)
+        relative_path = remote_dir.resolve().expanduser().relative_to(self.execution_path.parent)
+        # if reltive path exists and no ValueError was thrown we can delete
+        shutil.rmtree(remote_dir)
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
         from nanoparticle import Nanoparticle
@@ -67,6 +79,6 @@ class LocalMachine(Machine):
             try:
                 nano = Nanoparticle.from_executed(folder_name)
                 yield folder_name, nano.run.get_current_step(), nano.title
-            except Exception:
-                logging.debug(f"Could not parse {folder_name}")
+            except Exception as e:
+                logging.debug(f"Could not parse {folder_name} {e}")
                 pass

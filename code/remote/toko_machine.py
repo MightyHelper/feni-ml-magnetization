@@ -7,13 +7,17 @@ import time
 from pathlib import Path, PurePath, PurePosixPath
 from typing import cast
 
+import asyncssh
 import numpy as np
+from asyncssh import SSHCompletedProcess
 
 import config
 import utils
-from config import LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, BATCH_INFO_PATH
+from config import LAMMPS_EXECUTABLE, LOCAL_EXECUTION_PATH, BATCH_INFO
 from execution_queue import ExecutionQueue, SingleExecutionQueue
+from remote.local_machine import LocalMachine
 from remote.slurm_machine import SLURMMachine
+from remote.ssh_machine import SSHBatchedExecutionQueue
 from simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import write_local_file
@@ -109,10 +113,14 @@ def estimate_time(count: int, tasks: int = 1):
     return f"{days}-{remaining_hours}:{remaining_minutes}"
 
 
-class SlurmBatchedExecutionQueue(ExecutionQueue):
-    queue: list[SimulationTask]
-    completed: list[SimulationTask]
+class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
     remote: SLURMMachine
+    def __init__(self, remote: SLURMMachine, local: LocalMachine, batch_size: int = 10):
+        super().__init__(remote, local, batch_size)
+        self.batch_size = batch_size
+        self.remote = remote
+        self.queue = []
+        self.completed = []
 
     def enqueue(self, simulation_task: SimulationTask):
         assert isinstance(simulation_task, SimulationTask)
@@ -124,126 +132,29 @@ class SlurmBatchedExecutionQueue(ExecutionQueue):
         assert simulation_task not in self.queue
         self.queue.append(simulation_task)
 
-    def run(self) -> list[SimulationTask]:
-        try:
-            self._simulate()
-        except Exception as e:
-            logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
-        return self.completed
 
-    def __init__(self, remote: SLURMMachine, batch_size: int = 10):
-        super().__init__()
-        self.batch_size = batch_size
-        self.remote = remote
-        self.queue = []
-        self.completed = []
-
-    def submit_toko_script(
-            self,
-            local_batch_path: Path,
-            toko_batch_path: PurePosixPath,
-            simulation_count: int,
-            n_threads: int = 1,
-    ):
-        # Create a slurm script to run the commands in parallel
-        local_slurm_sh: Path = local_batch_path / config.SLURM_SH
-        toko_slurm_sh: PurePosixPath = toko_batch_path / config.SLURM_SH
-
-        slurm_code = TemplateUtils.replace_templates(
+    def _generate_local_run_file(self, batch_name: str, n_threads: int, simulation_count: int):
+        remote_batch_path: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / batch_name
+        local_run_script_path: Path = self._get_local_exec_child(batch_name) / config.RUN_SH
+        script_code: str = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_multi_template(), {
                 "tasks": str(n_threads),
                 "time": estimate_time(simulation_count, n_threads),
-                "cmd_args": BATCH_INFO_PATH.as_posix(),
-                "cwd": toko_batch_path.as_posix(),
+                "cmd_args": str(BATCH_INFO),
+                "cwd": str(remote_batch_path),
                 "partition": self.remote.partition_to_use,
-                "output": (toko_batch_path / "batch_run.out").as_posix(),
-                "file_tag": toko_slurm_sh.as_posix()
+                "output": str(remote_batch_path / "batch_run.out"),
+                "file_tag": str(remote_batch_path / config.RUN_SH),
             }
         )
-        assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
-        write_local_file(local_slurm_sh, slurm_code)
-        logging.info(f"Copying {config.SLURM_SH} to toko...")
-        self.remote.cp_to(local_slurm_sh, toko_slurm_sh)
+        assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
+        write_local_file(local_run_script_path, script_code)
+        # Change permission u+x
+        self.local.run_cmd(lambda: ["chmod", "u+x", local_run_script_path])
+
+
+    async def submit_remote_batch(self, batch_name: str, connection: asyncssh.SSHClientConnection):
         logging.info("Queueing job in toko...")
-        return self.remote.run_cmd(lambda user, toko_url: [
-            "ssh",
-            f"{user}@{toko_url}",
-            f"sh -c 'cd {toko_batch_path}; {self.remote.sbatch_path} {config.SLURM_SH}'"
-        ])
-
-    def get_tasks(self, simulation_info):
-        # Create a list of commands to run in parallel
-        for toko_nano_in, toko_sim_folder, local_sim_folder in simulation_info:
-            lammps_log = toko_sim_folder / "log.lammps.bak"
-            yield f"sh -c 'cd {toko_sim_folder}; {self.remote.lammps_executable} -in {toko_nano_in} > {lammps_log}'"
-
-    def _simulate(self):
-        simulations = self.queue
-        local_batch_path, toko_batch_path, simulation_info = self.prepare_scripts(simulations)
-        sbatch_output = self.submit_toko_script(
-            local_batch_path,
-            toko_batch_path,
-            simulation_count=len(simulation_info),
-            n_threads=self.batch_size,
-        )
-        self.process_output(local_batch_path, sbatch_output, simulations, toko_batch_path)
-
-    def prepare_scripts(self, simulations: list[SimulationTask]):
-        """
-        Create a folder in toko with the simulations and a multi.py file to run them in parallel
-        Then, copy the folder to toko
-        :param simulations: List of simulations to run
-        :return:
-        """
-        simulation_info: list[tuple[PurePosixPath, PurePosixPath, Path]] = []
-        # Make new dir in remote execution path "batch_<timestamp>_<random[0-1000]>"
-        batch_name: PurePath = PurePath(f"batch_{int(time.time())}_{random.randint(0, 1000)}")
-        local_batch_path: Path = LOCAL_EXECUTION_PATH / batch_name
-        toko_batch_path: PurePosixPath = cast(PurePosixPath, self.remote.execution_path / batch_name)
-        batch_info_path: Path = local_batch_path / BATCH_INFO_PATH
-        local_multi_py: Path = config.LOCAL_MULTI_PY
-        toko_multi_py: PurePosixPath = toko_batch_path / "multi.py"
-        os.mkdir(local_batch_path)
-
-        for i, simulation in enumerate(simulations):
-            local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
-            toko_sim_folder: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / local_sim_folder.name
-            toko_nano_in: PurePosixPath = toko_sim_folder / simulation.local_input_file.name
-            logging.debug(f"Creating simulation folder in toko ({i + 1}/{len(simulations)})...")
-            if i == 0:
-                logging.debug(f"{toko_sim_folder=}")
-                logging.debug(f"{local_sim_folder=}")
-                logging.debug(f"{toko_nano_in=}")
-                self.remote.copy_alloy_files(local_sim_folder, toko_sim_folder)
-            simulation_info.append((toko_nano_in, toko_sim_folder, local_sim_folder))
-        tasks = self.get_tasks(simulation_info)
-        write_local_file(batch_info_path, "\n".join([
-            f"{i + 1}: {os.path.basename(Path(simulation.local_input_file).parent.resolve())} # {shell}"
-            for i, (simulation, shell) in enumerate(zip(simulations, tasks))
-        ]) + "\n")
-
-        self.remote.cp_multi_to([folder for (_, _, folder) in simulation_info], cast(PurePosixPath, self.remote.execution_path))
-
-        self.remote.cp_to(local_batch_path, toko_batch_path, is_folder=True)
-        self.remote.cp_to(local_multi_py, toko_multi_py)
-        return local_batch_path, toko_batch_path, simulation_info
-
-    def process_output(self, local_batch_path, sbatch_output, simulations, toko_batch_path):
-        jobid = re.match(r"Submitted batch job (\d+)", sbatch_output.decode('utf-8')).group(1)
-        self.remote.wait_for_slurm_execution(jobid)
-        logging.info("Copying output files from toko to local machine...")
-        self.remote.cp_from(toko_batch_path, local_batch_path, is_folder=True)
-        files_to_copy_back = []
-        callback_info = []
-        for i, simulation in enumerate(simulations):
-            # Copy each simulation output to the local machine
-            local_sim_folder: Path = Path(simulation.local_input_file).parent.resolve()
-            toko_sim_folder: Path = Path(os.path.join(self.remote.execution_path, local_sim_folder.name))
-            # TokoUtils.copy_file_from_toko(toko_sim_folder.as_posix(), local_sim_folder.as_posix(), is_folder=True)
-            local_lammps_log: Path = local_sim_folder / "log.lammps"
-            files_to_copy_back.append(toko_sim_folder.as_posix())
-            callback_info.append((simulation, local_lammps_log))
-        self.remote.cp_multi_from([folder for folder in files_to_copy_back], LOCAL_EXECUTION_PATH)
-        for simulation, lammps_log in callback_info:
-            self.run_callback(simulation, utils.read_local_file(lammps_log))
-            self.completed.append(simulation)
+        sbatch: SSHCompletedProcess = await connection.run(f"sh -c 'cd {self.remote.execution_path / batch_name}; {self.remote.sbatch_path} {config.RUN_SH}'")
+        jobid: int = re.match(r"Submitted batch job (\d+)", sbatch.stdout).group(1)
+        await self.remote.wait_for_slurm_execution(connection, jobid)

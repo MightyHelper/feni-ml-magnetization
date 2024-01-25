@@ -26,7 +26,7 @@ def get_execution_queue(machine: Machine, n_threads: int, local_machine: LocalMa
     elif isinstance(machine, SLURMMachine):
         if n_threads is None:
             return toko_machine.SlurmExecutionQueue(machine)
-        return toko_machine.SlurmBatchedExecutionQueue(machine, n_threads)
+        return toko_machine.SlurmBatchedExecutionQueue(machine, local_machine, n_threads)
     elif isinstance(machine, SSHMachine):
         if n_threads is None:
             n_threads = 1

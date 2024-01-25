@@ -1,14 +1,13 @@
-# Don't turn these signal into exceptions, just die.
 import logging
 import signal
 import sys
 
 from rich.logging import RichHandler
-
 from config import LOG_LEVEL
 
 
 def setup_logging():
+	# Don't turn these signal into exceptions, just die.
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
 	if hasattr(signal, "SIGPIPE"):
 		signal.signal(signal.SIGPIPE, signal.SIG_DFL)

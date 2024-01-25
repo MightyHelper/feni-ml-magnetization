@@ -122,8 +122,9 @@ Void = Pores.1
 ## TODO:
 Exec clean for toko
 Allow exec execute multiple nanoparticles at a time
-
-
+Add bar plot by type
+lattice dynamics and check displacement
+generate more random
 
 ## Note about Paths in pathlib
 
