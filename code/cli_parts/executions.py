@@ -34,7 +34,8 @@ executions = typer.Typer(add_completion=False, no_args_is_help=True)
 @executions.command()
 def ls(
         count: Annotated[bool, typer.Option(help="Whether to count the executions", show_default=True)] = False,
-        plot_magnetism: Annotated[bool, typer.Option(help="Whether to plot the magnetism of the executions", show_default=True)] = False,
+        plot_magnetism: Annotated[
+            bool, typer.Option(help="Whether to plot the magnetism of the executions", show_default=True)] = False,
         save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None,
         by: Annotated[str, typer.Option(help="Parameter to sort the executions by", show_default=True)] = "Shape"
 ):
@@ -108,25 +109,30 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, str], tupl
 def clean(
         keep_ok: Annotated[bool, typer.Option(help="Whether to keep OK executions", show_default=True)] = False,
         keep_full: Annotated[bool, typer.Option(help="Whether to keep full executions", show_default=True)] = True,
-        keep_batch: Annotated[bool, typer.Option(help="Whether to keep batch executions", show_default=True)] = True
+        keep_batch: Annotated[bool, typer.Option(help="Whether to keep batch executions", show_default=True)] = True,
+        keep_remote_local: Annotated[bool, typer.Option(help="Whether to keep remote - local executions", show_default=True)] = True
 ):
     """
     Clean all executions
     """
     total = 0
-    for execution in os.listdir(config.LOCAL_EXECUTION_PATH):
-        if 'batch' in execution and keep_batch:
-            continue
-        listdir = os.listdir(os.path.join(config.LOCAL_EXECUTION_PATH, execution))
-        if 'iron.0.dump' in listdir and keep_ok:
-            continue
-        if f'iron.{config.FULL_RUN_DURATION}.dump' in listdir and keep_full:
-            continue
-        for file in listdir:
-            full_path = os.path.join(config.LOCAL_EXECUTION_PATH, execution, file)
-            os.remove(full_path)
-        os.rmdir(config.LOCAL_EXECUTION_PATH / execution)
-        total += 1
+    dirs = [config.LOCAL_EXECUTION_PATH]
+    if keep_remote_local:
+        dirs.append(config.MACHINES()['local-ssh'].execution_path)
+    for d in dirs:
+        for execution in os.listdir(d):
+            if 'batch' in execution and keep_batch:
+                continue
+            listdir = os.listdir(d / execution)
+            if 'iron.0.dump' in listdir and keep_ok:
+                continue
+            if f'iron.{config.FULL_RUN_DURATION}.dump' in listdir and keep_full:
+                continue
+            for file in listdir:
+                full_path = d / execution / file
+                os.remove(full_path)
+            os.rmdir(d / execution)
+            total += 1
     if total == 0:
         rprint(f"[red]No executions to remove[/red].")
     else:
@@ -135,9 +141,12 @@ def clean(
 
 @executions.command()
 def live(
-        in_toko: Annotated[bool, typer.Option(help="Whether to listen for executions in Toko", show_default=True)] = False,
-        listen_anyway: Annotated[bool, typer.Option(help="Whether to listen for executions even if there are none", show_default=True)] = False,
-        only_running: Annotated[bool, typer.Option(help="Whether to only listen for running executions", show_default=True)] = True
+        in_toko: Annotated[
+            bool, typer.Option(help="Whether to listen for executions in Toko", show_default=True)] = False,
+        listen_anyway: Annotated[bool, typer.Option(help="Whether to listen for executions even if there are none",
+                                                    show_default=True)] = False,
+        only_running: Annotated[
+            bool, typer.Option(help="Whether to only listen for running executions", show_default=True)] = True
 ):
     """
     Find live executions
@@ -177,12 +186,14 @@ def get_running_executions(in_toko: bool, only_running: bool) -> list[tuple[str,
         if step != -1 or not only_running
     ]
 
+
 @executions.command()
 def execute(
         paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
         plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
         test: Annotated[bool, typer.Option(help="Whether to run in test mode or not", show_default=True)] = True,
-        at: Annotated[str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
+        at: Annotated[
+            str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
         seed: Annotated[int, typer.Option(help="Seed for the random number generator", show_default=True)] = 123,
         seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 0
 ) -> list[Path | None]:
@@ -201,14 +212,19 @@ def execute(
         result_paths.append(nano.local_path)
     return result_paths
 
+
 @executions.command()
 def inspect(
         paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
         plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
-        csv: Annotated[bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
-        g_r: Annotated[bool, typer.Option(help="Whether to calculate the radial distribution function g(r)", show_default=True)] = False,
-        pec: Annotated[bool, typer.Option(help="Whether to calculate the potential energy curve", show_default=True)] = False,
-        coord: Annotated[bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
+        csv: Annotated[
+            bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
+        g_r: Annotated[bool, typer.Option(help="Whether to calculate the radial distribution function g(r)",
+                                          show_default=True)] = False,
+        pec: Annotated[
+            bool, typer.Option(help="Whether to calculate the potential energy curve", show_default=True)] = False,
+        coord: Annotated[
+            bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
         np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False
 ):
     """
@@ -253,7 +269,8 @@ def inspect(
 def csv(
         paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
         output_csv_format: Annotated[Path, typer.Option(help="Path to the output CSV format file", show_default=True)],
-        concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file", show_default=True)] = False
+        concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file",
+                                             show_default=True)] = False
 ):
     """
     Export finished nanoparticle execution data to a CSV file
@@ -271,7 +288,8 @@ def csv(
 
 
 @executions.command()
-def raw_parse_completed(reparse: Annotated[bool, typer.Option(help="Whether to reparse completed nanoparticle simulations", show_default=True)] = False):
+def raw_parse_completed(reparse: Annotated[
+    bool, typer.Option(help="Whether to reparse completed nanoparticle simulations", show_default=True)] = False):
     """
     Parse all completed nanoparticle simulations
     """
