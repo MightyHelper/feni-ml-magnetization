@@ -19,77 +19,35 @@ from lammps.simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import write_local_file
 
-
-class SlurmExecutionQueue(SingleExecutionQueue):
-    remote: SLURMMachine
-
-    def __init__(self, remote: SLURMMachine):
-        super().__init__()
-        self.remote = remote
-
-    def submit_toko_script(self, toko_nano_in: PurePosixPath, toko_sim_folder: PurePosixPath, local_sim_folder: Path):
-        local_slurm_sh: Path = local_sim_folder / config.SLURM_SH
-        toko_slurm_sh: PurePosixPath = toko_sim_folder / config.SLURM_SH
-        slurm_code = TemplateUtils.replace_templates(
-            TemplateUtils.get_slurm_template(), {
-                "lammps_exec": self.remote.lammps_executable.as_posix(),
-                "tasks": "1",
-                "time": "00:45:00",
-                "lammps_input": toko_nano_in.as_posix(),
-                "lammps_output": (toko_sim_folder / "log.lammps.bak").as_posix(),
-                "cwd": toko_sim_folder.as_posix(),
-                "partition": self.remote.partition_to_use,
-                "file_tag": toko_slurm_sh.as_posix()
-            }
-        )
-        assert "{{" not in slurm_code, f"Not all templates were replaced in {slurm_code}"
-        write_local_file(local_slurm_sh, slurm_code)
-        logging.info(f"Copying {config.SLURM_SH} to toko...")
-        self.remote.cp_to(local_slurm_sh, toko_slurm_sh)
-        logging.info("Queueing job in toko...")
-        return self.remote.run_cmd(lambda user, toko_url: ["ssh", f"{user}@{toko_url}",
-                                                           f"sh -c 'cd {toko_sim_folder}; {self.remote.sbatch_path} {config.SLURM_SH}'"])
-
-    def simulate_in_toko(self, simulation_task: SimulationTask) -> str:
-        input_path = Path(simulation_task.local_input_file)
-        local_sim_folder: Path = input_path.parent.resolve()
-        toko_sim_folder: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / input_path.parent.name
-        toko_nano_in: PurePosixPath = toko_sim_folder / input_path.name
-        logging.info("Creating simulation folder in toko...")
-        logging.debug(f"{toko_sim_folder=}")
-        logging.debug(f"{local_sim_folder=}")
-        logging.debug(f"{toko_nano_in=}")
-        logging.debug("Copying input file...")
-        self.remote.cp_to(local_sim_folder, toko_sim_folder, is_folder=True)
-        self.remote.copy_alloy_files(local_sim_folder, toko_sim_folder)
-        sbatch_output = self.submit_toko_script(toko_nano_in, toko_sim_folder, local_sim_folder)
-        jobid = re.match(r"Submitted batch job (\d+)", sbatch_output.decode('utf-8')).group(1)
-        self.remote.wait_for_slurm_execution(jobid)
-        logging.info("Copying output files from toko to local machine...")
-        self.remote.cp_from(toko_sim_folder.as_posix(), local_sim_folder.as_posix(), is_folder=True)
-        local_lammps_log = os.path.join(local_sim_folder, "log.lammps")
-        with open(local_lammps_log, "r") as f:
-            lammps_log = f.read()
-        return lammps_log
-
-    def _simulate(self, simulation_task: SimulationTask) -> tuple[SimulationTask, str]:
-        try:
-            logging.info(
-                f"[bold green]TokoExecutionQueue[/bold green] Running [bold yellow]{simulation_task.local_input_file}[/bold yellow] in [cyan]{simulation_task.local_cwd}[/cyan]",
-                extra={"markup": True, "highlighter": None})
-            result = self.simulate_in_toko(simulation_task)
-            return simulation_task, result
-        except subprocess.CalledProcessError as e:
-            self.print_error(e)
-            raise e
-        except OSError as e:
-            self.print_error(e)
-            raise ValueError(f"Is LAMMPS ({LAMMPS_EXECUTABLE}) installed?") from e
+SINGLE_SIMULATION_TIME = 45
 
 
-def estimate_time(count: int, tasks: int = 1):
+def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0):
     """
-    ceil(Count / tasks) * 45 min in d-hh:mm
+    :param count: Simulation count
+    :param tasks: Thread count
+    :param machine_power: Machine power multiplier
+    :return:
+    """
+    minutes = estimate_minutes(count, tasks, machine_power)
+    return minutes_to_slurm(minutes)
+
+
+def minutes_to_slurm(minutes: float):
+    """
+    ceil(Count / tasks) * 45 min
+    :param minutes: Minutes to convert
+    :return:
+    """
+    hours = minutes // 60
+    days = hours // 24
+    remaining_minutes = minutes % 60
+    remaining_hours = hours % 24
+    return f"{days}-{remaining_hours}:{remaining_minutes}"
+
+
+def estimate_minutes(count: int, tasks: int, machine_power: float) -> float:
+    """
     From SLURM docs:
     > Acceptable time formats include
     > - "minutes"
@@ -99,15 +57,11 @@ def estimate_time(count: int, tasks: int = 1):
     > - "days-hours:minutes"
     > - "days-hours:minutes:seconds"
     :param count: Simulation count
+    :param machine_power: Machine power multiplier
     :param tasks: Thread count
     :return:
     """
-    minutes = int(np.ceil(count / tasks) * 45)
-    hours = minutes // 60
-    days = hours // 24
-    remaining_minutes = minutes % 60
-    remaining_hours = hours % 24
-    return f"{days}-{remaining_hours}:{remaining_minutes}"
+    return int(np.ceil(count / tasks) * SINGLE_SIMULATION_TIME / machine_power)
 
 
 class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
@@ -136,7 +90,7 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         script_code: str = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_multi_template(), {
                 "tasks": str(n_threads),
-                "time": estimate_time(simulation_count, n_threads),
+                "time": estimate_slurm_time(simulation_count, n_threads, self.remote.single_core_performance),
                 "cmd_args": str(BATCH_INFO),
                 "cwd": str(remote_batch_path),
                 "partition": self.remote.partition_to_use,

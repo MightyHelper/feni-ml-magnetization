@@ -14,15 +14,13 @@ class Machine(metaclass=ABCMeta):
     """
     name: str
     cores: int
-    single_core_performance: float = field(init=False, default=1.0)
-
-    task_queue: list[list[SimulationTask]] = field(init=False, default_factory=list)
+    single_core_performance: float = field(init=False, default=1.0)  # Higher is better
 
     lammps_executable: PurePath
     execution_path: PurePath
 
     def __str__(self) -> str:
-        return f"Machine: {self.name} ({self.cores} cores) with {sum([len(queue) for queue in self.task_queue])} tasks"
+        return f"Machine: {self.name} ({self.cores} cores)"
 
     def __repr__(self) -> str:
         return str(self)

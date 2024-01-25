@@ -30,7 +30,6 @@ class SSHMachine(Machine):
     remote_url: str
     port: int
     password: str | None
-    copy_script: PurePath
 
     def __init__(
             self,
@@ -131,7 +130,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     def _get_local_exec_child(self, child: str | PurePath) -> Path:
         return set_type(Path, self.local.execution_path) / child
 
-    async def _copy_scripts_to_remote(self, sftp: asyncssh.SFTPClient, simulations: list[SimulationTask],
+    async def  _copy_scripts_to_remote(self, sftp: asyncssh.SFTPClient, simulations: list[SimulationTask],
                                       batch_name: str) -> tuple[Path, PurePath]:
         """
         Copy the local batch folder, simulation folders and scripts to the remote machine

@@ -4,7 +4,7 @@ import random
 from pathlib import Path
 from typing import cast
 
-from remote.execution_queue import local_execution_queue, execution_queue, slurm_execution_queue
+from remote.execution_queue import local_execution_queue, execution_queue, slurm_execution_queue, mixed_execution_queue
 from lammps import nanoparticle, poorly_coded_parser as parser, nanoparticlebuilder
 from config.config import MACHINES
 from lammps.nanoparticle import Nanoparticle
@@ -37,6 +37,14 @@ def get_executor(at: str) -> execution_queue.ExecutionQueue:
     :param at: A string that determines the type of ExecutionQueue to return.
     :return: An instance of ExecutionQueue.
     """
+    if at == "all":
+        machines = MACHINES()
+        queues = [get_executor(f"{machine.name}:{machine.cores}") for machine in machines.values() if machine.name != "local-ssh"]
+        return mixed_execution_queue.MixedExecutionQueue(queues)
+    if "," in at:
+        ats = at.split(",")
+        queues = [get_executor(a) for a in ats]
+        return mixed_execution_queue.MixedExecutionQueue(queues)
     machine_name, *threads = at.split(":")
     n_threads: int | None = int(threads[0]) if len(threads) > 0 else None
     machines = MACHINES()

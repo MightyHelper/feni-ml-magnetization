@@ -31,7 +31,6 @@ TOKO_SBATCH = PurePosixPath("/apps/slurm/bin/sbatch")
 TOKO_SQUEUE = PurePosixPath("/apps/slurm/bin/squeue")
 TOKO_SCONTROL = PurePosixPath("/apps/slurm/bin/scontrol")
 TOKO_SINFO = PurePosixPath("/apps/slurm/bin/sinfo")
-TOKO_COPY_SCRIPT = "rsync"  # rsync or scp
 BATCH_INFO = "batch_info.txt"
 SLURM_SH = "slurm.sh"
 RUN_SH = "run.sh"

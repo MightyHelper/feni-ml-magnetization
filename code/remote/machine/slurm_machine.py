@@ -29,7 +29,7 @@ class SLURMMachine(SSHMachine):
     sinfo_path: PurePath
 
     def __str__(self) -> str:
-        return f"Machine: {self.name}/{self.partition_to_use}{self.node_id} ({self.cores} cores) with {sum([len(queue) for queue in self.task_queue])} tasks"
+        return f"Machine: {self.name}{self.node_id} ({self.cores} cores)"
 
     def __init__(
             self,
@@ -39,7 +39,6 @@ class SLURMMachine(SSHMachine):
             remote_url: str,
             port: int = 22,
             password: str | None = None,
-            copy_script: PurePath = PurePath('rsync'),
             lammps_executable: PurePosixPath = PurePosixPath('lmp'),
             execution_path: PurePosixPath = PurePosixPath(''),
             partition_to_use: str = TOKO_PARTITION_TO_USE,

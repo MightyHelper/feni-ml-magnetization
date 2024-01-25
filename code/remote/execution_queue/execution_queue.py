@@ -1,9 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
 from lammps.simulation_task import SimulationTask
+from remote.machine.machine import Machine
 
 
 class ExecutionQueue(ABC):
+    queue: list[SimulationTask]
+    remote: Machine
     @abstractmethod
     def enqueue(self, simulation_task: SimulationTask):
         """
@@ -39,8 +42,9 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
     queue: list[SimulationTask]
     completed: list[SimulationTask]
 
-    def __init__(self):
+    def __init__(self, remote: Machine):
         super().__init__()
+        self.remote = remote
         self.queue = []
         self.completed = []
 

@@ -11,14 +11,14 @@ from lammps.simulation_task import SimulationTask
 
 
 class LocalExecutionQueue(SingleExecutionQueue):
-    local_machine: LocalMachine
+    remote: LocalMachine
 
     def __init__(self, local_machine: LocalMachine):
-        super().__init__()
-        self.local_machine = local_machine
+        super().__init__(local_machine)
+        self.remote = local_machine
 
     def _simulate(self, simulation_task: SimulationTask) -> tuple[SimulationTask, str]:
-        lammps_executable: PurePath = self.local_machine.lammps_executable
+        lammps_executable: PurePath = self.remote.lammps_executable
         cmd = f"{simulation_task.mpi} {lammps_executable} {simulation_task.omp} {simulation_task.gpu} -in {simulation_task.local_input_file}"
         cmd = re.sub(r' +', " ", cmd).strip()
         logging.info(
@@ -43,12 +43,15 @@ def _run_queue(queue: ExecutionQueue) -> list[SimulationTask]:
 
 
 class ThreadedLocalExecutionQueue(ExecutionQueue):
-    def __init__(self, local_machine: LocalMachine, threads: int):
+    remote: LocalMachine
+    queue: list[SimulationTask]
+    def __init__(self, remote: LocalMachine, threads: int):
         super().__init__()
         self.threads: int = threads
         self.index: int = 0
-        self.local_machine = local_machine
-        self.queues: list[LocalExecutionQueue] = [LocalExecutionQueue(self.local_machine) for _ in range(threads)]
+        self.remote = remote
+        self.queue = []
+        self.queues: list[LocalExecutionQueue] = [LocalExecutionQueue(self.remote) for _ in range(threads)]
         self.full_queue: list[SimulationTask] = []
 
     def enqueue(self, simulation_task: SimulationTask):
@@ -56,6 +59,7 @@ class ThreadedLocalExecutionQueue(ExecutionQueue):
         self.queues[queue_to_use].enqueue(simulation_task)
         self.full_queue.append(simulation_task)
         self.index += 1
+        self.queue.append(simulation_task)
 
     def run(self) -> list[SimulationTask]:
         with ThreadPool(len(self.queues)) as p:
