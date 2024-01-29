@@ -1,21 +1,16 @@
 import logging
-import os
 import re
-import subprocess
 from pathlib import Path, PurePosixPath
 
-import asyncssh
 import numpy as np
 from asyncssh import SSHCompletedProcess
 
 import utils
-from config.config import LAMMPS_EXECUTABLE, BATCH_INFO
 from config import config
-from remote.execution_queue.execution_queue import SingleExecutionQueue
+from config.config import BATCH_INFO
 from remote.machine.local_machine import LocalMachine
 from remote.machine.slurm_machine import SLURMMachine
 from remote.machine.ssh_machine import SSHBatchedExecutionQueue
-from lammps.simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import write_local_file
 
@@ -73,15 +68,6 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         self.queue = []
         self.completed = []
 
-    def enqueue(self, simulation_task: SimulationTask):
-        assert isinstance(simulation_task, SimulationTask)
-        assert simulation_task.local_input_file is not None
-        assert simulation_task.local_cwd is not None
-        assert simulation_task.mpi is not None
-        assert simulation_task.omp is not None
-        assert simulation_task.gpu is not None
-        assert simulation_task not in self.queue
-        self.queue.append(simulation_task)
 
 
     def _generate_local_run_file(self, batch_name: str, n_threads: int, simulation_count: int):
@@ -101,11 +87,11 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
-        self.local.run_cmd(lambda: ["chmod", "u+x", local_run_script_path])
+        self.local.run_cmd(["chmod", "u+x", local_run_script_path])
 
 
-    async def submit_remote_batch(self, batch_name: str, connection: asyncssh.SSHClientConnection):
+    async def submit_remote_batch(self, batch_name: str):
         logging.info("Queueing job in toko...")
-        sbatch: SSHCompletedProcess = await connection.run(f"sh -c 'cd {self.remote.execution_path / batch_name}; {self.remote.sbatch_path} {config.RUN_SH}'")
+        sbatch: SSHCompletedProcess = await self.remote.run_cmd(f"sh -c 'cd {self.remote.execution_path / batch_name}; {self.remote.sbatch_path} {config.RUN_SH}'")
         jobid: int = re.match(r"Submitted batch job (\d+)", sbatch.stdout).group(1)
-        await self.remote.wait_for_slurm_execution(connection, jobid)
+        await self.remote.wait_for_slurm_execution(jobid)

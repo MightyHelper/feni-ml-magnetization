@@ -1,14 +1,17 @@
 import logging
 import multiprocessing
 import os
+import platform
 import re
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Generator
+from typing import Generator
 
 import utils
+from config import config
+from lammps.nanoparticle import Nanoparticle
 from model.live_execution import LiveExecution
 from remote.machine.machine import Machine
 
@@ -18,8 +21,7 @@ class LocalMachine(Machine):
     def __init__(self, execution_path: Path, lammps_executable: Path):
         super().__init__("local", multiprocessing.cpu_count(), execution_path, lammps_executable)
 
-    def run_cmd(self, command_getter: Callable[[], list[str]]) -> bytes:
-        command = command_getter()
+    def run_cmd(self, command: list[str]) -> bytes:
         logging.debug(f"Running {command=}")
         return subprocess.check_output(command)
 
@@ -30,9 +32,9 @@ class LocalMachine(Machine):
         if local_path == remote_path:
             return
         if is_folder:
-            self.run_cmd(lambda: ["cp", "-r", local_path, remote_path])
+            self.run_cmd(["cp", "-r", local_path, remote_path])
         else:
-            self.run_cmd(lambda: ["cp", local_path, remote_path])
+            self.run_cmd(["cp", local_path, remote_path])
 
     def cp_multi_to(self, local_paths: list[Path], remote_path: Path):
         for local_path in local_paths:
@@ -57,7 +59,6 @@ class LocalMachine(Machine):
     def ls(self, remote_dir: Path | str) -> list[str]:
         return os.listdir(remote_dir)
 
-
     def copy_alloy_files(self, local_sim_folder: Path, remote_sim_folder: Path):
         local_alloy_file: Path = utils.assert_type(Path, local_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
         remote_alloy_file: Path = utils.assert_type(Path, remote_sim_folder.parent.parent) / "FeCuNi.eam.alloy"
@@ -72,13 +73,53 @@ class LocalMachine(Machine):
         shutil.rmtree(remote_dir)
 
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+        if platform.system() == "Windows":
+            yield from self.get_running_windows(True)
+        elif platform.system() == "Linux":
+            try:
+                yield from self.get_running_windows(False)
+            except FileNotFoundError:
+                pass
+            yield from self.get_running_linux()
+        raise Exception(f"Unknown system: {platform.system()}")
+
+    def get_running_linux(self) -> Generator[LiveExecution, None, None]:
         from lammps.nanoparticle import Nanoparticle
         ps_result = os.popen("ps -ef | grep " + self.lammps_executable.as_posix()).readlines()
         for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
             folder_name = Path(execution).parent
             try:
                 nano = Nanoparticle.from_executed(folder_name)
-                yield folder_name, nano.run.get_current_step(), nano.title
+                yield LiveExecution(nano.title, nano.run.get_current_step(), folder_name)
             except Exception as e:
                 logging.debug(f"Could not parse {folder_name} {e}")
                 pass
+
+    def get_running_windows(self, from_windows: bool = True) -> Generator[LiveExecution, None, None]:
+        # wmic.exe process where "name='python.exe'" get commandline, disable stderr
+        if from_windows:
+            path = Path("C:\Windows\System32\wbem\wmic.exe")
+        else:
+            path = Path("/mnt/c/Windows/System32/Wbem/wmic.exe")
+        result = self.run_cmd(
+            [
+                path.as_posix(),
+                "process",
+                "where",
+                f"name='{config.LOCAL_LAMMPS_NAME_WINDOWS}'",
+                "get",
+                "commandline"
+            ],
+        ).decode('utf-8').replace("\r", "").split("\n")
+        logging.debug(f"WMIC Result: {result}")
+        result = [x.strip() for x in result if x.strip() != ""]
+        xv: str = ""
+        for execution in {
+            xv
+            for result in result
+            if "-in" in result and (xv := re.sub(".*?(-in (.*))\n?", "\\2", result).strip()) != ""
+        }:
+            logging.debug(f"Found execution: {execution}")
+            folder_name = Path(execution).parent
+            nano = Nanoparticle.from_executed(folder_name)
+            yield LiveExecution(nano.title, nano.run.get_current_step(), folder_name)

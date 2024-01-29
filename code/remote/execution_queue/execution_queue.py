@@ -7,14 +7,21 @@ from remote.machine.machine import Machine
 class ExecutionQueue(ABC):
     queue: list[SimulationTask]
     remote: Machine
-    @abstractmethod
+
     def enqueue(self, simulation_task: SimulationTask):
         """
         Enqueue a simulation
         :param simulation_task: Simulation task to enqueue
         :return:
         """
-        pass
+        assert isinstance(simulation_task, SimulationTask)
+        assert simulation_task.local_input_file is not None
+        assert simulation_task.local_cwd is not None
+        assert simulation_task.mpi is not None
+        assert simulation_task.omp is not None
+        assert simulation_task.gpu is not None
+        assert simulation_task not in self.queue
+        self.queue.append(simulation_task)
 
     @abstractmethod
     def run(self) -> list[SimulationTask]:
@@ -47,16 +54,6 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         self.remote = remote
         self.queue = []
         self.completed = []
-
-    def enqueue(self, simulation_task: SimulationTask):
-        assert isinstance(simulation_task, SimulationTask)
-        assert simulation_task.local_input_file is not None
-        assert simulation_task.local_cwd is not None
-        assert simulation_task.mpi is not None
-        assert simulation_task.omp is not None
-        assert simulation_task.gpu is not None
-        assert simulation_task not in self.queue
-        self.queue.append(simulation_task)
 
     def _get_next_task(self) -> SimulationTask | None:
         if len(self.queue) == 0:

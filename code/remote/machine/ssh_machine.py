@@ -3,11 +3,12 @@ import logging
 import random
 import time
 from asyncio import Task
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PurePosixPath
 from typing import Generator, Any
 
 import asyncssh
+from asyncssh import SSHCompletedProcess
 
 import utils
 from config.config import BATCH_INFO
@@ -31,6 +32,9 @@ class SSHMachine(Machine):
     port: int
     password: str | None
 
+    connection: asyncssh.SSHClientConnection | None = field(init=False, default=None)
+    sftp: asyncssh.SFTPClient | None = field(init=False, default=None)
+
     def __init__(
             self,
             name: str,
@@ -48,8 +52,33 @@ class SSHMachine(Machine):
         self.port = port
         self.password = password
 
+    async def connect(self, start_sftp: bool = True):
+        self.connection = await asyncssh.connect(
+            self.remote_url,
+            port=self.port,
+            username=self.user,
+            password=self.password,
+            client_host="foo"  # Otherwise getnameinfo might fail on our own address
+        )
+        if start_sftp:
+            self.sftp = await self.connection.start_sftp_client()
+
     def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
         raise NotImplementedError("get_running_tasks not implemented in SSHMachine")
+
+    def run_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
+        return asyncio.create_task(self.connection.run(cmd))
+
+    def cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Task:
+        return asyncio.create_task(self.sftp.put([local_path.resolve().as_posix()], remote_path.as_posix(), recurse=True))
+
+    def cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Task:
+        return asyncio.create_task(self.sftp.get([remote_path.as_posix()], local_path.resolve().as_posix(), recurse=True))
+
+    async def disconnect(self):
+        await self.sftp.wait_closed()
+        await self.connection.wait_closed()
+
 
 class SSHBatchedExecutionQueue(ExecutionQueue):
     queue: list[SimulationTask]
@@ -57,33 +86,18 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     remote: SSHMachine
     local: LocalMachine
 
-    def enqueue(self, simulation_task: SimulationTask):
-        assert isinstance(simulation_task, SimulationTask)
-        assert simulation_task.local_input_file is not None
-        assert simulation_task.local_cwd is not None
-        assert simulation_task.mpi is not None
-        assert simulation_task.omp is not None
-        assert simulation_task.gpu is not None
-        assert simulation_task not in self.queue
-        self.queue.append(simulation_task)
-
     def run(self) -> list[SimulationTask]:
         return asyncio.run(self.main())
 
     async def main(self) -> list[SimulationTask]:
-        async with asyncssh.connect(
-                self.remote.remote_url,
-                port=self.remote.port,
-                username=self.remote.user,
-                password=self.remote.password,
-                client_host="foo"  # Otherwise getnameinfo might fail on our own address
-        ) as connection:
-            async with connection.start_sftp_client() as sftp:
-                try:
-                    await self._simulate(connection, sftp)
-                except Exception as e:
-                    logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
-                return self.completed
+        await self.remote.connect()
+        try:
+            await self._simulate()
+        except Exception as e:
+            logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
+        finally:
+            await self.remote.disconnect()
+        return self.completed
 
     def __init__(self, remote: SSHMachine, local: LocalMachine, batch_size: int = 10):
         super().__init__()
@@ -93,11 +107,10 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         self.queue = []
         self.completed = []
 
-    async def submit_remote_batch(self, batch_name: str, connection: asyncssh.SSHClientConnection):
+    async def submit_remote_batch(self, batch_name: str):
         logging.info(f"Queueing job in {self}...")
         remote_batch_path: PurePosixPath = self._get_remote_exec_child(batch_name)
-        return await connection.run(f"cd {remote_batch_path}; sh {config.RUN_SH}")
-        # return await connection.run(f"echo Hello World")
+        return await self.remote.run_cmd(f"cd {remote_batch_path}; sh {config.RUN_SH}")
 
     def _generate_local_run_file(self, batch_name: str, n_threads: int, simulation_count: int):
         remote_batch_path: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / batch_name
@@ -114,14 +127,14 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
-        self.local.run_cmd(lambda: ["chmod", "u+x", local_run_script_path])
+        self.local.run_cmd(["chmod", "u+x", local_run_script_path])
 
-    async def _simulate(self, connection: asyncssh.SSHClientConnection, sftp: asyncssh.SFTPClient):
+    async def _simulate(self):
         batch_name: str = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
         self._setup_local_simulation_files(batch_name, self.queue, self.batch_size)
-        await self._copy_scripts_to_remote(sftp, self.queue, batch_name)
-        await self.submit_remote_batch(batch_name, connection)
-        await self._copy_scripts_from_remote(sftp, self.queue, batch_name)
+        await self._copy_scripts_to_remote(self.queue, batch_name)
+        await self.submit_remote_batch(batch_name)
+        await self._copy_scripts_from_remote(self.queue, batch_name)
         self.process_output(self.queue)
 
     def _get_remote_exec_child(self, child: str | PurePath) -> PurePosixPath:
@@ -130,11 +143,10 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     def _get_local_exec_child(self, child: str | PurePath) -> Path:
         return set_type(Path, self.local.execution_path) / child
 
-    async def  _copy_scripts_to_remote(self, sftp: asyncssh.SFTPClient, simulations: list[SimulationTask],
-                                      batch_name: str) -> tuple[Path, PurePath]:
+    async def  _copy_scripts_to_remote(self, simulations: list[SimulationTask],
+                                       batch_name: str) -> tuple[Path, PurePath]:
         """
         Copy the local batch folder, simulation folders and scripts to the remote machine
-        :param sftp: SFTP client
         :param simulations: Simulations to run
         :param batch_name: Name of the batch
         """
@@ -142,16 +154,14 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         local_batch_path: Path = self._get_local_exec_child(batch_name)
         folder_cps: list[Task] = [
             # Batch folder
-            self._cp_put(sftp, local_batch_path, remote_batch_path),
+            self._cp_put(local_batch_path, remote_batch_path),
             # Alloy files
             self._cp_put(
-                sftp,
                 set_type(Path, self.local.execution_path).parent / "FeCuNi.eam.alloy",
                 set_type(PurePosixPath, self.remote.execution_path).parent
             ),
             *[
                 self._cp_put(
-                    sftp,
                     simulation.local_cwd,
                     self._get_remote_exec_child(simulation.local_cwd.name)
                 )
@@ -162,11 +172,9 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
             await folder_cp
         return local_batch_path, remote_batch_path
 
-    async def _copy_scripts_from_remote(self, sftp: asyncssh.SFTPClient, simulations: list[SimulationTask],
-                                      batch_name: str) -> tuple[Path, PurePath]:
+    async def _copy_scripts_from_remote(self, simulations: list[SimulationTask], batch_name: str) -> tuple[Path, PurePath]:
         """
         Copy the local batch folder, simulation folders and scripts to the remote machine
-        :param sftp: SFTP client
         :param simulations: Simulations to run
         :param batch_name: Name of the batch
         """
@@ -174,26 +182,21 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         local_batch_path: Path = self._get_local_exec_child(batch_name)
         folder_cps: list[Task] = [
             # Batch folder
-            self._cp_get(sftp, local_batch_path, remote_batch_path),
+            self._cp_get(local_batch_path, remote_batch_path),
             *[
-                self._cp_get(
-                    sftp,
-                    simulation.local_cwd,
-                    self._get_remote_exec_child(simulation.local_cwd.name)
-                )
+                self._cp_get(simulation.local_cwd, self._get_remote_exec_child(simulation.local_cwd.name))
                 for simulation in simulations
             ]
         ]
-        for folder_cp in folder_cps:
-            await folder_cp
+        for folder_cp in folder_cps: await folder_cp
         return local_batch_path, remote_batch_path
 
-    def _cp_put(self, sftp: asyncssh.SFTPClient, local_path: Path, remote_path: PurePosixPath) -> Task:
-        return asyncio.create_task(sftp.put([local_path.resolve().as_posix()], remote_path.as_posix(), recurse=True))
+    def _cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Task:
+        return self.remote.cp_put(local_path, remote_path)
 
-    def _cp_get(self, sftp: asyncssh.SFTPClient, local_path: Path, remote_path: PurePosixPath) -> Task:
+    def _cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Task:
         self.local.remove_dir(local_path)
-        return asyncio.create_task(sftp.get([remote_path.as_posix()], local_path.resolve().as_posix(), recurse=True))
+        return self.remote.cp_get(local_path, remote_path)
 
     def _setup_local_simulation_files(self, batch_name: str, simulations, n_threads: int):
         """

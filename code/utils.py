@@ -44,7 +44,7 @@ def filter_empty(l: list) -> list:
     return [x for x in l if x != ""]
 
 
-def parse_nanoparticle_name(key: str) -> tuple[str, str, str, str, str]:
+def parse_nanoparticle_name(key: str | Path) -> tuple[str, str, str, str, str]:
     shape, distribution, interface, pores, index = None, None, None, None, None
     # noinspection PyBroadException
     try:
@@ -130,7 +130,7 @@ def get_matching(distributions: dict[str, T], processed_name: str, error: str) -
     raise Exception(error)
 
 
-def assign_nanoparticle_name(name: str) -> dict[str, int | str]:
+def assign_nanoparticle_name(name: str | Path) -> dict[str, int | str]:
     shape, distribution, interface, pores, index = parse_nanoparticle_name(name)
     dist = distribution.split(".")
     intf = interface.split(".")

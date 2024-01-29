@@ -26,6 +26,10 @@ from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks,
     create_tasks
 from lammps.nanoparticle import Nanoparticle
 from lammps.nanoparticlebuilder import NanoparticleBuilder
+from model.live_execution import LiveExecution
+from remote.machine.machine import Machine
+from remote.machine.ssh_machine import SSHMachine
+from service import executor_service
 from service.executor_service import execute_nanoparticles, add_extra_nanoparticles
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -141,8 +145,8 @@ def clean(
 
 @executions.command()
 def live(
-        in_toko: Annotated[
-            bool, typer.Option(help="Whether to listen for executions in Toko", show_default=True)] = False,
+        at: Annotated[
+            str, typer.Option(help="Where to look for simulations", show_default=True)] = "local",
         listen_anyway: Annotated[bool, typer.Option(help="Whether to listen for executions even if there are none",
                                                     show_default=True)] = False,
         only_running: Annotated[
@@ -159,7 +163,9 @@ def live(
             expand=True,
             speed_estimate_period=600,
     ) as progress:
-        running: list[tuple[str, int, str]] = get_running_executions(in_toko, only_running)
+        machine: Machine = executor_service.get_executor(at).remote
+        is_remote_machine: bool = isinstance(machine, SSHMachine)
+        running: list[LiveExecution] = get_running_executions(at, only_running)
         tasks: dict[str, TaskID] = {}
         create_tasks(progress, running, tasks)
         if len(running) == 0:
@@ -168,22 +174,22 @@ def live(
         try:
             while True:
                 update_tasks(progress, running, tasks)
-                sleep_time: float = 5 + 0.25 * len(running) if in_toko else 0.2
-                if in_toko: logging.debug(f"Waiting {sleep_time}")
+                sleep_time: float = 5 + 0.25 * len(running) if is_remote_machine else 0.2
+                if is_remote_machine: logging.debug(f"Waiting {sleep_time}")
                 time.sleep(sleep_time)
-                running = get_running_executions(in_toko, only_running)
+                running = get_running_executions(at, only_running)
                 add_new_tasks(progress, running, tasks)
                 remove_old_tasks(progress, running, tasks)
         except KeyboardInterrupt:
             logging.info("[yellow]Exiting...[/yellow]", extra={"markup": True})
 
 
-def get_running_executions(in_toko: bool, only_running: bool) -> list[tuple[str, int, str]]:
+def get_running_executions(at: str, only_running: bool) -> list[LiveExecution]:
     return [
-        (folder, step, title)
-        for folder, step, title in
-        nanoparticle.RunningExecutionLocator.get_running_executions(in_toko)
-        if step != -1 or not only_running
+        execution
+        for execution in
+        nanoparticle.RunningExecutionLocator.get_running_executions(executor_service.get_executor(at).remote)
+        if execution.is_running() or not only_running
     ]
 
 
@@ -217,7 +223,7 @@ def execute(
 def inspect(
         paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
         plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
-        csv: Annotated[
+        export_csv: Annotated[
             bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
         g_r: Annotated[bool, typer.Option(help="Whether to calculate the radial distribution function g(r)",
                                           show_default=True)] = False,
@@ -256,7 +262,7 @@ def inspect(
                         ), title="Nanoparticle data") if np_data else ""
                 ], expand=False)
             ), title=nano.title))
-        if csv:
+        if export_csv:
             data = nano.columns_for_dataset()
             print(data.to_csv(index=False))
         else:

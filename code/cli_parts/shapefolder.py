@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -15,25 +15,20 @@ from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import do_plots, correct_highlighter
 from lammps.nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
-from utils import parse_nanoparticle_name
+from utils import parse_nanoparticle_name, assign_nanoparticle_name
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 
 
 @shapefolder.command()
-def ls(path: Path = Path("../Shapes")):
+def ls(path: Path = Path("../Shapes"), plot_stats: bool = False, by: str = 'Shape'):
     """
     List available nanoparticles in folder
     """
     table = rich.table.Table(title="Available nanoparticles")
-    table.add_column("Index")
-    table.add_column("Path")
-    table.add_column("Shape")
-    table.add_column("Distribution")
-    table.add_column("Interface")
-    table.add_column("Pores")
-    table.add_column("Index")
-    table.add_column("R")
+    for column in ["Index", "Path", "Shape", "Distribution", "Interface", "Pores", "Index", "R"]:
+        table.add_column(column)
+    data: list[dict[str, Any]] = []
     for i, (path, nano) in enumerate(parser.PoorlyCodedParser.load_shapes(path, [])):
         shape, distribution, interface, pores, index = parse_nanoparticle_name(path)
         pathl = Path(path)
@@ -47,7 +42,22 @@ def ls(path: Path = Path("../Shapes")):
             f"[blue]{index}[/blue]",
             f"[green]{len(nano.seed_values)}[/green]" if nano.is_random() else "[red]0[/red]"
         )
+        data.append({
+            'is_random': nano.is_random(),
+            **assign_nanoparticle_name(path)
+        })
     console.print(table, highlight=True)
+    if plot_stats:
+        for g_by in by.split(","):
+            df: pd.DataFrame = pd.DataFrame(data)
+            df = df[[g_by, 'is_random', 'Index']].groupby([g_by, 'is_random'], as_index=False).count()
+            df2 = pd.DataFrame()
+            df2['count'] = df.groupby(g_by).sum()['Index']
+            df2['random'] = df[df['is_random'] == True].groupby(g_by).sum()['Index']
+            df2 = df2.fillna(value=0).sort_values(by=['count', 'random'])
+            df2.plot(kind='bar')
+            plt.tight_layout()
+            plt.show()
 
 
 @shapefolder.command()

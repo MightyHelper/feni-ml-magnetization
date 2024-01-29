@@ -1,14 +1,15 @@
 import logging
+import random
 import re
+import shutil
 import subprocess
 from dataclasses import dataclass
-from pathlib import PurePath, PurePosixPath
+from pathlib import PurePath, PurePosixPath, Path
 from typing import Generator, cast
 
-from asyncssh import SSHClientConnection
-
-from config.config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
+import utils
 from config import config
+from config.config import TOKO_PARTITION_TO_USE, TOKO_SBATCH, TOKO_SQUEUE, TOKO_SCONTROL, TOKO_SINFO
 from lammps.lammpsrun import LammpsRun
 from model.live_execution import LiveExecution
 from remote.machine.ssh_machine import SSHMachine
@@ -65,32 +66,29 @@ class SLURMMachine(SSHMachine):
         self.node_id = node_id
         self.partition_to_use = partition_to_use
 
-    async def wait_for_slurm_execution(self, connection: SSHClientConnection, jobid: int):
+    async def wait_for_slurm_execution(self, jobid: int):
         logging.info("Waiting for execution to finish in remote...")
-        return await connection.run(f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'")
+        return await self.run_cmd(f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'")
 
-    async def get_slurm_jobids(self, connection: SSHClientConnection, of_user: str) -> list[int]:
+    async def get_slurm_jobids(self, of_user: str | None) -> list[int]:
         """
         Get the job ids of the current user
         Runs: `squeue -u <USER> -h -o %i`
         :return:
         """
-        return [int(jobid) for jobid in (await connection.run(f"sh -c '{self.squeue_path} -u {of_user} -h -o %i'").stdout).split("\n") if jobid]
+        of_user = f"-u {of_user}" if of_user is not None else ""
+        return [int(jobid) for jobid in (await self.run_cmd(f"sh -c '{self.squeue_path} {of_user} -h -o %i'")).stdout.split("\n") if jobid]
 
-    def get_slurm_executing_job_submit_code(self, job_id: int) -> str:
+    async def get_slurm_executing_job_submit_code(self, job_id: int) -> str:
         """
         Get the batch script that was used to run the job
         Runs: `scontrol write batch_script <JOB_ID> -`
         :param job_id:
         :return:
         """
-        return self.run_cmd(
-            lambda user, remote_url: [
-                "ssh",
-                f"{user}@{remote_url}",
+        return (await self.run_cmd(
                 f"sh -c '{self.scontrol_path} write batch_script {job_id} -'"
-            ]
-        ).decode("utf-8")
+        )).stdout
 
     def get_file_tag(self, batch_script: str) -> PurePath | None:
         """
@@ -101,7 +99,7 @@ class SLURMMachine(SSHMachine):
         result = re.search(r"## TAG: (.*)", batch_script)
         return None if result is None else PurePath(result.group(1))
 
-    def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+    async def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
         # List job ids with (in toko with ssh): # squeue -hu fwilliamson -o "%i"
         # Then Get slurm.sh contents with # scontrol write batch_script <JOB_ID> -
         # Then parse {{file_tag}} which is in the last line as a comment with "## TAG: <file_tag>"
@@ -109,11 +107,11 @@ class SLURMMachine(SSHMachine):
         # Read it
         # Read each simulation and get the current step
         # Return the current step
-        job_ids: list[int] = self.get_slurm_jobids(self.user)
+        job_ids: list[int] = await self.get_slurm_jobids(self.user)
         logging.info(f"Found {len(job_ids)} active jobs ({job_ids})")
         for job_id in job_ids:
             logging.info(f"Getting info for job {job_id}")
-            batch_script: str = self.get_slurm_executing_job_submit_code(job_id)
+            batch_script: str = await self.get_slurm_executing_job_submit_code(job_id)
             logging.debug(f"Batch script: {batch_script}")
             file_tag: PurePath | None = self.get_file_tag(batch_script)
             logging.debug(f"File tag: {file_tag}")
@@ -123,10 +121,10 @@ class SLURMMachine(SSHMachine):
             batch_info: PurePath = file_tag.parent / config.BATCH_INFO
             logging.debug(f"Batch info: {batch_info}")
             try:
-                batch_info_content: str = self.read_file(cast(PurePosixPath, batch_info))
+                batch_info_content: str = (await self.read_files(cast(PurePosixPath, batch_info)))[0]
             except FileNotFoundError:
                 batch_info_content: str = "1: " + (file_tag.parent / config.NANOPARTICLE_IN).as_posix()
-            file_read_output, files_to_read = self._read_required_files(batch_info_content)
+            file_read_output, files_to_read = await self._read_required_files(batch_info_content)
             total_steps: int = 0
             count: int = 0
             for folder, step, title in self._get_execution_data(file_read_output, files_to_read):
@@ -167,14 +165,27 @@ class SLURMMachine(SSHMachine):
             remote_nano_in: PurePath = folder_name / config.NANOPARTICLE_IN
             yield folder_name, lammps_log, remote_nano_in
 
-    def _read_required_files(self, batch_info_content):
+    async def _read_required_files(self, batch_info_content):
         files_to_read: list[tuple[str, str, str]] = list(
             self._process_files_to_read(batch_info_content)
         )
         file_read_output: dict[str, str] = {}
         file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
-        file_contents = self.read_multiple_files(file_names_to_read)
+        file_contents: list[str] = list(await self.read_files(*file_names_to_read))
         logging.info(f"Read {len(file_contents)} files")
         for i, content in enumerate(file_contents):
             file_read_output[file_names_to_read[i]] = content
         return file_read_output, files_to_read
+
+    async def read_files(self, *paths: PurePosixPath) -> list[str]:
+        local: Path = Path("/") / "tmp" / f"dw_{random.randint(0, 10000)}"
+        while local.exists():
+            local: Path = Path("/") / "tmp" / f"dw_{random.randint(0, 10000)}"
+        local.mkdir(parents=True, exist_ok=False)
+        await self.sftp.mget(paths, local)
+        out: list[str] = []
+        for path in paths:
+            out.append(utils.read_local_file(local / path.name))
+        shutil.rmtree(local)
+        return out
+
