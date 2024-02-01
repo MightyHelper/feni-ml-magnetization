@@ -20,9 +20,9 @@ region          c1 ellipsoid 0 0 0 8 20 20 units box
 set region      c1 type 2
 region          c2 ellipsoid 0 0 0 6 19 19 units box
 set region      c2 type 1
-region          c3 ellipsoid 0 0 0 4 12 12 units box
+region          c3 ellipsoid 0 0 0 4 11.5 11.5 units box
 set region      c3 type 2
-region          c4 ellipsoid 0 0 0 2 11.5 11.5 units box
+region          c4 ellipsoid 0 0 0 2 11 11 units box
 set region      c4 type 1
 
 
