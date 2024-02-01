@@ -121,11 +121,10 @@ class NanoparticleBuilder:
         nano.regions = self.regions
         nano.atom_manipulation = self.atom_manipulation
         nano.region_name_map = self.region_name_map
-        seed_count = self.get_seed_count()
-        nano.atom_manipulation = self.replace_seeds(nano.atom_manipulation, seed_count, seeds)
+        nano.atom_manipulation = self.replace_seeds(nano.atom_manipulation, self.get_seed_count(), seeds)
         return nano
 
-    def replace_seeds(self, atom_manipulation, seed_count, seeds):
+    def replace_seeds(self, atom_manipulation: list[str], seed_count: int, seeds: list[int]):
         if len(seeds) != seed_count:
             raise Exception(f"Expected {seed_count} seeds, got {len(seeds)}")
         for i in range(0, seed_count):
