@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import multiprocessing
 import os
 import time
 from datetime import datetime
+from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from typing import Annotated
 
@@ -308,7 +310,8 @@ def csv(
 
 @executions.command()
 def raw_parse_completed(reparse: Annotated[
-    bool, typer.Option(help="Whether to reparse completed nanoparticle simulations", show_default=True)] = False):
+    bool, typer.Option(help="Whether to reparse completed nanoparticle simulations", show_default=True)] = False
+):
     """
     Parse all completed nanoparticle simulations
     """
@@ -332,11 +335,13 @@ def raw_parse_completed(reparse: Annotated[
             to_parse.append(folder)
             progress.update(gather_task, completed=i, total=len(to_parse))
         progress.remove_task(gather_task)
+        task_id = progress.add_task("Parsing", total=len(to_parse))
         # Run in parallel
-        with (config.EXEC_LS_POOL_TYPE() as pool):
-            pool.map(raw_parse, to_parse)
+        with ThreadPool() as pool:
+            pool.starmap(raw_parse, [(folder, task_id, progress) for folder in to_parse])
 
 
-def raw_parse(folder):
+def raw_parse(folder, task_id, progress):
     nano = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
     nano.on_post_execution("Some non-empty result")
+    progress.update(task_id, advance=1)
