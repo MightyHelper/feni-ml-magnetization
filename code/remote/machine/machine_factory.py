@@ -10,7 +10,7 @@ def get_toko_cores(partition: str = "mini") -> int:
         'mini': 16,
         'Small': 16,
         'prueba': 64,
-        'Large': 64,
+        'Large': 32,
         'XL': 64,
         'XXL': 128,
     }[partition]
