@@ -30,9 +30,9 @@ set group Ni spin 0.61 0 0 1 #Ni
 
 pair_style 	hybrid/overlay eam/alloy spin/exchange 4.0
 pair_coeff 	* * eam/alloy ../../FeCuNi.eam.alloy Fe Ni
-pair_coeff 	1 1 spin/exchange exchange 4.0 0.02726 0.2171 1.841 #FeFe
-pair_coeff	1 2 spin/exchange exchange 4.0 0.00782 0.0001 1.37 #FeNi
-pair_coeff	2 2 spin/exchange exchange 4.0 0.01066 0.00171 1.01282 #NiNi
+pair_coeff 	1 1 spin/exchange exchange 3.5 0.02726 0.2171 1.841 #FeFe
+pair_coeff	1 2 spin/exchange exchange 3.5 0.0120573 0.01 1.21416 #FeNi
+pair_coeff	2 2 spin/exchange exchange 3.5 0.000208 0.09 1.7 #NiNi
 
 neighbor 	0.5 bin
 # neigh_modify every 10 check yes delay 10 # No need for frozen lattice

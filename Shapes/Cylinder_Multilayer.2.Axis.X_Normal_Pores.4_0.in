@@ -39,8 +39,8 @@ group		Ni type 2
 #El 2 indica que se reemplazarán los de Fe por los de Ni, que un 62% indica la cantidad de mezcla y se hará desde 300 atomos en adelante 
 #sin restricciones
 
-set group Fe type/subset 2 62 300
-set region esquina type/subset 1 62 250
+#set group Fe type/subset 2 62 300
+#set region esquina type/subset 1 62 250
 
 
 # setting mass, mag. moments, and interactions for bcc iron
