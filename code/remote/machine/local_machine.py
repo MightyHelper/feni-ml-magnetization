@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generator
+from typing import Generator, AsyncGenerator
 
 import utils
 from config import config
@@ -72,15 +72,18 @@ class LocalMachine(Machine):
         # if reltive path exists and no ValueError was thrown we can delete
         shutil.rmtree(remote_dir)
 
-    def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+    async def get_running_tasks(self) -> AsyncGenerator[LiveExecution, None]:
         if platform.system() == "Windows":
-            yield from self.get_running_windows(True)
+            for item in self.get_running_windows(True):
+                yield item
         elif platform.system() == "Linux":
             try:
-                yield from self.get_running_windows(False)
+                for item in self.get_running_windows(False):
+                    yield item
             except FileNotFoundError:
                 pass
-            yield from self.get_running_linux()
+            for item in self.get_running_linux():
+                yield item
         raise Exception(f"Unknown system: {platform.system()}")
 
     def get_running_linux(self) -> Generator[LiveExecution, None, None]:

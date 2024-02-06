@@ -1,10 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import PurePath
-from typing import Generator
+from typing import AsyncGenerator
 
 from model.live_execution import LiveExecution
-from lammps.simulation_task import SimulationTask
 
 
 @dataclass
@@ -33,7 +32,5 @@ class Machine(metaclass=ABCMeta):
         assert self.execution_path.is_absolute(), f"Execution path {self.execution_path} is not absolute"
 
     @abstractmethod
-    def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+    async def get_running_tasks(self) -> AsyncGenerator[LiveExecution, None]:
         pass
-
-

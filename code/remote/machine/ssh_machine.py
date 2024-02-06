@@ -5,22 +5,23 @@ import time
 from asyncio import Task
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Generator, Any
+from typing import Any, AsyncGenerator
 
 import asyncssh
-from asyncssh import SSHCompletedProcess
+from asyncssh import SSHCompletedProcess, DISC_BY_APPLICATION
 
 import utils
-from config.config import BATCH_INFO
 from config import config
-from remote.execution_queue.execution_queue import ExecutionQueue
+from config.config import BATCH_INFO
+from lammps.simulation_task import SimulationTask
 from model.live_execution import LiveExecution
+from remote.execution_queue.execution_queue import ExecutionQueue
 from remote.machine.local_machine import LocalMachine
 from remote.machine.machine import Machine
-from lammps.simulation_task import SimulationTask
 from template import TemplateUtils
 from utils import set_type
 from utils import write_local_file
+
 
 @dataclass
 class SSHMachine(Machine):
@@ -36,15 +37,15 @@ class SSHMachine(Machine):
     sftp: asyncssh.SFTPClient | None = field(init=False, default=None)
 
     def __init__(
-            self,
-            name: str,
-            cores: int,
-            user: str,
-            remote_url: str,
-            port: int,
-            password: str | None = None,
-            lammps_executable: PurePath = PurePath(),
-            execution_path: PurePath = PurePath()
+        self,
+        name: str,
+        cores: int,
+        user: str,
+        remote_url: str,
+        port: int,
+        password: str | None = None,
+        lammps_executable: PurePath = PurePath(),
+        execution_path: PurePath = PurePath()
     ):
         super().__init__(name, cores, execution_path, lammps_executable)
         self.user = user
@@ -63,7 +64,7 @@ class SSHMachine(Machine):
         if start_sftp:
             self.sftp = await self.connection.start_sftp_client()
 
-    def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+    async def get_running_tasks(self) -> AsyncGenerator[LiveExecution, None]:
         raise NotImplementedError("get_running_tasks not implemented in SSHMachine")
 
     def run_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
@@ -76,8 +77,11 @@ class SSHMachine(Machine):
         return asyncio.create_task(self.sftp.get([remote_path.as_posix()], local_path.resolve().as_posix(), recurse=True))
 
     async def disconnect(self):
-        await self.sftp.wait_closed()
-        await self.connection.wait_closed()
+        # We no longer do it like this because we could wait forever:
+        # > await self.sftp.wait_closed()
+        # > await self.connection.wait_closed()
+        # Instead we do it like this:
+        self.connection.disconnect(DISC_BY_APPLICATION, "Done Nya!")
 
 
 class SSHBatchedExecutionQueue(ExecutionQueue):
@@ -90,8 +94,8 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         return asyncio.run(self.main())
 
     async def main(self) -> list[SimulationTask]:
-        await self.remote.connect()
         try:
+            await self.remote.connect()
             await self._simulate()
         except Exception as e:
             logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
@@ -143,8 +147,8 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     def _get_local_exec_child(self, child: str | PurePath) -> Path:
         return set_type(Path, self.local.execution_path) / child
 
-    async def  _copy_scripts_to_remote(self, simulations: list[SimulationTask],
-                                       batch_name: str) -> tuple[Path, PurePath]:
+    async def _copy_scripts_to_remote(self, simulations: list[SimulationTask],
+                                      batch_name: str) -> tuple[Path, PurePath]:
         """
         Copy the local batch folder, simulation folders and scripts to the remote machine
         :param simulations: Simulations to run

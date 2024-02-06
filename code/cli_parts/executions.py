@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -17,13 +18,13 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn, TaskID
 
 import cli_parts.ui_utils
-from config import config
-from lammps import nanoparticle, poorly_coded_parser as parser
 import utils
 from cli_parts import ui_utils
 from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import ZeroHighlighter, remove_old_tasks, add_new_tasks, update_tasks, \
     create_tasks
+from config import config
+from lammps import nanoparticle, poorly_coded_parser as parser
 from lammps.nanoparticle import Nanoparticle
 from lammps.nanoparticlebuilder import NanoparticleBuilder
 from model.live_execution import LiveExecution
@@ -165,7 +166,8 @@ def live(
     ) as progress:
         machine: Machine = executor_service.get_executor(at).remote
         is_remote_machine: bool = isinstance(machine, SSHMachine)
-        running: list[LiveExecution] = get_running_executions(at, only_running)
+        # running: list[LiveExecution] = get_running_executions(at, only_running)
+        running: list[LiveExecution] = asyncio.run(get_running_executions(at, only_running))
         tasks: dict[str, TaskID] = {}
         create_tasks(progress, running, tasks)
         if len(running) == 0:
@@ -177,17 +179,17 @@ def live(
                 sleep_time: float = 5 + 0.25 * len(running) if is_remote_machine else 0.2
                 if is_remote_machine: logging.debug(f"Waiting {sleep_time}")
                 time.sleep(sleep_time)
-                running = get_running_executions(at, only_running)
+                running = asyncio.run(get_running_executions(at, only_running))
                 add_new_tasks(progress, running, tasks)
                 remove_old_tasks(progress, running, tasks)
         except KeyboardInterrupt:
             logging.info("[yellow]Exiting...[/yellow]", extra={"markup": True})
 
 
-def get_running_executions(at: str, only_running: bool) -> list[LiveExecution]:
+async def get_running_executions(at: str, only_running: bool) -> list[LiveExecution]:
     return [
         execution
-        for execution in
+        async for execution in
         nanoparticle.RunningExecutionLocator.get_running_executions(executor_service.get_executor(at).remote)
         if execution.is_running() or not only_running
     ]

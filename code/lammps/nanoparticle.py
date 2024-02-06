@@ -5,7 +5,7 @@ import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Generator
+from typing import AsyncGenerator
 
 import pandas as pd
 
@@ -405,8 +405,9 @@ class RunningExecutionLocator:
             yield folder_name, nano.run.get_current_step(), nano.title
 
     @staticmethod
-    def get_running_executions(machine: Machine) -> Generator[LiveExecution, None, None]:
-        yield from machine.get_running_tasks()
+    async def get_running_executions(machine: Machine) -> AsyncGenerator[LiveExecution, None]:
+        async for item in machine.get_running_tasks():
+            yield item
 
     @staticmethod
     def get_nth_path_element(path: str, n: int) -> str:

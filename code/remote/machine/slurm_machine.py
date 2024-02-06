@@ -5,7 +5,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import PurePath, PurePosixPath, Path
-from typing import Generator, cast
+from typing import Generator, cast, AsyncGenerator
 
 import utils
 from config import config
@@ -99,7 +99,7 @@ class SLURMMachine(SSHMachine):
         result = re.search(r"## TAG: (.*)", batch_script)
         return None if result is None else PurePath(result.group(1))
 
-    async def get_running_tasks(self) -> Generator[LiveExecution, None, None]:
+    async def get_running_tasks(self) -> AsyncGenerator[LiveExecution, None]:
         # List job ids with (in toko with ssh): # squeue -hu fwilliamson -o "%i"
         # Then Get slurm.sh contents with # scontrol write batch_script <JOB_ID> -
         # Then parse {{file_tag}} which is in the last line as a comment with "## TAG: <file_tag>"
@@ -107,6 +107,11 @@ class SLURMMachine(SSHMachine):
         # Read it
         # Read each simulation and get the current step
         # Return the current step
+        connected: bool = False
+        if self.connection is None:
+            await self.connect(start_sftp=True)
+            connected = True
+
         job_ids: list[int] = await self.get_slurm_jobids(self.user)
         logging.info(f"Found {len(job_ids)} active jobs ({job_ids})")
         for job_id in job_ids:
@@ -135,6 +140,8 @@ class SLURMMachine(SSHMachine):
             if batch_info_content.count("\n") > 1:
                 logging.debug(f"Found Batch execution")
                 yield PurePath(file_tag).parent.as_posix(), total_steps, config.BATCH_EXECUTION + f" ({count})"
+        if connected:
+            await self.disconnect()
 
     def _get_execution_data(self, file_read_output: dict[str, str], files_to_read: list[tuple[str, str, str]]):
         for folder_name, lammps_log, remote_nano_in in files_to_read:
@@ -188,4 +195,3 @@ class SLURMMachine(SSHMachine):
             out.append(utils.read_local_file(local / path.name))
         shutil.rmtree(local)
         return out
-
