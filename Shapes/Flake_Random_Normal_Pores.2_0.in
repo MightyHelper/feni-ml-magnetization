@@ -21,13 +21,12 @@ region		    s1 sphere -15 0 0 3.5 units box
 set region      s1 type 2
 region		    s2 sphere 15 0 0 3.5 units box 
 set region      s2 type 2
-region		    s3 sphere 0 -15 0 3.5 units box
-set region      s3 type 2
+
 
 
 delete_atoms 	region s1 compress yes 
 delete_atoms 	region s2 compress yes 
-delete_atoms 	region s3 compress yes 
+
 
 
 region		p1 plane 24 0 0 20 20 0  units box
