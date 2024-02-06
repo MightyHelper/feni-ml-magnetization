@@ -17,18 +17,19 @@ from utils import write_local_file
 SINGLE_SIMULATION_TIME = 45
 
 
-def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0):
+def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, machine_start_time_seconds: float = 0.0) -> str:
     """
+    :param machine_start_time_seconds:
     :param count: Simulation count
     :param tasks: Thread count
     :param machine_power: Machine power multiplier
     :return:
     """
-    minutes = estimate_minutes(count, tasks, machine_power)
+    minutes: float = estimate_minutes(count, tasks, machine_power, machine_start_time_seconds)
     return minutes_to_slurm(minutes)
 
 
-def minutes_to_slurm(minutes: float):
+def minutes_to_slurm(minutes: float) -> str:
     """
     From SLURM docs:
     > Acceptable time formats include
@@ -48,15 +49,19 @@ def minutes_to_slurm(minutes: float):
     return f"{days}-{remaining_hours}:{remaining_minutes}"
 
 
-def estimate_minutes(count: int, tasks: int, machine_power: float) -> float:
+def estimate_minutes(count: int, tasks: int, machine_power: float, machine_start_time_seconds: float, is_test: bool = False) -> float:
     """
     ceil(Count / tasks) * SINGLE_SIMULATION_TIME min
+    :param is_test:
+    :param machine_start_time_seconds:
     :param count: Simulation count
     :param machine_power: Machine power multiplier
     :param tasks: Thread count
     :return:
     """
-    return int(np.ceil(count / tasks) * SINGLE_SIMULATION_TIME / machine_power)
+    simulation_time_minutes: int = (5.0 / 60.0) if is_test else SINGLE_SIMULATION_TIME
+    result = int(np.ceil(np.ceil(count / tasks) * (simulation_time_minutes + (machine_start_time_seconds / 60.0)) / machine_power))
+    return result
 
 
 class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
@@ -72,7 +77,7 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         script_code: str = TemplateUtils.replace_templates(
             TemplateUtils.get_slurm_multi_template(), {
                 "tasks": str(n_threads),
-                "time": estimate_slurm_time(simulation_count, n_threads, self.remote.single_core_performance),
+                "time": estimate_slurm_time(simulation_count, n_threads, self.remote.single_core_performance, self.remote.launch_time),
                 "cmd_args": str(BATCH_INFO),
                 "cwd": str(remote_batch_path),
                 "partition": self.remote.partition_to_use,

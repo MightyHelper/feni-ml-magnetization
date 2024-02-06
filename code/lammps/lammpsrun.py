@@ -69,11 +69,11 @@ class LammpsRun:
 			pass
 		return -1
 
-	def get_simulation_task(self) -> SimulationTask:
+	def get_simulation_task(self, test_run: bool) -> SimulationTask:
 		"""
 		Get a simulation task for this run
 		"""
-		sim_task = SimulationWrapper.generate(self.code, file_to_use=self.file_name, sim_params=self.sim_params)
+		sim_task = SimulationWrapper.generate(self.code, file_to_use=self.file_name, sim_params=self.sim_params, test_run=test_run)
 		sim_task.add_callback(self.on_post_execution)
 		return sim_task
 

@@ -47,9 +47,10 @@ class SSHMachine(Machine):
         port: int,
         password: str | None = None,
         lammps_executable: PurePath = PurePath(),
-        execution_path: PurePath = PurePath()
+        execution_path: PurePath = PurePath(),
+        launch_time: float = 0.0,
     ):
-        super().__init__(name, cores, execution_path, lammps_executable)
+        super().__init__(name, cores, execution_path, lammps_executable, launch_time)
         self.user = user
         self.remote_url = remote_url
         self.port = port
@@ -126,7 +127,9 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
     local: LocalMachine
 
     def run(self) -> list[SimulationTask]:
-        return asyncio.run(self.main())
+        result: list[SimulationTask] = asyncio.run(self.main())
+        logging.info(f"Completed {len(result)} tasks in {self}")
+        return result
 
     async def main(self) -> list[SimulationTask]:
         try:

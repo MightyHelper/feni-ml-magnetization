@@ -212,7 +212,7 @@ class Nanoparticle:
         """
         code = self._build_lammps_code(test_run)
         dumps, self.run = self._build_lammps_run(code, kwargs, test_run)
-        sim_task = self.run.get_simulation_task()
+        sim_task = self.run.get_simulation_task(test_run)
         sim_task.add_callback(self.on_post_execution)
         sim_task.nanoparticle = self
         return sim_task

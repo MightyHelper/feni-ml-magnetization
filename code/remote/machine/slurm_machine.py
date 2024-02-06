@@ -33,21 +33,22 @@ class SLURMMachine(SSHMachine):
         return f"Machine: {self.name}{self.node_id} ({self.cores} cores)"
 
     def __init__(
-            self,
-            name: str,
-            cores: int,
-            user: str,
-            remote_url: str,
-            port: int = 22,
-            password: str | None = None,
-            lammps_executable: PurePosixPath = PurePosixPath('lmp'),
-            execution_path: PurePosixPath = PurePosixPath(''),
-            partition_to_use: str = TOKO_PARTITION_TO_USE,
-            node_id: int = 1,
-            sbatch_path: PurePath = TOKO_SBATCH,
-            squeue_path: PurePath = TOKO_SQUEUE,
-            scontrol_path: PurePath = TOKO_SCONTROL,
-            sinfo_path: PurePath = TOKO_SINFO,
+        self,
+        name: str,
+        cores: int,
+        user: str,
+        remote_url: str,
+        port: int = 22,
+        password: str | None = None,
+        lammps_executable: PurePosixPath = PurePosixPath('lmp'),
+        execution_path: PurePosixPath = PurePosixPath(''),
+        partition_to_use: str = TOKO_PARTITION_TO_USE,
+        node_id: int = 1,
+        sbatch_path: PurePath = TOKO_SBATCH,
+        squeue_path: PurePath = TOKO_SQUEUE,
+        scontrol_path: PurePath = TOKO_SCONTROL,
+        sinfo_path: PurePath = TOKO_SINFO,
+        launch_time: float = 0.0
     ):
         super().__init__(
             name=name,
@@ -57,7 +58,8 @@ class SLURMMachine(SSHMachine):
             port=port,
             password=password,
             lammps_executable=lammps_executable,
-            execution_path=execution_path
+            execution_path=execution_path,
+            launch_time=launch_time
         )
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path
@@ -87,7 +89,7 @@ class SLURMMachine(SSHMachine):
         :return:
         """
         return (await self.run_cmd(
-                f"sh -c '{self.scontrol_path} write batch_script {job_id} -'"
+            f"sh -c '{self.scontrol_path} write batch_script {job_id} -'"
         )).stdout
 
     def get_file_tag(self, batch_script: str) -> PurePath | None:

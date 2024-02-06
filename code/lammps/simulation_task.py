@@ -39,21 +39,23 @@ class SimulationWrapper:
 
     @staticmethod
     def get_task(
-            input_file: Path,
-            cwd: Path,
-            gpu: GPUOpt = None,
-            mpi: MPIOpt = None,
-            omp: OMPOpt = None,
+        input_file: Path,
+        cwd: Path,
+        gpu: GPUOpt = None,
+        mpi: MPIOpt = None,
+        omp: OMPOpt = None,
+        test_run: bool = False
     ) -> SimulationTask:
         if gpu is None: gpu = GPUOpt()
         if mpi is None: mpi = MPIOpt()
         if omp is None: omp = OMPOpt()
-        return SimulationTask(input_file, gpu, mpi, omp, cwd)
+        return SimulationTask(input_file, gpu, mpi, omp, cwd, is_test_run=test_run)
 
     @staticmethod
-    def generate(code: str, file_to_use: Path, sim_params: dict[str, Any] = None) -> SimulationTask:
+    def generate(code: str, file_to_use: Path, sim_params: dict[str, Any] = None, test_run: bool = False) -> SimulationTask:
         """
         Generate the local folder structure and return a simulation task
+        :param test_run:
         :param code:
         :param sim_params:
         :param file_to_use:
@@ -62,4 +64,4 @@ class SimulationWrapper:
         assert "{{" not in code, "Not all templates were replaced"
         os.makedirs(file_to_use.parent, exist_ok=True)
         utils.write_local_file(file_to_use, code)
-        return SimulationWrapper.get_task(input_file=file_to_use, **sim_params)
+        return SimulationWrapper.get_task(input_file=file_to_use, test_run=test_run, **sim_params)
