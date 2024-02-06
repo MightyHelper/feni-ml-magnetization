@@ -98,8 +98,8 @@ def realpath(path):
 
 
 def write_local_file(path: Path | str, content: str):
-    with open(path, "w") as f:
-        f.write(content)
+    with open(path, "wb") as f:
+        f.write(content.encode("utf-8"))
 
 
 def read_local_file(path: Path | str) -> str | None:
