@@ -3,19 +3,12 @@ from pathlib import Path
 import typer
 from rich import print as rprint
 
-from config import config
 from lammps.nanoparticle import Nanoparticle
 from remote.execution_queue.execution_queue import ExecutionQueue
-from remote.execution_queue.local_execution_queue import ThreadedLocalExecutionQueue, LocalExecutionQueue
 from remote.execution_queue.mixed_execution_queue import MixedExecutionQueue
-from remote.machine.machine import Machine
-from remote.execution_queue.slurm_execution_queue import estimate_slurm_time, SlurmBatchedExecutionQueue, \
-    estimate_minutes, minutes_to_slurm
-from remote.machine.ssh_machine import SSHBatchedExecutionQueue
+from remote.execution_queue.slurm_execution_queue import estimate_slurm_time, estimate_minutes, minutes_to_slurm
 from service import executor_service
 from service.executor_service import get_executor
-from service.scheduler_service import SchedulerService
-from lammps.simulation_task import SimulationTask
 
 sched = typer.Typer(add_completion=False, no_args_is_help=True, name="sched")
 
