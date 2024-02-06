@@ -1,10 +1,10 @@
 import re
 from pathlib import Path
+from typing import Generator
 
-import nanoparticlebuilder
-import shapes as s
+from lammps import nanoparticlebuilder, shapes as s
 import template
-from nanoparticle_locator import NanoparticleLocator
+from lammps.nanoparticle_locator import NanoparticleLocator
 
 
 class PoorlyCodedParser:
@@ -12,6 +12,7 @@ class PoorlyCodedParser:
     Parse a lammps file and generate a Nanoparticle instance.
     The code isn't great, but at least it's somewhat tested now
     """
+
     @staticmethod
     def parse_region(line: str,
                      nano: nanoparticlebuilder.NanoparticleBuilder) -> None | s.Shape:
@@ -322,10 +323,16 @@ class PoorlyCodedParser:
             PoorlyCodedParser.parse_line(line, nano)
 
     @staticmethod
-    def load_shapes(path: Path, ignore: list[str]) -> dict[str, nanoparticlebuilder.NanoparticleBuilder]:
+    def load_shapes(path: Path, ignore: list[str]) -> Generator[tuple[
+        str, nanoparticlebuilder.NanoparticleBuilder], None, None]:
         for shape in NanoparticleLocator.sorted_search(path):
             if any([section in shape for section in ignore]):  # Ignore
                 continue
+            yield PoorlyCodedParser.parse_single_shape(shape)
+
+    @staticmethod
+    def load_shapes_from_paths(path_gen: list[Path]) -> Generator[tuple[str, nanoparticlebuilder.NanoparticleBuilder], None, None]:
+        for shape in path_gen:
             yield PoorlyCodedParser.parse_single_shape(shape)
 
     @staticmethod

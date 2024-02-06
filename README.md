@@ -4,7 +4,7 @@ Run a nanoparticle simulation with configurable parametes and execution location
 
 ## Configuration
 
-Check and update [config.py](code/config.py) as required.
+Check and update [config.py](code/config/config.py) as required.
 
 You may create a `config.local.py` file to override the default values inside `code/`.
 
@@ -121,9 +121,10 @@ Void = Pores.1
 
 ## TODO:
 Exec clean for toko
-Allow scp by single file in batch mode
-Properly test scp/rsync
-
+Allow exec execute multiple nanoparticles at a time
+Add bar plot by type
+lattice dynamics and check displacement
+generate more random
 
 ## Note about Paths in pathlib
 

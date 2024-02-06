@@ -1,28 +1,31 @@
-from remote.machine import Machine
-from simulation_task import SimulationTask
+from math import ceil
+
+from remote.machine.machine import Machine
+from lammps.simulation_task import SimulationTask
 
 
 class SchedulerService:
     @staticmethod
-    def schedule(machines: dict[str, Machine], tasks: list[SimulationTask]) -> tuple[list[Machine], int]:
+    def estimate_queue_time(machine: Machine, tasks: list[SimulationTask]) -> float:
+        """
+        Estimate the time it takes to run a list of tasks on a machine
+        """
+        task_count = len(tasks)
+        if task_count == 0:
+            return 0
+        return ceil(task_count / machine.cores) / machine.single_core_performance
+
+    @staticmethod
+    def schedule(machines: list[Machine], tasks: list[SimulationTask]) -> tuple[list[list[SimulationTask]], float]:
         """
         Given N machines, with [a, b, ..., z] cores, and M tasks.
         Assign tasks to cores in such a way that the total execution time is minimized.
         """
-        # Sort machines by number of cores
-        mach: list[Machine] = list(machines.values())
-        mach.sort(key=lambda machine: machine.single_core_performance, reverse=True)
-        queues: list[list[SimulationTask]] = [[] for machine in mach for _ in range(machine.cores)]
-
-        queue_index: int = 0
+        queues: list[list[SimulationTask]] = [[] for _ in machines]
         for task in tasks:
-            queues[queue_index].append(task)
-            queue_index = (queue_index + 1) % len(queues)
+            # best_queue: Machine = min(queues, key=lambda queue: SchedulerService.estimate_queue_time(machines[queue], queues[queue]))
+            best_queue: tuple[Machine, list[SimulationTask]] = min(zip(machines, queues), key=lambda m_q: SchedulerService.estimate_queue_time(m_q[0], m_q[1]))
+            best_queue[1].append(task)
 
-        for machine in mach:
-            machine.task_queue = queues[:machine.cores]
-            queues = queues[machine.cores:]
+        return queues, max([SchedulerService.estimate_queue_time(machine, queue) for machine, queue in zip(machines, queues)])
 
-        longest_queue: int = max([len(queue) for machine in mach for queue in machine.task_queue])
-
-        return mach, longest_queue

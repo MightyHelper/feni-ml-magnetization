@@ -5,9 +5,9 @@ from multiprocessing.pool import Pool
 from pathlib import Path, PurePosixPath
 from unittest import TestCase
 
-import config
+from config import config
 import utils
-from remote.slurm_machine import SLURMMachine
+from remote.machine.slurm_machine import SLURMMachine
 
 LOCAL_TEST_FILE = "test_{}.txt"
 TOKO_TEST_FILE = "~/test_{}.txt"

@@ -1,9 +1,10 @@
 import dataclasses
 import os
-import utils
 from dataclasses import field
 from pathlib import Path
 from typing import Callable, Any, Optional
+
+import utils
 from opt import GPUOpt, MPIOpt, OMPOpt
 
 

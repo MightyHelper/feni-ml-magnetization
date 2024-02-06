@@ -1,27 +1,25 @@
 import logging
 import os
-import platform
 import random
 import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Generator
+from typing import AsyncGenerator
 
 import pandas as pd
 
-import config
-import feni_mag
-import feni_ovito
-import lammpsrun as lr
 import opt
-import shapes
 import template
 import utils
-from config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
+from config import config
+from config.config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     NANOPARTICLE_IN
-from execution_queue import ExecutionQueue
-from simulation_task import SimulationTask
+from lammps import feni_mag, feni_ovito, lammpsrun as lr, shapes
+from lammps.simulation_task import SimulationTask
+from model.live_execution import LiveExecution
+from remote.execution_queue.execution_queue import ExecutionQueue
+from remote.machine.machine import Machine
 from utils import drop_index
 
 
@@ -407,20 +405,9 @@ class RunningExecutionLocator:
             yield folder_name, nano.run.get_current_step(), nano.title
 
     @staticmethod
-    def get_running_executions(in_toko: bool = False) -> Generator[tuple[str, int, str], None, None]:
-        if not in_toko:
-            if platform.system() == "Windows":
-                yield from RunningExecutionLocator.get_running_windows(True)
-            elif platform.system() == "Linux":
-                try:
-                    yield from RunningExecutionLocator.get_running_windows(False)
-                except FileNotFoundError:
-                    pass
-                yield from config.MACHINES()['local'].get_running_tasks()
-            else:
-                raise Exception(f"Unknown system: {platform.system()}")
-        else:
-            yield from config.MACHINES()['mini'].get_running_tasks()
+    async def get_running_executions(machine: Machine) -> AsyncGenerator[LiveExecution, None]:
+        async for item in machine.get_running_tasks():
+            yield item
 
     @staticmethod
     def get_nth_path_element(path: str, n: int) -> str:

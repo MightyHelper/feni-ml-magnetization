@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
 
-import nanoparticle_locator
+from lammps import nanoparticle_locator
 
 PATH = Path("../Shapes")
 

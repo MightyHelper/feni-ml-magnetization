@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,32 +8,28 @@ import rich.table
 import typer
 from rich import print as rprint
 
-import config
-import poorly_coded_parser as parser
+from config import config
+from lammps import poorly_coded_parser as parser, nanoparticle_locator
 import service.executor_service
 from cli_parts.number_highlighter import console
 from cli_parts.ui_utils import do_plots, correct_highlighter
-from nanoparticle import Nanoparticle
+from lammps.nanoparticle import Nanoparticle
 from service.executor_service import execute_nanoparticles
-from utils import parse_nanoparticle_name
+from utils import parse_nanoparticle_name, assign_nanoparticle_name
 
 shapefolder = typer.Typer(add_completion=False, no_args_is_help=True, name="shapefolder")
 
 
 @shapefolder.command()
-def ls(path: Path = Path("../Shapes")):
+def ls(path: Path = Path("../Shapes"), plot_stats: bool = False, by: str = 'Shape'):
     """
     List available nanoparticles in folder
     """
-    table = rich.table.Table(title="Available nanoparticles")
-    table.add_column("Index")
-    table.add_column("Path")
-    table.add_column("Shape")
-    table.add_column("Distribution")
-    table.add_column("Interface")
-    table.add_column("Pores")
-    table.add_column("Index")
-    table.add_column("R")
+    table = rich.table.Table(title="Available nanoparticles", show_footer=True)
+    for column in ["Index", "Path", "Shape", "Distribution", "Interface", "Pores", "Index", "R"]:
+        table.add_column(column)
+    data: list[dict[str, Any]] = []
+    total_random = 0
     for i, (path, nano) in enumerate(parser.PoorlyCodedParser.load_shapes(path, [])):
         shape, distribution, interface, pores, index = parse_nanoparticle_name(path)
         pathl = Path(path)
@@ -47,7 +43,25 @@ def ls(path: Path = Path("../Shapes")):
             f"[blue]{index}[/blue]",
             f"[green]{len(nano.seed_values)}[/green]" if nano.is_random() else "[red]0[/red]"
         )
+        total_random += int(nano.is_random())
+        data.append({
+            'is_random': nano.is_random(),
+            **assign_nanoparticle_name(path)
+        })
+    table.columns[0].footer = f"[green]{i + 1}[/green]"
+    table.columns[-1].footer = f"[green]{total_random}[/green]"
     console.print(table, highlight=True)
+    if plot_stats:
+        for g_by in by.split(","):
+            df: pd.DataFrame = pd.DataFrame(data)
+            df = df[[g_by, 'is_random', 'Index']].groupby([g_by, 'is_random'], as_index=False).count()
+            df2 = pd.DataFrame()
+            df2['count'] = df.groupby(g_by).sum()['Index']
+            df2['random'] = df[df['is_random'] == True].groupby(g_by).sum()['Index']
+            df2 = df2.fillna(value=0).sort_values(by=['count', 'random'])
+            df2.plot(kind='bar')
+            plt.tight_layout()
+            plt.show()
 
 
 @shapefolder.command()
@@ -233,6 +247,32 @@ def parseshapes(
         plt.show()
 
     return nanoparticles
+
+@shapefolder.command()
+def get_region(path: Path) -> int:
+    """
+    Hash a nanoparticle
+    """
+    _, nano = parser.PoorlyCodedParser.parse_single_shape(path)
+    region = nano.build(seeds=[123 for _ in nano.seed_values]).get_region()
+    rprint(region)
+    return hash(region)
+
+@shapefolder.command()
+def find_dupes(path: Path = Path("../Shapes")):
+    """
+    Find duplicate nanoparticle shapes
+    """
+    gen = nanoparticle_locator.NanoparticleLocator.search(path)
+    hashes = {}
+    for path in gen:
+        _, nano = parser.PoorlyCodedParser.parse_single_shape(path)
+        region = nano.build(seeds=[123 for _ in nano.seed_values]).get_region()
+        h = hash(region)
+        if h in hashes:
+            rprint(f"Duplicate found: {path} and {hashes[h]}")
+        else:
+            hashes[h] = path
 
 
 @shapefolder.command()

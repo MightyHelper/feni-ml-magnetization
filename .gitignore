@@ -19,4 +19,6 @@ r_experiments/mount.sh
 /r_experiments/FeNiMl/*.html
 /r_experiments/FeNiMl/*.csv
 /r_experiments/FeNiMl/*.png
-/code/config_local.py
+/code/config/config_local.py
+/remote_local_exec/simulations/
+/remote_local_exec/FeCuNi.eam.alloy

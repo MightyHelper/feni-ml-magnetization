@@ -5,8 +5,8 @@ from pathlib import Path
 
 import cli_parts.executions as executions
 import cli_parts.shapefolder as shapefolder
-import nanoparticle_locator
-from nanoparticle import Nanoparticle
+from lammps import nanoparticle_locator
+from lammps.nanoparticle import Nanoparticle
 
 
 class TestShapefolder(unittest.TestCase):
@@ -31,11 +31,11 @@ class TestExec(unittest.TestCase):
     def test_execute(self):
         ironsphere_in = Path("../Shapes/Test/Cone_Multilayer.2.Axis.X_05_Full_0.in")
         execution_result: Path | None = executions.execute(
-            path=Path(ironsphere_in),
+            paths=[Path(ironsphere_in)],
             plot=False,
             test=True,
             at="local"
-        )
+        )[0]
         if execution_result is None:
             self.fail("Execution failed :c")
         self.assertTrue(os.path.exists(execution_result), "Execution doesnt exist")

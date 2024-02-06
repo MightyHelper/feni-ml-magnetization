@@ -3,12 +3,12 @@ import re
 from pathlib import Path
 from typing import Callable, Annotated
 
-from bayes_opt import BayesianOptimization
 import typer
+from bayes_opt import BayesianOptimization
 from rich import print as rprint
 
-import config
-import poorly_coded_parser as parser
+from config import config
+from lammps import poorly_coded_parser as parser
 import utils
 from service import executor_service
 

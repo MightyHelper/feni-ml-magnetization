@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import utils
-from lammpsdump import LammpsDump
-from simulation_task import SimulationTask, SimulationWrapper
+from lammps.lammpsdump import LammpsDump
+from lammps.simulation_task import SimulationTask, SimulationWrapper
 from utils import generate_random_filename
 
 
