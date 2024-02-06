@@ -132,7 +132,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
-        self.local.run_cmd(["chmod", "u+x", str(local_run_script_path)])
+        self.local.make_executable(local_run_script_path)
 
     async def _simulate(self):
         batch_name: str = f"batch_{int(time.time())}_{random.randint(0, 1000)}"

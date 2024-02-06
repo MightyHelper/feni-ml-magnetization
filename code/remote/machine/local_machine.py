@@ -32,13 +32,6 @@ class LocalMachine(Machine):
         if local_path == remote_path:
             return
         shutil.copy(local_path, remote_path)
-        # if platform.system() == "Windows":
-        #     self.run_cmd(["copy", str(local_path), str(remote_path)])
-        # else:
-        #     if is_folder:
-        #         self.run_cmd(["cp", "-r", str(local_path), str(remote_path)])
-        #     else:
-        #         self.run_cmd(["cp", str(local_path), str(remote_path)])
 
     def cp_multi_to(self, local_paths: list[Path], remote_path: Path):
         for local_path in local_paths:
@@ -130,3 +123,7 @@ class LocalMachine(Machine):
             folder_name = Path(execution).parent
             nano = Nanoparticle.from_executed(folder_name)
             yield LiveExecution(nano.title, nano.run.get_current_step(), folder_name)
+
+    def make_executable(self, local_path: Path):
+        os.chmod(local_path, 0o755)
+        logging.debug(f"Made {local_path} executable")
