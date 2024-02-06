@@ -8,7 +8,12 @@ def load_machines():
     from remote.machine.machine_factory import MachineFactory
     return {
         'local': LocalMachine(Path(LOCAL_EXECUTION_PATH), Path(LAMMPS_EXECUTABLE)),
-        'mini': MachineFactory.toko('mini'),
+        'toko/mini': MachineFactory.toko('mini'),
+        'toko/Small': MachineFactory.toko('Small'),
+        'toko/Large': MachineFactory.toko('Large'),
+        'toko/XL': MachineFactory.toko('XL'),
+        'toko/XXL': MachineFactory.toko('XXL'),
+        'toko/prueba': MachineFactory.toko('prueba'),
     }
 
 
