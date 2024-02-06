@@ -189,7 +189,7 @@ class SLURMMachine(SSHMachine):
         while local.exists():
             local: Path = Path("/") / "tmp" / f"dw_{random.randint(0, 10000)}"
         local.mkdir(parents=True, exist_ok=False)
-        await self.sftp.mget(paths, local)
+        await self.sftp.mget([str(path) for path in paths], str(local))
         out: list[str] = []
         for path in paths:
             out.append(utils.read_local_file(local / path.name))

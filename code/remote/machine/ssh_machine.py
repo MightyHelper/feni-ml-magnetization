@@ -5,10 +5,10 @@ import time
 from asyncio import Task
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Coroutine, Iterable
 
 import asyncssh
-from asyncssh import SSHCompletedProcess, DISC_BY_APPLICATION
+from asyncssh import SSHCompletedProcess, DISC_BY_APPLICATION, SFTPFailure
 
 import utils
 from config import config
@@ -36,6 +36,8 @@ class SSHMachine(Machine):
     connection: asyncssh.SSHClientConnection | None = field(init=False, default=None)
     sftp: asyncssh.SFTPClient | None = field(init=False, default=None)
 
+    semaphore = asyncio.Semaphore(200)
+
     def __init__(
         self,
         name: str,
@@ -54,13 +56,15 @@ class SSHMachine(Machine):
         self.password = password
 
     async def connect(self, start_sftp: bool = True):
+        logging.info(f"Connecting to {self}...")
         self.connection = await asyncssh.connect(
             self.remote_url,
             port=self.port,
             username=self.user,
             password=self.password,
-            client_host="foo"  # Otherwise getnameinfo might fail on our own address
+            client_host="foo",  # Otherwise getnameinfo might fail on our own address
         )
+        self.connection.set_keepalive(interval=2)
         if start_sftp:
             self.sftp = await self.connection.start_sftp_client()
 
@@ -70,16 +74,47 @@ class SSHMachine(Machine):
     def run_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
         return asyncio.create_task(self.connection.run(cmd))
 
-    def cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Task:
-        return asyncio.create_task(self.sftp.put([str(local_path.resolve())], str(remote_path), recurse=True))
+    def cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+        logging.debug(f"Copying {local_path} to {remote_path}...")
 
-    def cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Task:
-        return asyncio.create_task(self.sftp.get([str(remote_path)], str(local_path.resolve()), recurse=True))
+        async def do_thing():
+            async with self.semaphore:
+                return await self.sftp.put([str(local_path.resolve())], str(remote_path), recurse=True)
+
+        return do_thing()
+
+    def cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+        logging.debug(f"Copying {remote_path} to {local_path}...")
+
+        async def do_thing():
+            async with self.semaphore:
+                return await self.sftp.get([str(remote_path)], str(local_path.resolve()), recurse=True)
+
+        return do_thing()
+
+    def cp_nput(self, local_paths: Iterable[Path], remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+        logging.debug(f"Copying {local_paths} to {remote_path}...")
+
+        async def do_thing():
+            async with self.semaphore:
+                return await self.sftp.put([str(local_path.resolve()) for local_path in local_paths], str(remote_path), recurse=True)
+
+        return do_thing()
+
+    def cp_nget(self, local_path: Path, remote_paths: Iterable[PurePosixPath]) -> Coroutine[Any, Any, None]:
+        logging.debug(f"Copying {remote_paths} to {local_path}...")
+
+        async def do_thing():
+            async with self.semaphore:
+                return await self.sftp.get([str(remote_path) for remote_path in remote_paths], str(local_path.resolve()), recurse=True)
+
+        return do_thing()
 
     async def disconnect(self):
+        logging.info(f"Disconnecting from {self}...")
         # We no longer do it like this because we could wait forever:
-        # > await self.sftp.wait_closed()
-        # > await self.connection.wait_closed()
+        # await self.sftp.wait_closed()
+        # await self.connection.wait_closed()
         # Instead we do it like this:
         self.connection.disconnect(DISC_BY_APPLICATION, "Done Nya!")
 
@@ -135,6 +170,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         self.local.make_executable(local_run_script_path)
 
     async def _simulate(self):
+        logging.info(f"Simulating {len(self.queue)} tasks in {self}...")
         batch_name: str = f"batch_{int(time.time())}_{random.randint(0, 1000)}"
         self._setup_local_simulation_files(batch_name, self.queue, self.batch_size)
         await self._copy_scripts_to_remote(self.queue, batch_name)
@@ -157,7 +193,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         """
         remote_batch_path: PurePosixPath = self._get_remote_exec_child(batch_name)
         local_batch_path: Path = self._get_local_exec_child(batch_name)
-        folder_cps: list[Task] = [
+        folder_cps: list[Coroutine[Any, Any, None]] = [
             # Batch folder
             self._cp_put(local_batch_path, remote_batch_path),
             # Alloy files
@@ -165,6 +201,10 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
                 set_type(Path, self.local.execution_path).parent / "FeCuNi.eam.alloy",
                 set_type(PurePosixPath, self.remote.execution_path).parent
             ),
+            # self._cp_nput(
+            #     [simulation.local_cwd for simulation in simulations],
+            #     set_type(PurePosixPath, self.remote.execution_path)
+            # )
             *[
                 self._cp_put(
                     simulation.local_cwd,
@@ -173,8 +213,11 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
                 for simulation in simulations
             ]
         ]
-        for folder_cp in folder_cps:
-            await folder_cp
+        try:
+            await asyncio.gather(*folder_cps)
+        except SFTPFailure as e:
+            logging.error(f"Error in {type(self)}: {e}", stack_info=True, exc_info=e)
+            raise Exception(f"Error copying files") from e
         return local_batch_path, remote_batch_path
 
     async def _copy_scripts_from_remote(self, simulations: list[SimulationTask], batch_name: str) -> tuple[Path, PurePath]:
@@ -185,23 +228,32 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         """
         remote_batch_path: PurePosixPath = self._get_remote_exec_child(batch_name)
         local_batch_path: Path = self._get_local_exec_child(batch_name)
-        folder_cps: list[Task] = [
+        folder_cps: list[Coroutine[Any, Any, None]] = [
             # Batch folder
             self._cp_get(local_batch_path, remote_batch_path),
             *[
                 self._cp_get(simulation.local_cwd, self._get_remote_exec_child(simulation.local_cwd.name))
                 for simulation in simulations
             ]
+            # self._cp_nget(local_batch_path, [self._get_remote_exec_child(simulation.local_cwd.name) for simulation in simulations])
         ]
-        for folder_cp in folder_cps: await folder_cp
+        await asyncio.gather(*folder_cps)
         return local_batch_path, remote_batch_path
 
-    def _cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Task:
+    def _cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
         return self.remote.cp_put(local_path, remote_path)
 
-    def _cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Task:
+    def _cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
         self.local.remove_dir(local_path)
         return self.remote.cp_get(local_path, remote_path)
+
+    def _cp_nput(self, local_paths: list[Path], remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+        return self.remote.cp_nput(local_paths, remote_path)
+
+    def _cp_nget(self, local_path: Path, remote_paths: list[PurePosixPath]) -> Coroutine[Any, Any, None]:
+        for remote_path in remote_paths:
+            self.local.remove_dir(local_path / remote_path.name)
+        return self.remote.cp_nget(local_path, remote_paths)
 
     def _setup_local_simulation_files(self, batch_name: str, simulations, n_threads: int):
         """

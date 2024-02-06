@@ -1,5 +1,5 @@
 #!/bin/bash
 cd {{cwd}}
-mpirun --np {{tasks}} python3 multi.py {{cmd_args}} > {{output}}
+mpirun --np {{tasks}} python3 multi.py {{cmd_args}} > {{output}} 2>&1
 
 ## TAG: {{file_tag}}

@@ -53,7 +53,7 @@ def _render_queue(queue: ExecutionQueue) -> list[float]:
         return [qmin for q in queue.queues for qmin in _render_queue(q)]
     else:
         qlen = len(queue.queue)
-        qcores = queue.remote.cores
+        qcores = queue.parallelism_count
         qperf = queue.remote.single_core_performance
         qmin = estimate_minutes(qlen, qcores, qperf)
         qtime = estimate_slurm_time(qlen, qcores, qperf)

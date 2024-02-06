@@ -122,7 +122,7 @@ def clean(
     """
     total = 0
     dirs = [config.LOCAL_EXECUTION_PATH]
-    if keep_remote_local:
+    if not keep_remote_local:
         dirs.append(config.MACHINES()['local-ssh'].execution_path)
     for d in dirs:
         for execution in os.listdir(d):

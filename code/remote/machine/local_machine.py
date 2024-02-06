@@ -20,6 +20,13 @@ from remote.machine.machine import Machine
 class LocalMachine(Machine):
     def __init__(self, execution_path: Path, lammps_executable: Path):
         super().__init__("local", multiprocessing.cpu_count(), execution_path, lammps_executable)
+        if platform.system() == "Windows":
+            import win32file
+            win32file._setmaxstdio(2048)
+        elif platform.system() == "Linux":
+            import resource
+            resource.setrlimit(resource.RLIMIT_NOFILE, (4096, 4096))
+
 
     def run_cmd(self, command: list[str]) -> bytes:
         logging.debug(f"Running {command=}")
@@ -74,14 +81,15 @@ class LocalMachine(Machine):
             for item in self.get_running_windows(True):
                 yield item
         elif platform.system() == "Linux":
-            try:
-                for item in self.get_running_windows(False):
-                    yield item
-            except FileNotFoundError:
-                pass
+            # try:
+            #     for item in self.get_running_windows(False):
+            #         yield item
+            # except FileNotFoundError:
+            #     pass
             for item in self.get_running_linux():
                 yield item
-        raise Exception(f"Unknown system: {platform.system()}")
+        else:
+            raise Exception(f"Unknown system: {platform.system()}")
 
     def get_running_linux(self) -> Generator[LiveExecution, None, None]:
         from lammps.nanoparticle import Nanoparticle
@@ -108,7 +116,7 @@ class LocalMachine(Machine):
                 "where",
                 f"name='{config.LOCAL_LAMMPS_NAME_WINDOWS}'",
                 "get",
-                "commandline"
+                "commandline",
             ],
         ).decode('utf-8').replace("\r", "").split("\n")
         logging.debug(f"WMIC Result: {result}")

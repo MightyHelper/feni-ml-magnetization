@@ -5,6 +5,6 @@
 . /etc/profile
 module load openmpi-2.1.6 gcc-9.2.0
 cd {{cwd}}
-mpirun --np {{tasks}} python3 multi.py {{cmd_args}} > {{output}}
+mpirun --np {{tasks}} python3 multi.py {{cmd_args}} > {{output}} 2>&1
 
 ## TAG: {{file_tag}}

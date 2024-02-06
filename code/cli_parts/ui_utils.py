@@ -147,7 +147,7 @@ def lerp_green_red(value: float) -> str:
 
 def add_task(execution: LiveExecution, progress: Progress, tasks: dict[str, TaskID]) -> None:
     logging.info(f"Found running execution: {execution}")
-    tasks[str(execution.folder)] = progress.add_task(
+    tasks[execution.folder.name] = progress.add_task(
         f"{os.path.basename(execution.folder)} ({execution.title})",
         total=execution.get_total_execution_length()
     )
@@ -155,7 +155,7 @@ def add_task(execution: LiveExecution, progress: Progress, tasks: dict[str, Task
 def remove_old_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[str, TaskID]):
     keys_to_remove = []
     for folder in tasks.keys():
-        if folder not in [execution.folder for execution in running]:
+        if folder not in [execution.folder.name for execution in running]:
             logging.info(f"Execution {folder} has finished")
             try:
                 progress.remove_task(tasks[folder])
@@ -168,14 +168,14 @@ def remove_old_tasks(progress: Progress, running: list[LiveExecution], tasks: di
 
 def add_new_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[str, TaskID]):
     for execution in running:
-        if execution.folder not in tasks:
+        if execution.folder.name not in tasks:
             add_task(execution, progress, tasks)
 
 
 def update_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[str, TaskID]):
     for execution in running:
         progress.update(
-            tasks[str(execution.folder)],
+            tasks[execution.folder.name],
             completed=execution.step,
             total=execution.get_total_execution_length()
         )
