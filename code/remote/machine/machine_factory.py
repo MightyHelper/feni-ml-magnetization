@@ -26,7 +26,7 @@ class MachineFactory:
             remote_url=TOKO_URL,
             cores=get_toko_cores(partition),
             partition_to_use=partition,
-            execution_path=PurePosixPath("~/scratch/projects/magnetism/simulations/"),
+            execution_path=PurePosixPath(f"/scratch/{TOKO_USER}/projects/magnetism/simulations/"),
             lammps_executable=PurePosixPath("/scratch/fwilliamson/lammps_compile/lammps/build1/lmp"),
             user=user,
             node_id=node_id,
