@@ -1,5 +1,5 @@
 #!/bin/bash
 cd {{cwd}}
-mpirun -n {{tasks}} --use-hw-threads python3 multi.py {{cmd_args}} > {{output}}
+mpirun --np {{tasks}} python3 multi.py {{cmd_args}} > {{output}}
 
 ## TAG: {{file_tag}}

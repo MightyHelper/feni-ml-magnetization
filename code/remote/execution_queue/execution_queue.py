@@ -6,6 +6,7 @@ from remote.machine.machine import Machine
 
 class ExecutionQueue(ABC):
     queue: list[SimulationTask]
+    parallelism_count: int
     remote: Machine
 
     def enqueue(self, simulation_task: SimulationTask):
@@ -53,6 +54,7 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         super().__init__()
         self.remote = remote
         self.queue = []
+        self.parallelism_count = 1
         self.completed = []
 
     def _get_next_task(self) -> SimulationTask | None:
@@ -90,5 +92,3 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
 
     def __str__(self):
         return f"{type(self).__name__}({len(self.queue)} items)"
-
-

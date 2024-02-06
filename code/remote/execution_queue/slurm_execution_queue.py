@@ -63,10 +63,6 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
     remote: SLURMMachine
     def __init__(self, remote: SLURMMachine, local: LocalMachine, batch_size: int = 10):
         super().__init__(remote, local, batch_size)
-        self.batch_size = batch_size
-        self.remote = remote
-        self.queue = []
-        self.completed = []
 
 
 

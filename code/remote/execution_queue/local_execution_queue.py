@@ -48,6 +48,7 @@ class ThreadedLocalExecutionQueue(ExecutionQueue):
     def __init__(self, remote: LocalMachine, threads: int):
         super().__init__()
         self.threads: int = threads
+        self.parallelism_count = threads
         self.index: int = 0
         self.remote = remote
         self.queue = []

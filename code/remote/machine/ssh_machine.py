@@ -107,6 +107,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         super().__init__()
         self.batch_size = batch_size
         self.remote = remote
+        self.parallelism_count = batch_size
         self.local = local
         self.queue = []
         self.completed = []

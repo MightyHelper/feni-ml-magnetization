@@ -22,13 +22,11 @@ class MixedExecutionQueue(ExecutionQueue):
         self.queue.append(simulation_task)
 
     def schedule(self):
-        machines: list[Machine] = [myq.remote for myq in self.queues]
-        result: tuple[list[list[SimulationTask]], float] = SchedulerService.schedule(machines, self.queue)
-        for machine, queue in zip(machines, result[0]):
-            machine: Machine
+        result: tuple[list[list[SimulationTask]], float] = SchedulerService.schedule_queue(self.queues, self.queue)
+        for execution_queue, queue in zip(self.queues, result[0]):
             queue: list[SimulationTask]
             for item in queue:
-                self.queues[machines.index(machine)].enqueue(item)
+                self.queues[self.queues.index(execution_queue)].enqueue(item)
 
     def run(self) -> list[SimulationTask]:
         self.schedule()
