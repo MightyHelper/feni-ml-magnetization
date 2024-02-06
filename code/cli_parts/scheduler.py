@@ -57,5 +57,5 @@ def _render_queue(queue: ExecutionQueue) -> list[float]:
         qperf = queue.remote.single_core_performance
         qmin = estimate_minutes(qlen, qcores, qperf)
         qtime = estimate_slurm_time(qlen, qcores, qperf)
-        rprint(f"{queue.remote.name:12} ({queue.remote.cores:3} cores): {len(queue.queue):4} tasks = {qtime}")
+        rprint(f"{queue.remote.name:12} ({queue.parallelism_count:3} cores): {len(queue.queue):4} tasks = {qtime}")
         return [qmin]
