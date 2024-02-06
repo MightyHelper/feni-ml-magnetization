@@ -31,10 +31,13 @@ class LocalMachine(Machine):
     def cp_to(self, local_path: Path, remote_path: Path, is_folder: bool):
         if local_path == remote_path:
             return
-        if is_folder:
-            self.run_cmd(["cp", "-r", str(local_path), str(remote_path)])
+        if platform.system() == "Windows":
+            self.run_cmd(["copy", str(local_path), str(remote_path)])
         else:
-            self.run_cmd(["cp", str(local_path), str(remote_path)])
+            if is_folder:
+                self.run_cmd(["cp", "-r", str(local_path), str(remote_path)])
+            else:
+                self.run_cmd(["cp", str(local_path), str(remote_path)])
 
     def cp_multi_to(self, local_paths: list[Path], remote_path: Path):
         for local_path in local_paths:
