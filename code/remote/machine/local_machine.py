@@ -32,9 +32,9 @@ class LocalMachine(Machine):
         if local_path == remote_path:
             return
         if is_folder:
-            self.run_cmd(["cp", "-r", local_path, remote_path])
+            self.run_cmd(["cp", "-r", str(local_path), str(remote_path)])
         else:
-            self.run_cmd(["cp", local_path, remote_path])
+            self.run_cmd(["cp", str(local_path), str(remote_path)])
 
     def cp_multi_to(self, local_paths: list[Path], remote_path: Path):
         for local_path in local_paths:
@@ -88,7 +88,7 @@ class LocalMachine(Machine):
 
     def get_running_linux(self) -> Generator[LiveExecution, None, None]:
         from lammps.nanoparticle import Nanoparticle
-        ps_result = os.popen("ps -ef | grep " + self.lammps_executable.as_posix()).readlines()
+        ps_result = os.popen("ps -ef | grep " + str(self.lammps_executable)).readlines()
         for execution in {x for result in ps_result if (x := re.sub(".*?(-in (.*))?\n", "\\2", result)) != ""}:
             folder_name = Path(execution).parent
             try:
@@ -106,7 +106,7 @@ class LocalMachine(Machine):
             path = Path("/mnt/c/Windows/System32/Wbem/wmic.exe")
         result = self.run_cmd(
             [
-                path.as_posix(),
+                str(path),
                 "process",
                 "where",
                 f"name='{config.LOCAL_LAMMPS_NAME_WINDOWS}'",

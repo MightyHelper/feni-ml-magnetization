@@ -128,7 +128,7 @@ class SLURMMachine(SSHMachine):
             try:
                 batch_info_content: str = (await self.read_files(cast(PurePosixPath, batch_info)))[0]
             except FileNotFoundError:
-                batch_info_content: str = "1: " + (file_tag.parent / config.NANOPARTICLE_IN).as_posix()
+                batch_info_content: str = "1: " + str(file_tag.parent / config.NANOPARTICLE_IN)
             file_read_output, files_to_read = await self._read_required_files(batch_info_content)
             total_steps: int = 0
             count: int = 0
@@ -139,7 +139,7 @@ class SLURMMachine(SSHMachine):
                     yield folder, step, title
             if batch_info_content.count("\n") > 1:
                 logging.debug(f"Found Batch execution")
-                yield PurePath(file_tag).parent.as_posix(), total_steps, config.BATCH_EXECUTION + f" ({count})"
+                yield str(PurePath(file_tag).parent), total_steps, config.BATCH_EXECUTION + f" ({count})"
         if connected:
             await self.disconnect()
 

@@ -22,8 +22,7 @@ LAMMPS_TEMPLATE_PATH = Path("../lammps.template").resolve().expanduser()  # Loca
 SLURM_TEMPLATE_PATH = Path("../slurm.template").resolve().expanduser()  # Local path pointing to the slurm template
 SLURM_MULTI_TEMPLATE_PATH = Path("../slurm-multi.template").resolve().expanduser()  # Local path pointing to the slurm template
 SSH_MULTI_TEMPLATE_PATH = Path("../ssh-multi.template").resolve().expanduser()  # Local path pointing to the slurm template
-LAMMPS_EXECUTABLE = Path(
-    "/home/federico/sistemas_complejos/lammps/lammps/build6/lmp")  # Path to the lammps executable in local
+LAMMPS_EXECUTABLE = Path("/tmp")  # Path to the lammps executable in local
 LOCAL_EXECUTION_PATH = Path("../executions").resolve().expanduser()  # Path in local where the simulations will be stored
 LOCAL_MULTI_PY = Path("../multi.py").resolve().expanduser()  # Path in local to the multi.py file
 LOCAL_LAMMPS_NAME_WINDOWS = "lmp.exe"

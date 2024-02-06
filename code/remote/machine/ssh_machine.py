@@ -71,10 +71,10 @@ class SSHMachine(Machine):
         return asyncio.create_task(self.connection.run(cmd))
 
     def cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Task:
-        return asyncio.create_task(self.sftp.put([local_path.resolve().as_posix()], remote_path.as_posix(), recurse=True))
+        return asyncio.create_task(self.sftp.put([str(local_path.resolve())], str(remote_path), recurse=True))
 
     def cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Task:
-        return asyncio.create_task(self.sftp.get([remote_path.as_posix()], local_path.resolve().as_posix(), recurse=True))
+        return asyncio.create_task(self.sftp.get([str(remote_path)], str(local_path.resolve()), recurse=True))
 
     async def disconnect(self):
         # We no longer do it like this because we could wait forever:
@@ -132,7 +132,7 @@ class SSHBatchedExecutionQueue(ExecutionQueue):
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
-        self.local.run_cmd(["chmod", "u+x", local_run_script_path])
+        self.local.run_cmd(["chmod", "u+x", str(local_run_script_path)])
 
     async def _simulate(self):
         batch_name: str = f"batch_{int(time.time())}_{random.randint(0, 1000)}"

@@ -355,7 +355,7 @@ class PoorlyCodedParser:
             lines = [template.TemplateUtils.replace_templates(ll.strip(), replacements) for line in lines if
                      (ll := line.strip()) != ""]
             PoorlyCodedParser.parse_shape(lines, nano)
-            return shape_path.resolve().as_posix(), nano
+            return str(shape_path.resolve()), nano
 
     @staticmethod
     def locate_relevant_lines(lines):

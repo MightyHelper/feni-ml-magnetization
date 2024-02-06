@@ -77,13 +77,13 @@ def ls(
                 (by_value, "magnetism_std", None, None)
             )
             if save is not None:
-                fig.savefig(os.path.join(save.as_posix(), f"exec_result_{by_value}.png"))
+                fig.savefig(os.path.join(str(save), f"exec_result_{by_value}.png"))
             else:
                 plt.show()
             cli_parts.ui_utils.scatter(df, by=by_value, y="magnetism_std_over_mag", x="magnetism_val")
             plt.show()
             if save is not None:
-                fig.savefig(os.path.join(save.as_posix(), f"exec_result_scatter_{by_value}.png"))
+                fig.savefig(os.path.join(str(save), f"exec_result_scatter_{by_value}.png"))
             else:
                 plt.show()
 

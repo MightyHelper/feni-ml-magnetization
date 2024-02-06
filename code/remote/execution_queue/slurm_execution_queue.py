@@ -83,7 +83,7 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
-        self.local.run_cmd(["chmod", "u+x", local_run_script_path])
+        self.local.run_cmd(["chmod", "u+x", str(local_run_script_path)])
 
 
     async def submit_remote_batch(self, batch_name: str):

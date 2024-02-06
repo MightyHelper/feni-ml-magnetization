@@ -47,7 +47,7 @@ def single(path: Annotated[Path, typer.Option(help="Path to the folder", show_de
     Outputs the renamed nanoparticle for a single folder.
     """
     class_type = _get_renamer(rename_type)
-    nanoparticle = class_type.get_new_nanoparticle_name(path.as_posix(), [])
+    nanoparticle = class_type.get_new_nanoparticle_name(str(path), [])
     rprint(f"[green]{nanoparticle}[/green]")
 
 
@@ -114,6 +114,6 @@ def dataset_info(
              config.DESIRED_NI_RATIO + config.DESIRED_MAX_RATIO_VARIANCE)
         )
         if save is not None:
-            fig.savefig(os.path.join(save.as_posix(), f"{dataset_path.name}_{by_value}.png"))
+            fig.savefig(os.path.join(str(save), f"{dataset_path.name}_{by_value}.png"))  # TODO: Fixme path
         else:
             plt.show()

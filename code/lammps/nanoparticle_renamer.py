@@ -34,7 +34,7 @@ class NanoparticleRenamer(ABC):
     @classmethod
     def get_all_renames_for_folder(cls, folder: Path = Path("../Shapes")) -> list[tuple[str, str]]:
         nanoparticles = nanoparticle_locator.NanoparticleLocator.sorted_search(folder)
-        return cls.get_all_renames([path.resolve().as_posix() for path in nanoparticles])
+        return cls.get_all_renames([str(path.resolve()) for path in nanoparticles])
 
     @classmethod
     def output_rename(cls, old_name: str, new_name: str) -> None:
@@ -252,7 +252,7 @@ class NewNanoparticleRenamer(NanoparticleRenamer):
     @classmethod
     def get_all_renames_for_folder(cls, folder: Path = Path("../Shapes")) -> list[tuple[str, str]]:
         nanoparticles = nanoparticle_locator.NanoparticleLocator.sorted_search(folder)
-        return cls.get_all_renames([path.resolve().as_posix() for path in nanoparticles])
+        return cls.get_all_renames([str(path.resolve()) for path in nanoparticles])
 
     @classmethod
     def _assemble_nanoparticle_name(cls, shape, distribution, interface, pores, index, base_path):

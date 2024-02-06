@@ -147,7 +147,7 @@ def lerp_green_red(value: float) -> str:
 
 def add_task(execution: LiveExecution, progress: Progress, tasks: dict[str, TaskID]) -> None:
     logging.info(f"Found running execution: {execution}")
-    tasks[execution.folder.as_posix()] = progress.add_task(
+    tasks[str(execution.folder)] = progress.add_task(
         f"{os.path.basename(execution.folder)} ({execution.title})",
         total=execution.get_total_execution_length()
     )
@@ -175,7 +175,7 @@ def add_new_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[
 def update_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[str, TaskID]):
     for execution in running:
         progress.update(
-            tasks[execution.folder.as_posix()],
+            tasks[str(execution.folder)],
             completed=execution.step,
             total=execution.get_total_execution_length()
         )
@@ -185,4 +185,3 @@ def update_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[s
 def create_tasks(progress: Progress, running: list[LiveExecution], tasks: dict[str, TaskID]):
     for execution in running:
         add_task(execution, progress, tasks)
-
