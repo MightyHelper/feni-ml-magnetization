@@ -67,6 +67,11 @@ def ls(
                 df_rows.append(data)  # Add new row to df using .loc
                 table.add_row(*tab)
     df = pd.DataFrame(df_rows)
+    # create magnetism_std and magnetism val if the columns are not present
+    if 'magnetism_std' not in df.columns:
+        df['magnetism_std'] = float('nan')
+    if 'magnetism_val' not in df.columns:
+        df['magnetism_val'] = float('nan')
     if full_only:
         # filter rows where magnetism_val is not nan
         df = df[df['magnetism_val'].notna()]
