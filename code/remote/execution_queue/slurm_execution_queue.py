@@ -14,11 +14,12 @@ from remote.machine.ssh_machine import SSHBatchedExecutionQueue
 from template import TemplateUtils
 from utils import write_local_file
 
-SINGLE_SIMULATION_TIME = 45
+SINGLE_SIMULATION_TIME = 16
 
 
-def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, machine_start_time_seconds: float = 0.0) -> str:
+def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, machine_start_time_seconds: float = 0.0, tolerance: float = 1.5) -> str:
     """
+    :param tolerance:
     :param machine_start_time_seconds:
     :param count: Simulation count
     :param tasks: Thread count
@@ -26,10 +27,10 @@ def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, 
     :return:
     """
     minutes: float = estimate_minutes(count, tasks, machine_power, machine_start_time_seconds)
-    return minutes_to_slurm(minutes)
+    return minutes_to_slurm(minutes, tolerance)
 
 
-def minutes_to_slurm(minutes: float) -> str:
+def minutes_to_slurm(minutes: float, tolerance: float = 1.5) -> str:
     """
     From SLURM docs:
     > Acceptable time formats include
@@ -39,9 +40,11 @@ def minutes_to_slurm(minutes: float) -> str:
     > - "days-hours"
     > - "days-hours:minutes"
     > - "days-hours:minutes:seconds"
+    :param tolerance: 
     :param minutes: Minutes to convert
     :return:
     """
+    minutes = int(np.ceil(minutes * tolerance))
     hours = minutes // 60
     days = hours // 24
     remaining_minutes = minutes % 60
@@ -59,17 +62,16 @@ def estimate_minutes(count: int, tasks: int, machine_power: float, machine_start
     :param tasks: Thread count
     :return:
     """
-    simulation_time_minutes: int = (5.0 / 60.0) if is_test else SINGLE_SIMULATION_TIME
-    result = int(np.ceil(np.ceil(count / tasks) * (simulation_time_minutes + (machine_start_time_seconds / 60.0)) / machine_power))
+    simulation_time_minutes: float = (2.0 / 60.0) if is_test else SINGLE_SIMULATION_TIME
+    result = np.ceil(count / tasks) * (simulation_time_minutes + (machine_start_time_seconds / 60.0)) / machine_power
     return result
 
 
 class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
     remote: SLURMMachine
+
     def __init__(self, remote: SLURMMachine, local: LocalMachine, batch_size: int = 10):
         super().__init__(remote, local, batch_size)
-
-
 
     def _generate_local_run_file(self, batch_name: str, n_threads: int, simulation_count: int):
         remote_batch_path: PurePosixPath = utils.set_type(PurePosixPath, self.remote.execution_path) / batch_name
@@ -89,7 +91,6 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
         write_local_file(local_run_script_path, script_code)
         # Change permission u+x
         self.local.make_executable(local_run_script_path)
-
 
     async def submit_remote_batch(self, batch_name: str):
         logging.info("Queueing job in toko...")

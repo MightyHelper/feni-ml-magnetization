@@ -2,7 +2,7 @@ import logging
 from multiprocessing.pool import ThreadPool, Pool
 from lammps.simulation_task import SimulationTask
 from remote.execution_queue.execution_queue import ExecutionQueue
-from remote.execution_queue.slurm_execution_queue import estimate_minutes, estimate_slurm_time
+from remote.execution_queue.slurm_execution_queue import estimate_minutes, estimate_slurm_time, minutes_to_slurm
 from remote.machine.machine import Machine
 from service.scheduler_service import SchedulerService
 
@@ -41,14 +41,14 @@ class MixedExecutionQueue(ExecutionQueue):
         return [item for sublist in results for item in sublist]
 
 
-def render_queue_plan(queue: ExecutionQueue, is_test: bool = False) -> list[float]:
+def render_queue_plan(queue: ExecutionQueue, is_test: bool = False, tolerance: float = 1.5) -> list[float]:
     if isinstance(queue, MixedExecutionQueue):
-        return [qmin for q in queue.queues for qmin in render_queue_plan(q, is_test)]
+        return [qmin for q in queue.queues for qmin in render_queue_plan(q, is_test, tolerance)]
     else:
         qlen = len(queue.queue)
         qcores = queue.parallelism_count
         qperf = queue.remote.single_core_performance
         qmin = estimate_minutes(qlen, qcores, qperf, queue.remote.launch_time, is_test)
-        qtime = estimate_slurm_time(qlen, qcores, qperf, queue.remote.launch_time)
-        logging.warning(f"{queue.remote.name:12} ({queue.parallelism_count:3} cores): {len(queue.queue):4} tasks = {qtime}")
+        qtime = minutes_to_slurm(qmin, tolerance)
+        logging.warning(f"{queue.remote.name:12} ({queue.parallelism_count:3} cores): {len(queue.queue):5} tasks = {qtime}")
         return [qmin]

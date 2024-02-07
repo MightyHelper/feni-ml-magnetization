@@ -34,6 +34,11 @@ def schedule(
         False,
         help="Run a test run",
         show_default=True
+    ),
+    tolerance: float = typer.Option(
+        1,
+        help="Time tolerance",
+        show_default=True
     )
 ):
     """
@@ -50,5 +55,5 @@ def schedule(
         np.schedule_execution(execution_queue=queue, test_run=test)
     if isinstance(queue, MixedExecutionQueue):
         queue.schedule(test)
-    estimated_min = max(render_queue_plan(queue, is_test=test))
-    rprint(f"Estimated time: {minutes_to_slurm(estimated_min)}")
+    estimated_min = max(render_queue_plan(queue, is_test=test, tolerance=tolerance))
+    rprint(f"Estimated time: {minutes_to_slurm(estimated_min, tolerance=tolerance)}")

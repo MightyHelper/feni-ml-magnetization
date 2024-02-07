@@ -44,7 +44,7 @@ class SSHMachine(Machine):
         cores: int,
         user: str,
         remote_url: str,
-        port: int,
+        port: int = 22,
         password: str | None = None,
         lammps_executable: PurePath = PurePath(),
         execution_path: PurePath = PurePath(),
