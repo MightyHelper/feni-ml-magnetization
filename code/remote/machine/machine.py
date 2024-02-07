@@ -13,7 +13,7 @@ class Machine(metaclass=ABCMeta):
     """
     name: str
     cores: int
-    single_core_performance: float = field(init=False, default=1.0)  # Higher is better
+    single_core_completion_time: float = field(init=False, default=60 * 17)  # Lower is better
     launch_time: float = field(init=False, default=0.0)  # Time to launch a task
 
     lammps_executable: PurePath
@@ -25,12 +25,13 @@ class Machine(metaclass=ABCMeta):
     def __repr__(self) -> str:
         return str(self)
 
-    def __init__(self, name: str, cores: int, execution_path: PurePath, lammps_executable: PurePath, launch_time: float = 0):
+    def __init__(self, name: str, cores: int, execution_path: PurePath, lammps_executable: PurePath, launch_time: float = 0, single_core_completion_time: float = 1.0):
         self.name = name
         self.cores = cores
         self.lammps_executable = lammps_executable
         self.execution_path = execution_path
         self.launch_time = launch_time
+        self.single_core_completion_time = single_core_completion_time
         assert self.execution_path.is_absolute(), f"Execution path {self.execution_path} is not absolute"
 
     @abstractmethod

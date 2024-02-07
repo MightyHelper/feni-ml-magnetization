@@ -18,8 +18,8 @@ from remote.machine.machine import Machine
 
 @dataclass
 class LocalMachine(Machine):
-    def __init__(self, execution_path: Path, lammps_executable: Path, launch_time: float = 0.0):
-        super().__init__("local", multiprocessing.cpu_count(), execution_path, lammps_executable, launch_time)
+    def __init__(self, execution_path: Path, lammps_executable: Path, launch_time: float = 0.0, single_core_completion_time: float = 1.0):
+        super().__init__("local", multiprocessing.cpu_count(), execution_path, lammps_executable, launch_time, single_core_completion_time)
         if platform.system() == "Windows":
             import win32file
             win32file._setmaxstdio(2048)

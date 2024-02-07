@@ -16,7 +16,7 @@ class SchedulerService:
         task_count = len(tasks)
         if task_count == 0:
             return 0
-        return estimate_minutes(task_count, machine.cores, machine.single_core_performance, machine.launch_time, is_test)
+        return estimate_minutes(task_count, machine.cores, machine.single_core_completion_time, machine.launch_time, is_test)
 
     @staticmethod
     def estimate_queue_time(queue: ExecutionQueue, tasks: list[SimulationTask], is_test: bool = False) -> float:
@@ -26,7 +26,7 @@ class SchedulerService:
         task_count = len(tasks)
         if task_count == 0:
             return 0
-        return estimate_minutes(task_count, queue.parallelism_count, queue.remote.single_core_performance, queue.remote.launch_time, is_test)
+        return estimate_minutes(task_count, queue.parallelism_count, queue.remote.single_core_completion_time, queue.remote.launch_time, is_test)
 
     @staticmethod
     def schedule(machines: list[Machine], tasks: list[SimulationTask], is_test: bool = False) -> tuple[list[list[SimulationTask]], float]:

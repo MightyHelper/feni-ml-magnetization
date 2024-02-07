@@ -38,11 +38,12 @@ executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
 @executions.command()
 def ls(
-        count: Annotated[bool, typer.Option(help="Whether to count the executions", show_default=True)] = False,
-        plot_magnetism: Annotated[
-            bool, typer.Option(help="Whether to plot the magnetism of the executions", show_default=True)] = False,
-        save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None,
-        by: Annotated[str, typer.Option(help="Parameter to sort the executions by", show_default=True)] = "Shape"
+    count: Annotated[bool, typer.Option(help="Whether to count the executions", show_default=True)] = False,
+    plot_magnetism: Annotated[
+        bool, typer.Option(help="Whether to plot the magnetism of the executions", show_default=True)] = False,
+    save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None,
+    by: Annotated[str, typer.Option(help="Parameter to sort the executions by", show_default=True)] = "Shape",
+    full_only: Annotated[bool, typer.Option(help="Whether to only list full executions", show_default=True)] = False
 ):
     """
     List available nanoparticle executions
@@ -55,7 +56,7 @@ def ls(
     table.add_column("Date")
     table.add_column("Magnetism")
     table.add_column("In Toko")
-    df = pd.DataFrame(columns=["Shape", "magnetism_val", "magnetism_std"])
+    df_rows = []
     if not count:
         with (config.EXEC_LS_POOL_TYPE() as pool):
             result = pool.starmap(_load_single_nanoparticle, enumerate(sorted(execs)))
@@ -63,8 +64,13 @@ def ls(
                 if parts is None:
                     continue
                 data, tab = parts
-                df.loc[len(df)] = data  # Add new row to df using .loc
+                df_rows.append(data)  # Add new row to df using .loc
                 table.add_row(*tab)
+    df = pd.DataFrame(df_rows)
+    if full_only:
+        # filter rows where magnetism_val is not nan
+        df = df[df['magnetism_val'].notna()]
+        table.columns[1].footer = str(len(df))
     df['magnetism_std_over_mag'] = df['magnetism_std'] / df['magnetism_val']
     console.print(table, highlight=True)
     if plot_magnetism:
@@ -112,10 +118,10 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, str], tupl
 
 @executions.command()
 def clean(
-        keep_ok: Annotated[bool, typer.Option(help="Whether to keep OK executions", show_default=True)] = False,
-        keep_full: Annotated[bool, typer.Option(help="Whether to keep full executions", show_default=True)] = True,
-        keep_batch: Annotated[bool, typer.Option(help="Whether to keep batch executions", show_default=True)] = True,
-        keep_remote_local: Annotated[bool, typer.Option(help="Whether to keep remote - local executions", show_default=True)] = False
+    keep_ok: Annotated[bool, typer.Option(help="Whether to keep OK executions", show_default=True)] = False,
+    keep_full: Annotated[bool, typer.Option(help="Whether to keep full executions", show_default=True)] = True,
+    keep_batch: Annotated[bool, typer.Option(help="Whether to keep batch executions", show_default=True)] = True,
+    keep_remote_local: Annotated[bool, typer.Option(help="Whether to keep remote - local executions", show_default=True)] = False
 ):
     """
     Clean all executions
@@ -146,23 +152,23 @@ def clean(
 
 @executions.command()
 def live(
-        at: Annotated[
-            str, typer.Option(help="Where to look for simulations", show_default=True)] = "local",
-        listen_anyway: Annotated[bool, typer.Option(help="Whether to listen for executions even if there are none",
-                                                    show_default=True)] = False,
-        only_running: Annotated[
-            bool, typer.Option(help="Whether to only listen for running executions", show_default=True)] = True
+    at: Annotated[
+        str, typer.Option(help="Where to look for simulations", show_default=True)] = "local",
+    listen_anyway: Annotated[bool, typer.Option(help="Whether to listen for executions even if there are none",
+                                                show_default=True)] = False,
+    only_running: Annotated[
+        bool, typer.Option(help="Whether to only listen for running executions", show_default=True)] = True
 ):
     """
     Find live executions
     """
     with Progress(
-            SpinnerColumn(),
-            *Progress.get_default_columns(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            expand=True,
-            speed_estimate_period=600,
+        SpinnerColumn(),
+        *Progress.get_default_columns(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        expand=True,
+        speed_estimate_period=600,
     ) as progress:
         machine: Machine = executor_service.get_executor(at).remote
         is_remote_machine: bool = isinstance(machine, SSHMachine)
@@ -197,13 +203,13 @@ async def get_running_executions(at: str, only_running: bool) -> list[LiveExecut
 
 @executions.command()
 def execute(
-        paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
-        plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
-        test: Annotated[bool, typer.Option(help="Whether to run in test mode or not", show_default=True)] = True,
-        at: Annotated[
-            str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
-        seed: Annotated[int, typer.Option(help="Seed for the random number generator", show_default=True)] = 123,
-        seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 0
+    paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
+    plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
+    test: Annotated[bool, typer.Option(help="Whether to run in test mode or not", show_default=True)] = True,
+    at: Annotated[
+        str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
+    seed: Annotated[int, typer.Option(help="Seed for the random number generator", show_default=True)] = 123,
+    seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 0
 ) -> list[Path | None]:
     """
     This command executes a list of nanoparticle simulations.
@@ -223,17 +229,17 @@ def execute(
 
 @executions.command()
 def inspect(
-        paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
-        plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
-        export_csv: Annotated[
-            bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
-        g_r: Annotated[bool, typer.Option(help="Whether to calculate the radial distribution function g(r)",
-                                          show_default=True)] = False,
-        pec: Annotated[
-            bool, typer.Option(help="Whether to calculate the potential energy curve", show_default=True)] = False,
-        coord: Annotated[
-            bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
-        np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False
+    paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
+    plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
+    export_csv: Annotated[
+        bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
+    g_r: Annotated[bool, typer.Option(help="Whether to calculate the radial distribution function g(r)",
+                                      show_default=True)] = False,
+    pec: Annotated[
+        bool, typer.Option(help="Whether to calculate the potential energy curve", show_default=True)] = False,
+    coord: Annotated[
+        bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
+    np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False
 ):
     """
     Inspect a complete nanoparticle simulation
@@ -275,10 +281,10 @@ def inspect(
 
 @executions.command()
 def csv(
-        paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
-        output_csv_format: Annotated[Path, typer.Option(help="Path to the output CSV format file", show_default=True)],
-        concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file",
-                                             show_default=True)] = False
+    paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
+    output_csv_format: Annotated[Path, typer.Option(help="Path to the output CSV format file", show_default=True)],
+    concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file",
+                                         show_default=True)] = False
 ):
     """
     Export finished nanoparticle execution data to a CSV file
@@ -302,19 +308,19 @@ def raw_parse_completed(reparse: Annotated[
     Parse all completed nanoparticle simulations
     """
     with Progress(
-            SpinnerColumn(),
-            *Progress.get_default_columns(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            expand=True,
-            refresh_per_second=20
+        SpinnerColumn(),
+        *Progress.get_default_columns(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        expand=True,
+        refresh_per_second=20
     ) as progress:
         to_parse = []
         to_analyse = os.listdir(config.LOCAL_EXECUTION_PATH)
         gather_task = progress.add_task("Gathering", total=len(to_analyse))
         for i, folder in enumerate(to_analyse):
             if not os.path.exists(
-                    os.path.join(config.LOCAL_EXECUTION_PATH, folder, f"iron.{config.FULL_RUN_DURATION}.dump")):
+                os.path.join(config.LOCAL_EXECUTION_PATH, folder, f"iron.{config.FULL_RUN_DURATION}.dump")):
                 continue
             if not reparse and os.path.exists(os.path.join(config.LOCAL_EXECUTION_PATH, folder, "magnetism.txt")):
                 continue

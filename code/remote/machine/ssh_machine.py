@@ -49,8 +49,9 @@ class SSHMachine(Machine):
         lammps_executable: PurePath = PurePath(),
         execution_path: PurePath = PurePath(),
         launch_time: float = 0.0,
+        single_core_completion_time: float = 1.0
     ):
-        super().__init__(name, cores, execution_path, lammps_executable, launch_time)
+        super().__init__(name, cores, execution_path, lammps_executable, launch_time, single_core_completion_time)
         self.user = user
         self.remote_url = remote_url
         self.port = port

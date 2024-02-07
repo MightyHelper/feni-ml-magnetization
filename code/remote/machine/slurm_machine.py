@@ -48,7 +48,8 @@ class SLURMMachine(SSHMachine):
         squeue_path: PurePath = TOKO_SQUEUE,
         scontrol_path: PurePath = TOKO_SCONTROL,
         sinfo_path: PurePath = TOKO_SINFO,
-        launch_time: float = 0.0
+        launch_time: float = 0.0,
+        single_core_completion_time: float = 1.0
     ):
         super().__init__(
             name=name,
@@ -59,7 +60,8 @@ class SLURMMachine(SSHMachine):
             password=password,
             lammps_executable=lammps_executable,
             execution_path=execution_path,
-            launch_time=launch_time
+            launch_time=launch_time,
+            single_core_completion_time=single_core_completion_time
         )
         self.scontrol_path = scontrol_path
         self.squeue_path = squeue_path

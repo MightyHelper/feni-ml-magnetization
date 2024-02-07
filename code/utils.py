@@ -140,6 +140,7 @@ def assign_nanoparticle_name(name: str | Path) -> dict[str, int | str]:
         'Distribution': dist[0],
         'Distribution_full': distribution,
         'Distribution_data': "" if len(dist) == 1 else ".".join(dist[1:]),
+        'Distribution_1': dist[1] if len(dist) > 1 else "",
         'Interface': intf[0],
         'Interface_full': interface,
         'Interface_data': "" if len(intf) == 1 else ".".join(intf[1:]),

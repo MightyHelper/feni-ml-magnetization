@@ -47,7 +47,7 @@ def render_queue_plan(queue: ExecutionQueue, is_test: bool = False, tolerance: f
     else:
         qlen = len(queue.queue)
         qcores = queue.parallelism_count
-        qperf = queue.remote.single_core_performance
+        qperf = queue.remote.single_core_completion_time
         qmin = estimate_minutes(qlen, qcores, qperf, queue.remote.launch_time, is_test)
         qtime = minutes_to_slurm(qmin, tolerance)
         logging.warning(f"{queue.remote.name:12} ({queue.parallelism_count:3} cores): {len(queue.queue):5} tasks = {qtime}")
