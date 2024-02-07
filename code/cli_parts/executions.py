@@ -332,10 +332,11 @@ def raw_parse_completed(reparse: Annotated[
             to_parse.append(folder)
             progress.update(gather_task, completed=i, total=len(to_parse))
         progress.remove_task(gather_task)
-        task_id = progress.add_task("Parsing", total=len(to_parse))
-        for i, folder in enumerate(to_parse):
-            logging.info(f"Parsing {folder}")
-            nano = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
-            nano.on_post_execution("Some non-empty result")
-            progress.update(task_id, completed=i, total=len(to_parse))
-        progress.remove_task(task_id)
+        # Run in parallel
+        with (config.EXEC_LS_POOL_TYPE() as pool):
+            pool.map(raw_parse, to_parse)
+
+
+def raw_parse(folder):
+    nano = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
+    nano.on_post_execution("Some non-empty result")
