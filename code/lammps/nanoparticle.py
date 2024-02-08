@@ -57,9 +57,6 @@ class Nanoparticle:
         self.run = None
         self.magnetism = (None, None)
 
-    def hardcoded_g_r_crop(self, g_r):
-        return g_r[0:60]
-
     @staticmethod
     def from_executed(path: Path):
         """
@@ -87,8 +84,8 @@ class Nanoparticle:
         n.coord = n.read_coordination(feni_ovito.COORD_FILENAME)
         n.coord_fe = n.read_coordination(feni_ovito.COORD_FE_FILENAME)
         n.coord_ni = n.read_coordination(feni_ovito.COORD_NI_FILENAME)
-        n.psd_p = n.hardcoded_g_r_crop(n.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME))
-        n.psd = n.hardcoded_g_r_crop(n.read_psd(feni_ovito.G_R_FILENAME))
+        n.psd_p = n.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME)
+        n.psd = n.read_psd(feni_ovito.G_R_FILENAME)
         n.pec = n.read_peh(feni_ovito.PEH_FILENAME)
         surf = n.read_surface_atoms(feni_ovito.SURFACE_FILENAME)
         n.total = surf[0] if len(surf) > 0 else 0
@@ -104,10 +101,10 @@ class Nanoparticle:
             drop_index(pd.DataFrame([self.get_descriptor_name()], columns=["name"])),
         ]
         for k, (v, count) in {
-            'psd': (self.psd[['psd']].copy(), 60),
-            'psd11': (self.psd_p[['1-1']].copy(), 60),
-            'psd12': (self.psd_p[['1-2']].copy(), 60),
-            'psd22': (self.psd_p[['2-2']].copy(), 60),
+            'psd': (self.psd[['psd']].copy(), 100),
+            'psd11': (self.psd_p[['1-1']].copy(), 100),
+            'psd12': (self.psd_p[['1-2']].copy(), 100),
+            'psd22': (self.psd_p[['2-2']].copy(), 100),
             'coordc': (self.coord[['count']].copy(), 100),
             'coordc_fe': (self.coord_fe[['count']].copy(), 100),
             'coordc_ni': (self.coord_ni[['count']].copy(), 100),
@@ -124,9 +121,7 @@ class Nanoparticle:
             'tmg': drop_index(pd.DataFrame([self.magnetism[0]], columns=["tmg"])),
             'tmg_std': drop_index(pd.DataFrame([self.magnetism[1]], columns=["tmg_std"])),
         }.items():
-            out += [v]
-
-        # Concat columns of all dataframes
+            out.append(v)
         return pd.concat(out, axis=1)
 
     def _get_pivoted_df(self, df, name, expected_row_count=100):

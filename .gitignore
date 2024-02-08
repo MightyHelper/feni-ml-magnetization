@@ -22,3 +22,4 @@ r_experiments/mount.sh
 /code/config/config_local.py
 /remote_local_exec/simulations/
 /remote_local_exec/FeCuNi.eam.alloy
+/rem_executions/

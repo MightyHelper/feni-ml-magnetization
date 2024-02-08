@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import time
 from datetime import datetime
-from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import ThreadPool, Pool
 from pathlib import Path
 from typing import Annotated
 
@@ -34,6 +34,7 @@ from remote.machine.machine import Machine
 from remote.machine.ssh_machine import SSHMachine
 from service import executor_service
 from service.executor_service import execute_nanoparticles, add_extra_nanoparticles
+from typing import Optional
 
 executions = typer.Typer(add_completion=False, no_args_is_help=True)
 
@@ -288,30 +289,55 @@ def inspect(
 
 @executions.command()
 def csv(
-    paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
-    output_csv_format: Annotated[Path, typer.Option(help="Path to the output CSV format file", show_default=True)],
-    concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file",
-                                         show_default=True)] = False
+    paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
+    output_csv_format: Annotated[Optional[Path], typer.Option(help="Path to the output CSV format file", show_default=True)] = None,
+    concat: Annotated[bool, typer.Option(help="Whether to concatenate the output with existing CSV file", show_default=True)] = False,
+    show_progress: Annotated[bool, typer.Option(help="Whether to show progress", show_default=True)] = False
 ):
     """
     Export finished nanoparticle execution data to a CSV file
     """
-    my_csv = pd.read_csv(output_csv_format)
-    dfs = []
-    for path in paths:
-        nano = nanoparticle.Nanoparticle.from_executed(path)
-        dfs.append(nano.columns_for_dataset())
-    my_df = pd.concat(dfs)
-    my_df = my_df[my_csv.columns]  # Sort my_df columns to be in the order of my_csv
-    if concat:
-        my_df = pd.concat([my_csv, my_df])  # Concat my_df and my_csv
+    my_csv = pd.read_csv(output_csv_format) if output_csv_format is not None else pd.DataFrame()
+    if not output_csv_format and concat:
+        raise ValueError("Cannot concatenate without an output CSV format file")
+    dfs: list[pd.DataFrame] = []
+    if show_progress:
+        with Progress(
+            SpinnerColumn(),
+            *Progress.get_default_columns(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            expand=True,
+            refresh_per_second=20
+        ) as progress:
+            task_id = progress.add_task("Parsing", total=len(paths))
+            with ThreadPool() as pool:
+                dfs = pool.starmap(_to_csv, [(path, progress, task_id) for path in paths])
+    else:
+        with Pool() as pool:
+            dfs = pool.map(_to_csv2, paths)
+    my_df: pd.DataFrame = pd.concat(dfs)
+    if output_csv_format is not None:
+        my_df = my_df[my_csv.columns]  # Sort my_df columns to be in the order of my_csv
+        if concat:
+            my_df = pd.concat([my_csv, my_df])  # Concat my_df and my_csv
     print(my_df.to_csv(index=False))  # raw print without row index
+
+
+def _to_csv2(path: Path) -> pd.DataFrame:
+    return nanoparticle.Nanoparticle.from_executed(path).columns_for_dataset()
+
+
+def _to_csv(path: Path, progress: Progress, task_id: TaskID) -> pd.DataFrame:
+    result: pd.DataFrame = _to_csv2(path)
+    progress.update(task_id, advance=1)
+    return result
 
 
 @executions.command()
 def raw_parse_completed(reparse: Annotated[
     bool, typer.Option(help="Whether to reparse completed nanoparticle simulations", show_default=True)] = False
-):
+                        ):
     """
     Parse all completed nanoparticle simulations
     """
