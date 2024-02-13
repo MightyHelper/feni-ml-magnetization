@@ -6,4 +6,5 @@ rich==13.6.0
 typer==0.9.0
 bayesian-optimization==1.4.3
 asyncssh==2.14.2
-pywin32==306
+pywin32==306; sys_platform == 'win32'
+enum34==1.1.6
