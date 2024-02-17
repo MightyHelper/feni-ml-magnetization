@@ -30,5 +30,6 @@ class MachineFactory:
             lammps_executable=PurePosixPath("/scratch/fwilliamson/lammps_compile/lammps/build1/lmp"),
             user=user,
             node_id=node_id,
-            launch_time=0.0 # TODO: revise
+            launch_time=0.0,  # TODO: revise
+            single_core_completion_time=3155.91  # TODO: revise
         )

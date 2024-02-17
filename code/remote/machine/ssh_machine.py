@@ -5,10 +5,10 @@ import time
 from asyncio import Task
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Any, AsyncGenerator, Coroutine, Iterable
+from typing import Any, AsyncGenerator, Coroutine, Iterable, Callable
 
 import asyncssh
-from asyncssh import SSHCompletedProcess, DISC_BY_APPLICATION, SFTPFailure
+from asyncssh import SSHCompletedProcess, DISC_BY_APPLICATION, SFTPFailure, SFTPNoSuchFile
 
 import utils
 from config import config
@@ -36,7 +36,7 @@ class SSHMachine(Machine):
     connection: asyncssh.SSHClientConnection | None = field(init=False, default=None)
     sftp: asyncssh.SFTPClient | None = field(init=False, default=None)
 
-    semaphore = asyncio.Semaphore(200)
+    semaphore = asyncio.Semaphore(10)
 
     def __init__(
         self,
@@ -76,21 +76,31 @@ class SSHMachine(Machine):
     def run_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
         return asyncio.create_task(self.connection.run(cmd))
 
-    def cp_put(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+    def cp_put(self, local_path: Path, remote_path: PurePosixPath, ignore_errors: bool = False) -> Coroutine[Any, Any, None]:
         logging.debug(f"Copying {local_path} to {remote_path}...")
+        error_handler: None | Callable = (lambda: 0) if ignore_errors else None
 
         async def do_thing():
             async with self.semaphore:
-                return await self.sftp.put([str(local_path.resolve())], str(remote_path), recurse=True)
+                try:
+                    return await self.sftp.put([str(local_path.resolve())], str(remote_path), recurse=True, error_handler=error_handler)
+                except SFTPNoSuchFile as e:
+                    if not ignore_errors:
+                        raise e
 
         return do_thing()
 
-    def cp_get(self, local_path: Path, remote_path: PurePosixPath) -> Coroutine[Any, Any, None]:
+    def cp_get(self, local_path: Path, remote_path: PurePosixPath, ignore_errors: bool = False) -> Coroutine[Any, Any, None]:
         logging.debug(f"Copying {remote_path} to {local_path}...")
+        error_handler: None | Callable = (lambda: 0) if ignore_errors else None
 
         async def do_thing():
             async with self.semaphore:
-                return await self.sftp.get([str(remote_path)], str(local_path.resolve()), recurse=True)
+                try:
+                    return await self.sftp.get([str(remote_path)], str(local_path.resolve()), recurse=True, error_handler=error_handler)
+                except SFTPNoSuchFile as e:
+                    if not ignore_errors:
+                        raise e
 
         return do_thing()
 

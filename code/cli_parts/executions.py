@@ -217,7 +217,7 @@ def execute(
     at: Annotated[
         str, typer.Option(help="Where to execute the nanoparticle simulation", show_default=True)] = "local",
     seed: Annotated[int, typer.Option(help="Seed for the random number generator", show_default=True)] = 123,
-    seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 0
+    seed_count: Annotated[int, typer.Option(help="Number of extra nanoparticles to add", show_default=True)] = 1
 ) -> list[Path | None]:
     """
     This command executes a list of nanoparticle simulations.

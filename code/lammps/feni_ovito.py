@@ -1,8 +1,9 @@
 import logging
 import os
 from multiprocessing import Process
-
+import warnings
 import numpy
+warnings.filterwarnings('ignore', message='.*OVITO.*PyPI')
 
 XYZ_FILENAME = "XYZ.xyz"
 G_R_FILENAME = 'g(r).txt'

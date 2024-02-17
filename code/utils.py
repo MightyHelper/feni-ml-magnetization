@@ -107,7 +107,7 @@ def read_local_file(path: Path | str) -> str | None:
         with open(path, "r") as template:
             return template.read()
     except FileNotFoundError:
-        logging.warning(f"File not found: {path}")
+        logging.info(f"File not found: {path}")
         return None
 
 

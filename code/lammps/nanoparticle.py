@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import pandas as pd
+from pandas.errors import EmptyDataError
 
 import opt
 import template
@@ -152,7 +153,7 @@ class Nanoparticle:
             df.columns = ["coordination", "count"]
             df = df.astype({"coordination": float, "count": float})
             df["coordination"] -= 0.5
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             df = pd.DataFrame(columns=["coordination", "count"])
         return df
 
@@ -161,7 +162,7 @@ class Nanoparticle:
             df = pd.read_csv(self.local_path / filename, delimiter=" ", skiprows=2, header=None)
             df.columns = ["radius", "1-1", "1-2", "2-2"]
             df = df.astype({"radius": float, "1-1": float, "1-2": float, "2-2": float})
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             df = pd.DataFrame(columns=["radius", "1-1", "1-2", "2-2"])
         return df
 
@@ -175,7 +176,7 @@ class Nanoparticle:
                 df = df.groupby("index").mean()
                 df.reset_index(inplace=True)
                 df.drop(columns=["index"], inplace=True)
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             df = pd.DataFrame(columns=["radius", "psd"])
         return df
 
@@ -184,7 +185,7 @@ class Nanoparticle:
             with open(self.local_path / filename, "r") as f:
                 line = f.readlines()[1].strip()
                 return [float(x) for x in re.split(" +", line)]
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             df = pd.DataFrame(columns=["type", "count"])
         return df
 
@@ -194,7 +195,7 @@ class Nanoparticle:
             df = df.iloc[:, 0:2]
             df.columns = ["pe", "count"]
             df = df.astype({"pe": float, "count": float})
-        except FileNotFoundError:
+        except (FileNotFoundError, EmptyDataError):
             df = pd.DataFrame(columns=["pe", "count"])
         return df
 
@@ -277,7 +278,7 @@ class Nanoparticle:
                 lines = f.readlines()
             result = [float(x) for x in lines[1].split(" ")]
             return result[0], result[1]
-        except FileNotFoundError:
+        except (FileNotFoundError, IndexError):
             return float('nan'), float('nan')
 
     def get_region(self):
@@ -299,6 +300,7 @@ class Nanoparticle:
 
     def count_atoms_of_type(self, atom_type, dump_idx=0):
         if dump_idx not in self.run.dumps:
+            logging.warning(f"Dump {dump_idx} not found (Available dumps: {self.run.dumps.keys()}) - {self.run.dumps=}")
             raise Exception(f"Dump {dump_idx} not found (Available dumps: {self.run.dumps.keys()}) - {self.run.dumps=}")
         return self.run.dumps[dump_idx].count_atoms_of_type(atom_type)
 

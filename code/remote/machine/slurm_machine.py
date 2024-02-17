@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import re
@@ -140,27 +141,32 @@ class SLURMMachine(SSHMachine):
                 total_steps += step
                 count += 1
                 if title != config.FINISHED_JOB:
-                    yield folder, step, title
+                    yield LiveExecution(title, step, folder)
             if batch_info_content.count("\n") > 1:
                 logging.debug(f"Found Batch execution")
-                yield str(PurePath(file_tag).parent), total_steps, config.BATCH_EXECUTION + f" ({count})"
+                yield LiveExecution(config.BATCH_EXECUTION + f" ({count})", total_steps, PurePath(file_tag).parent)
         if connected:
             await self.disconnect()
 
-    def _get_execution_data(self, file_read_output: dict[str, str], files_to_read: list[tuple[str, str, str]]):
+    def _get_execution_data(self, file_read_output: dict[str, str | None], files_to_read: list[tuple[str, str, str]]):
         for folder_name, lammps_log, remote_nano_in in files_to_read:
-            try:
-                lammps_log_content = file_read_output[lammps_log]
-                if "Total wall time" in lammps_log_content:
-                    yield folder_name, config.FULL_RUN_DURATION, config.FINISHED_JOB
-                    continue
-                current_step = LammpsRun.compute_current_step(lammps_log_content)
-                logging.debug(f"Current step: {current_step} {folder_name}")
-            except subprocess.CalledProcessError:
-                current_step = -1
-                logging.debug(f"Error getting current step for {folder_name}")
-            code = file_read_output[remote_nano_in]
-            title = code.split("\n")[0][1:].strip()
+            current_step: int = -1
+            title: str = remote_nano_in
+            lammps_log_content: str | None = file_read_output[lammps_log]
+            if lammps_log_content is not None:
+                try:
+                    if "Total wall time" in lammps_log_content:
+                        yield folder_name, config.FULL_RUN_DURATION, config.FINISHED_JOB
+                        continue
+                    current_step = LammpsRun.compute_current_step(lammps_log_content)
+                    logging.debug(f"Current step: {current_step} {folder_name}")
+                except subprocess.CalledProcessError:
+                    logging.debug(f"Error getting current step for {folder_name}")
+            code: str | None = file_read_output[remote_nano_in]
+            if code is None:
+                logging.error(f"Could not read {remote_nano_in}")
+            else:
+                title = code.split("\n")[0][1:].strip()
             yield folder_name, current_step, title
 
     def _process_files_to_read(self, batch_info_content) -> Generator[tuple[str, str, str], None, None]:
@@ -168,24 +174,22 @@ class SLURMMachine(SSHMachine):
             if line.strip() == "":
                 continue
             index, nano_in = line.split(": ")
-            nano_in = PurePath(nano_in.split(" # ")[0] + "/")
-            logging.debug(f"Found nano_in: {nano_in}")
-            f_name: str = nano_in.parent.name
+            folder = PurePath(nano_in.split(" # ")[0] + "/")
+            logging.debug(f"Found folder: {folder}")
+            f_name: str = folder.name
             folder_name: PurePath = config.TOKO_EXECUTION_PATH / f_name
-            lammps_log: PurePath = folder_name / "log.lammps.bak"
+            lammps_log: PurePath = folder_name / "log.lammps"
             remote_nano_in: PurePath = folder_name / config.NANOPARTICLE_IN
             yield folder_name, lammps_log, remote_nano_in
 
-    async def _read_required_files(self, batch_info_content):
-        files_to_read: list[tuple[str, str, str]] = list(
-            self._process_files_to_read(batch_info_content)
-        )
-        file_read_output: dict[str, str] = {}
+    async def _read_required_files(self, batch_info_content) -> tuple[dict[str, str | None], list[tuple[str, str, str]]]:
+        files_to_read: list[tuple[str, str, str]] = list(self._process_files_to_read(batch_info_content))
+        file_read_output: dict[str, str | None] = {}
         file_names_to_read = [*[x[1] for x in files_to_read], *[x[2] for x in files_to_read]]
-        file_contents: list[str] = list(await self.read_files(*file_names_to_read))
+        file_contents: list[str | None] = list(await self.read_files(*file_names_to_read))
         logging.info(f"Read {len(file_contents)} files")
-        for i, content in enumerate(file_contents):
-            file_read_output[file_names_to_read[i]] = content
+        for file_name, content in zip(file_names_to_read, file_contents):
+            file_read_output[file_name] = content
         return file_read_output, files_to_read
 
     async def read_files(self, *paths: PurePosixPath) -> list[str]:
@@ -193,9 +197,12 @@ class SLURMMachine(SSHMachine):
         while local.exists():
             local: Path = Path("/") / "tmp" / f"dw_{random.randint(0, 10000)}"
         local.mkdir(parents=True, exist_ok=False)
-        await self.sftp.mget([str(path) for path in paths], str(local))
+        # await self.sftp.mget([str(path) for path in paths], str(local), error_handler=lambda x: 0)
+        await asyncio.gather(*[self.cp_get(remote_path=path, local_path=local / path.parent.name, ignore_errors=True) for path in paths])
+        logging.info(f"Read {len(paths)} files")
         out: list[str] = []
         for path in paths:
-            out.append(utils.read_local_file(local / path.name))
+            out.append(utils.read_local_file(local / path.parent.name))
         shutil.rmtree(local)
+        logging.info(f"Loaded {len(out)} files")
         return out
