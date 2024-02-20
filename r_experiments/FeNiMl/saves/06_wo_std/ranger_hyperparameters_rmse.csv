@@ -1,0 +1,2 @@
+"bestTune.mtry","bestTune.splitrule","bestTune.min.node.size","RMSE_fold","RMSE_full"
+10,"variance",5,0.0228074752771343,0.0119810715782183
