@@ -3,6 +3,9 @@ import os
 from multiprocessing import Process
 import warnings
 import numpy
+
+from config import config
+
 warnings.filterwarnings('ignore', message='.*OVITO.*PyPI')
 
 XYZ_FILENAME = "XYZ.xyz"
@@ -23,7 +26,7 @@ def _parse_worker(
     from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, \
         HistogramModifier, ExpressionSelectionModifier
     filenames = {
-        'dump': 'iron.300000.dump',
+        'dump': f'iron.{config.FULL_RUN_DURATION}.dump',
         'xyz': XYZ_FILENAME,
         'gr': G_R_FILENAME,
         'grp': PARTIAL_G_R_FILENAME,
