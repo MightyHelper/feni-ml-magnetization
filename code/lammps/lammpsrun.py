@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
@@ -32,10 +33,12 @@ class LammpsRun:
 		self.expect_dumps = [self.cwd / dump for dump in self.expect_dumps]
 		self.dumps: dict[int, LammpsDump] = {}
 
-	def get_lammps_log_filename(self) -> Path:
+	@cached_property
+	def lammps_log_filename(self) -> Path:
 		return self.cwd / "log.lammps"
 
-	def get_bak_lammps_log_filename(self) -> Path:
+	@cached_property
+	def bak_lammps_log_filename(self) -> Path:
 		return self.cwd / "log.lammps.bak"
 
 	@staticmethod
@@ -57,11 +60,11 @@ class LammpsRun:
 		"""
 		Get the current step of a lammps log file
 		"""
-		bak_file: Path = self.get_bak_lammps_log_filename()
+		bak_file: Path = self.bak_lammps_log_filename
 		if bak_file.exists():
 			filename: Path = bak_file
 		else:
-			filename: Path = self.get_lammps_log_filename()
+			filename: Path = self.lammps_log_filename
 		try:
 			contents: str = utils.read_local_file(filename)
 			return LammpsRun.compute_current_step(contents)

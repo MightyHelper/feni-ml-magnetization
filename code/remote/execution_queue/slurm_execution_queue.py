@@ -19,7 +19,7 @@ SINGLE_TEST_TIME_MINUTES: float = 2.0 / SECONDS_IN_MINUTE
 SINGLE_SIMULATION_TIME_MINUTES: float = 1.0
 
 
-def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, machine_start_time_seconds: float = 0.0, tolerance: float = 2.5) -> str:
+def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, machine_start_time_seconds: float = 0.0, tolerance: float = 1.5) -> str:
     """
     :param tolerance:
     :param machine_start_time_seconds:
@@ -32,7 +32,7 @@ def estimate_slurm_time(count: int, tasks: int = 1, machine_power: float = 1.0, 
     return minutes_to_slurm(minutes, tolerance)
 
 
-def minutes_to_slurm(minutes: float, tolerance: float = 2.5) -> str:
+def minutes_to_slurm(minutes: float, tolerance: float = 1.5) -> str:
     """
     From SLURM docs:
     > Acceptable time formats include

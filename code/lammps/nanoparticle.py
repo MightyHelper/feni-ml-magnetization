@@ -4,6 +4,7 @@ import random
 import re
 import subprocess
 import time
+from functools import cached_property
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -17,6 +18,7 @@ from config import config
 from config.config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     NANOPARTICLE_IN
 from lammps import feni_mag, feni_ovito, lammpsrun as lr, shapes
+from lammps.lammpsdump import LammpsLog
 from lammps.simulation_task import SimulationTask
 from model.live_execution import LiveExecution
 from remote.execution_queue.execution_queue import ExecutionQueue
@@ -69,7 +71,7 @@ class Nanoparticle:
         n.local_path = path.resolve()
         if not os.path.isdir(n.local_path):
             raise Exception(f"Path {n.local_path} is not a directory")
-        lammps_log = n.get_lammps_log_path()
+        lammps_log = n.lammps_log_path
         if not os.path.isfile(lammps_log):
             raise Exception(f"Path {n.local_path} does not contain a log.lammps file")
         n.id = n.local_path.name
@@ -228,21 +230,26 @@ class Nanoparticle:
         :return:
         """
         if result is None:
-            lammps_log_path: Path = self.get_lammps_log_path()
+            lammps_log_path: Path = self.lammps_log_path
             logging.info(f"{self.local_path=} {lammps_log_path}")
             lammps_log: str = utils.read_local_file(lammps_log_path)
             logging.warning(f"Run for nanoparticle {self.title} failed. LAMMPS Log:\n{lammps_log}")
             return
         if FULL_RUN_DURATION in self.run.dumps:
-            feni_mag.MagnetismExtractor.extract_magnetism(self.get_lammps_log_path(),
+            feni_mag.MagnetismExtractor.extract_magnetism(self.lammps_log_path,
                                                           out_mag=self.local_path / "magnetism.txt", digits=4)
             feni_ovito.FeNiOvitoParser.parse(
                 filenames={'base_path': self.local_path,
                            'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)})
             self.magnetism = self.get_magnetism()
 
-    def get_lammps_log_path(self) -> Path:
+    @cached_property
+    def lammps_log_path(self) -> Path:
         return self.local_path / "log.lammps"
+
+    @cached_property
+    def lammps_log(self) -> LammpsLog:
+        return LammpsLog(self.lammps_log_path)
 
     def _build_lammps_run(self, code, kwargs, test_run):
         lammps_run = lr.LammpsRun(
@@ -297,6 +304,9 @@ class Nanoparticle:
         if self.run is None:
             raise Exception("Run not executed")
         self.run.dumps[0].plot()
+
+    def plot_tmg(self):
+        self.lammps_log.plot_tmg(self.title)
 
     def count_atoms_of_type(self, atom_type, dump_idx=0):
         if dump_idx not in self.run.dumps:
@@ -369,6 +379,8 @@ class Nanoparticle:
 
     def is_ok(self):
         return len(self.run.dumps) > 0
+
+
 
 
 class RunningExecutionLocator:

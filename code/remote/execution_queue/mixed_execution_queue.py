@@ -41,7 +41,7 @@ class MixedExecutionQueue(ExecutionQueue):
         return [item for sublist in results for item in sublist]
 
 
-def render_queue_plan(queue: ExecutionQueue, is_test: bool = False, tolerance: float = 2.5) -> list[float]:
+def render_queue_plan(queue: ExecutionQueue, is_test: bool = False, tolerance: float = 1.5) -> list[float]:
     if isinstance(queue, MixedExecutionQueue):
         return [qmin for q in queue.queues for qmin in render_queue_plan(q, is_test, tolerance)]
     else:

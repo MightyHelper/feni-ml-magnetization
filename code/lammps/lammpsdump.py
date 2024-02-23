@@ -1,10 +1,17 @@
+import logging
+from functools import cached_property
+from io import StringIO
 from pathlib import Path
-
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
-
+import re
 import utils
+from rich import print as rprint
 from utils import get_index, opt, column_values_as_float
+
+DATA_START_PATTERN = re.compile("Step\\s+Temp")
+DATA_END_PATTERN = re.compile("Loop time")
 
 
 class LammpsDump:
@@ -12,13 +19,15 @@ class LammpsDump:
     Functions to parse a dump file
     """
     path: Path
-    dump: dict[str, any]
 
     def __init__(self, path: Path):
         self.path = path
-        self.dump = self._parse()
 
-    def _parse(self):
+    @cached_property
+    def dump(self) -> dict[str, any]:
+        return self._parse()
+
+    def _parse(self) -> dict[str, any]:
         if not self.path.exists():
             raise FileNotFoundError(f"Dump file {self.path} does not exist!")
         lines = utils.read_local_file(self.path).strip().split("\n")
@@ -76,6 +85,42 @@ class LammpsDump:
 
     def __repr__(self):
         return str(self)
+
+
+class LammpsLog:
+    path: Path
+
+    def __init__(self, path: Path):
+        self.path = path
+
+    @cached_property
+    def log(self) -> pd.DataFrame:
+        return self._parse()
+
+    def _parse(self) -> pd.DataFrame:
+        if not self.path.exists():
+            raise FileNotFoundError(f"Log file {self.path} does not exist!")
+        lines = utils.read_local_file(self.path).strip().split("\n")
+        try:
+            df: pd.DataFrame = pd.read_table(StringIO("\n".join(LammpsLog.__get_relevant_lines(lines))), sep="\\s+")
+            df.set_index('Step', inplace=True)
+            return df
+        except ValueError as e:
+            raise Exception(f"Could not parse log file {self.path}!") from e
+
+    @staticmethod
+    def __get_relevant_lines(lines):
+        start_index = [i for i, line in enumerate(lines) if DATA_START_PATTERN.search(line)]
+        end_index = [i for i, line in enumerate(lines) if DATA_END_PATTERN.search(line)]
+        if len(start_index) == 0 or len(end_index) == 0:
+            raise Exception("Couldn't find pattern")
+        if len(start_index) > 1 or len(end_index) > 1:
+            logging.warning(f"Found multiple patterns {start_index} {end_index}")
+        return lines[start_index[0]:end_index[0]]
+
+    def plot_tmg(self, title: str = "Total Magnetization"):
+        self.log.plot(y='v_magnorm', title=title)
+        plt.show()
 
 
 DUMP_ATOM_TYPE = 0

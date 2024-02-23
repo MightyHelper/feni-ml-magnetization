@@ -31,5 +31,5 @@ class MachineFactory:
             user=user,
             node_id=node_id,
             launch_time=0.0,  # TODO: revise
-            single_core_completion_time=3155.91  # TODO: revise
+            single_core_completion_time=4 * 3155.91  # TODO: revise
         )

@@ -247,13 +247,16 @@ def inspect(
         bool, typer.Option(help="Whether to calculate the potential energy curve", show_default=True)] = False,
     coord: Annotated[
         bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
-    np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False
+    np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False,
+    plot_tmg: Annotated[bool, typer.Option(help="Whether to plot the total magnetization evolution")] = False,
+    plot_all_tmg: Annotated[bool, typer.Option(help="Whether to plot the total magnetization evolution for all simulations")] = False
 ):
     """
     Inspect a complete nanoparticle simulation
     """
+    df_tmgs = pd.DataFrame()
     for path in paths:
-        nano = nanoparticle.Nanoparticle.from_executed(path)
+        nano: Nanoparticle = nanoparticle.Nanoparticle.from_executed(path)
 
         reh = ZeroHighlighter()
         r = ReprHighlighter()
@@ -285,6 +288,16 @@ def inspect(
             rprint(nano.asdict())
         if plot:
             nano.plot()
+        if plot_tmg:
+            nano.plot_tmg()
+        if plot_all_tmg:
+            tmg = nano.lammps_log.log['v_magnorm']
+            tmg.rename(nano.title, inplace=True)
+            # Merge the dataframes
+            df_tmgs = pd.concat([df_tmgs, tmg], axis=1)
+    if plot_all_tmg:
+        df_tmgs.plot()
+        plt.show()
 
 
 @executions.command()
@@ -363,7 +376,7 @@ def raw_parse_completed(reparse: Annotated[
         progress.remove_task(gather_task)
         task_id = progress.add_task("Parsing", total=len(to_parse))
         # Run in parallel
-        with ThreadPool() as pool:
+        with ThreadPool(64) as pool:
             pool.starmap(raw_parse, [(folder, task_id, progress) for folder in to_parse])
 
 
