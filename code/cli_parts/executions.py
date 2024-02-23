@@ -237,7 +237,7 @@ def execute(
 
 @executions.command()
 def inspect(
-    paths: Annotated[list[Path], typer.Option(help="List of paths to nanoparticle files", show_default=True)],
+    paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
     plot: Annotated[bool, typer.Option(help="Whether to plot the nanoparticle or not", show_default=True)] = False,
     export_csv: Annotated[
         bool, typer.Option(help="Whether to export nanoparticle data to a CSV file", show_default=True)] = False,
