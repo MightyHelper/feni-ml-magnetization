@@ -301,6 +301,30 @@ def inspect(
 
 
 @executions.command()
+def find(names: Annotated[list[str], typer.Argument(help="Parts of the name of the nanoparticle to find", show_default=True)]):
+    """
+    Find nanoparticle simulations
+    """
+    execs = os.listdir(config.LOCAL_EXECUTION_PATH)
+    relative: Path = Path(os.path.join("..", config.LOCAL_EXECUTION_PATH.relative_to(Path.cwd().parent)))
+    le: int = len(str(relative)) + 35 # Length to pad the folder name to
+    for folder in execs:
+        input_path = Path(config.LOCAL_EXECUTION_PATH / folder / "nanoparticle.in").absolute().resolve()
+        sim_nano: str | None = utils.read_local_file(input_path)
+        if sim_nano is None:
+            logging.info(f"Could not read {input_path}")
+            continue
+        sim_nano = sim_nano.split("\n")[0][2:]
+        has_all = all(name in sim_nano for name in names)
+        if not has_all:
+            continue
+        for name in names:
+            if name in sim_nano:
+                sim_nano = sim_nano.replace(name, f"[green]{name}[/green]")
+        rprint(f"[yellow]{str(relative / folder):{le}}[/yellow] {sim_nano}")
+
+
+@executions.command()
 def csv(
     paths: Annotated[list[Path], typer.Argument(help="List of paths to nanoparticle files", show_default=True)],
     output_csv_format: Annotated[Optional[Path], typer.Option(help="Path to the output CSV format file", show_default=True)] = None,
