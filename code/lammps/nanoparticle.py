@@ -4,7 +4,7 @@ import random
 import re
 import subprocess
 import time
-from functools import cached_property
+from functools import cached_property, cache
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -17,7 +17,7 @@ import utils
 from config import config
 from config.config import LOCAL_EXECUTION_PATH, FULL_RUN_DURATION, LAMMPS_DUMP_INTERVAL, FE_ATOM, NI_ATOM, \
     NANOPARTICLE_IN
-from lammps import feni_mag, feni_ovito, lammpsrun as lr, shapes
+from lammps import feni_ovito, lammpsrun as lr, shapes
 from lammps.lammpsdump import LammpsLog
 from lammps.simulation_task import SimulationTask
 from model.live_execution import LiveExecution
@@ -127,7 +127,31 @@ class Nanoparticle:
             out.append(v)
         return pd.concat(out, axis=1)
 
-    def _get_pivoted_df(self, df, name, expected_row_count=100):
+    @property
+    def run_magnetism(self) -> tuple[float | None, float | None]:
+        if self.lammps_log.step_count == 0:
+            return None, None
+        try:
+            tentative_values = self.lammps_log.magnetism['mean'], self.lammps_log.magnetism['std']
+            if abs(tentative_values[0] - self.magnetism[0]) > 0.0001:
+                logging.warning(f"The magnetism for {self.title} has been computed incorrectly")
+            if abs(tentative_values[1] - self.magnetism[1]) > 0.0001:
+                logging.warning(f"The magnetism for {self.title} has been computed incorrectly")
+            return tentative_values
+        except FileNotFoundError:
+            return None, None
+
+    @property
+    def run_total_energy(self) -> tuple[float | None, float | None]:
+        if self.lammps_log.step_count == 0:
+            return None, None
+        try:
+            return self.lammps_log.total_energy['mean'], self.lammps_log.total_energy['std']
+        except FileNotFoundError:
+            return None, None
+
+    @staticmethod
+    def _get_pivoted_df(df, name, expected_row_count=100):
         row_count = df.shape[0]
         if row_count > expected_row_count:
             logging.debug("Expanding " + name)
@@ -148,7 +172,8 @@ class Nanoparticle:
         df.index = ["" for _ in df.index]
         return df
 
-    def read_coordination(self, filename):
+    @cache
+    def read_coordination(self, filename: Path | str):
         try:
             df = pd.read_csv(self.local_path / filename, delimiter=" ", skiprows=2, header=None)
             df = df.iloc[:, 0:2]
@@ -159,7 +184,8 @@ class Nanoparticle:
             df = pd.DataFrame(columns=["coordination", "count"])
         return df
 
-    def read_psd_p(self, filename):
+    @cache
+    def read_psd_p(self, filename: Path | str):
         try:
             df = pd.read_csv(self.local_path / filename, delimiter=" ", skiprows=2, header=None)
             df.columns = ["radius", "1-1", "1-2", "2-2"]
@@ -168,7 +194,8 @@ class Nanoparticle:
             df = pd.DataFrame(columns=["radius", "1-1", "1-2", "2-2"])
         return df
 
-    def read_psd(self, filename):
+    @cache
+    def read_psd(self, filename: Path | str):
         try:
             df = pd.read_csv(self.local_path / filename, delimiter=" ", skiprows=2, header=None)
             df.columns = ["radius", "psd"]
@@ -182,7 +209,8 @@ class Nanoparticle:
             df = pd.DataFrame(columns=["radius", "psd"])
         return df
 
-    def read_surface_atoms(self, filename):
+    @cache
+    def read_surface_atoms(self, filename: Path | str):
         try:
             with open(self.local_path / filename, "r") as f:
                 line = f.readlines()[1].strip()
@@ -191,7 +219,8 @@ class Nanoparticle:
             df = pd.DataFrame(columns=["type", "count"])
         return df
 
-    def read_peh(self, filename):
+    @cache
+    def read_peh(self, filename: Path | str):
         try:
             df = pd.read_csv(self.local_path / filename, delimiter=" ", skiprows=2, header=None)
             df = df.iloc[:, 0:2]
@@ -236,11 +265,13 @@ class Nanoparticle:
             logging.warning(f"Run for nanoparticle {self.title} failed. LAMMPS Log:\n{lammps_log}")
             return
         if FULL_RUN_DURATION in self.run.dumps:
-            feni_mag.MagnetismExtractor.extract_magnetism(self.lammps_log_path,
-                                                          out_mag=self.local_path / "magnetism.txt", digits=4)
+            self.lammps_log.save_mag_to_file(self.local_path / "magnetism.txt", digits=4)
             feni_ovito.FeNiOvitoParser.parse(
-                filenames={'base_path': self.local_path,
-                           'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)})
+                filenames={
+                    'base_path': self.local_path,
+                    'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)
+                }
+            )
             self.magnetism = self.get_magnetism()
 
     @cached_property
@@ -276,8 +307,9 @@ class Nanoparticle:
     def _gen_identifier(self):
         return f"simulation_{time.time()}_{self.rid}"
 
-    def get_simulation_date(self):
-        return self.id.split("_")[1]
+    @cached_property
+    def get_simulation_date(self) -> float:
+        return float(self.id.split("_")[1])
 
     def get_magnetism(self):
         try:
@@ -380,7 +412,11 @@ class Nanoparticle:
     def is_ok(self):
         return len(self.run.dumps) > 0
 
+    def plot_tmg_vs_teng(self):
+        self.lammps_log.plot_tmg_vs_teng(self.title)
 
+    def plot_teng_hist(self):
+        self.lammps_log.plot_teng_hist(self.title)
 
 
 class RunningExecutionLocator:
@@ -415,7 +451,7 @@ class RunningExecutionLocator:
 
     @staticmethod
     async def get_running_executions(machine: Machine) -> AsyncGenerator[LiveExecution, None]:
-        async for item in machine.get_running_tasks():
+        async for item in await machine.get_running_tasks(): # TODO: Fixme if live exec not working
             yield item
 
     @staticmethod

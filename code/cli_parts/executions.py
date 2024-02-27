@@ -58,7 +58,7 @@ def ls(
     table.add_column("Title")
     table.add_column("Date")
     table.add_column("Magnetism")
-    table.add_column("In Toko")
+    table.add_column("Total Energy")
     df_rows = []
     if not count:
         with (config.EXEC_LS_POOL_TYPE() as pool):
@@ -102,22 +102,22 @@ def ls(
                 plt.show()
 
 
-def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, str], tuple[str, str, str, str, str, str]]:
+def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | str], tuple[str, str, str, str, str, str]]:
     try:
-        info = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
+        info: Nanoparticle = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
         row = (
             f"[green]{i}[/green]",
             f"[cyan]{folder}[/cyan]",
             f"[blue]{info.title}[/blue]",
-            f"[yellow]{datetime.utcfromtimestamp(float(info.get_simulation_date()))}[/yellow]",
-            f"[magenta]{info.magnetism}[/magenta]",
-            f"[red]{info.extra_replacements['in_toko']}[/red]"
+            f"[yellow]{datetime.utcfromtimestamp(int(info.get_simulation_date))}[/yellow]",
+            f"[magenta]{info.run_magnetism[0]:.3f} {info.run_magnetism[1]:.3f}[/magenta]",
+            f"[gold1]{info.run_total_energy[0]:.3f} {info.run_total_energy[1]:.3f}[/gold1]",
         )
         out = utils.assign_nanoparticle_name(info.title)
         data = {
             **out,
-            "magnetism_val": info.magnetism[0],
-            "magnetism_std": info.magnetism[1]
+            "magnetism_val": float(info.magnetism[0]),
+            "magnetism_std": float(info.magnetism[1])
         }
         return data, row
     except Exception as e:
@@ -249,7 +249,9 @@ def inspect(
         bool, typer.Option(help="Whether to calculate the coordination number", show_default=True)] = False,
     np_data: Annotated[bool, typer.Option(help="Whether to display nanoparticle data", show_default=True)] = False,
     plot_tmg: Annotated[bool, typer.Option(help="Whether to plot the total magnetization evolution")] = False,
-    plot_all_tmg: Annotated[bool, typer.Option(help="Whether to plot the total magnetization evolution for all simulations")] = False
+    plot_all_tmg: Annotated[bool, typer.Option(help="Whether to plot the total magnetization evolution for all simulations")] = False,
+    plot_tmg_vs_teng: Annotated[bool, typer.Option(help="Whether to plot the total magnetization vs total energy")] = False,
+    plot_teng_hist: Annotated[bool, typer.Option(help="Whether to plot the total energy histogram")] = False
 ):
     """
     Inspect a complete nanoparticle simulation
@@ -290,6 +292,10 @@ def inspect(
             nano.plot()
         if plot_tmg:
             nano.plot_tmg()
+        if plot_tmg_vs_teng:
+            nano.plot_tmg_vs_teng()
+        if plot_teng_hist:
+            nano.plot_teng_hist()
         if plot_all_tmg:
             tmg = nano.lammps_log.log['v_magnorm']
             tmg.rename(nano.title, inplace=True)
