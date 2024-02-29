@@ -23,10 +23,14 @@ class LocalExecutionQueue(SingleExecutionQueue):
         cmd = re.sub(r' +', " ", cmd).strip()
         logging.info(
             f"[bold blue]LocalExecutionQueue[/bold blue] Running [bold yellow]{cmd}[/bold yellow] in [cyan]{simulation_task.local_cwd}[/cyan]",
-            extra={"markup": True, "highlighter": None})
+            extra={"markup": True, "highlighter": None}
+        )
         try:
-            result = subprocess.check_output(cmd.split(" "), cwd=simulation_task.local_cwd,
-                                             shell=platform.system() == "Windows")
+            result = subprocess.check_output(
+                cmd.split(" "),
+                cwd=simulation_task.local_cwd,
+                shell=platform.system() == "Windows"
+            )
             return simulation_task, result.decode("utf-8")
         except subprocess.CalledProcessError as e:
             simulation_task.ok = False
@@ -45,6 +49,7 @@ def _run_queue(queue: ExecutionQueue) -> list[SimulationTask]:
 class ThreadedLocalExecutionQueue(ExecutionQueue):
     remote: LocalMachine
     queue: list[SimulationTask]
+
     def __init__(self, remote: LocalMachine, threads: int):
         super().__init__()
         self.threads: int = threads
@@ -54,6 +59,8 @@ class ThreadedLocalExecutionQueue(ExecutionQueue):
         self.queue = []
         self.queues: list[LocalExecutionQueue] = [LocalExecutionQueue(self.remote) for _ in range(threads)]
         self.full_queue: list[SimulationTask] = []
+        self.full_count: int = 0
+        self.full_completed_count: int = 0
 
     def enqueue(self, simulation_task: SimulationTask):
         queue_to_use: int = self.index % len(self.queues)
@@ -62,7 +69,15 @@ class ThreadedLocalExecutionQueue(ExecutionQueue):
         self.index += 1
         self.queue.append(simulation_task)
 
+    def sub_queue_progress(self, progress: int, total: int, task: tuple[SimulationTask, str | None], sender: LocalExecutionQueue):
+        self.full_completed_count += 1
+        self.dispatch_message(ExecutionQueue.PROGRESS, progress=self.full_completed_count, total=self.full_count, task=task)
+
     def run(self) -> list[SimulationTask]:
+        self.full_count = len(self.full_queue)
+        self.full_completed_count = 0
+        for queue in self.queues:
+            queue.listen(ExecutionQueue.PROGRESS, self.sub_queue_progress)
         with ThreadPool(len(self.queues)) as p:
             results = p.map(_run_queue, self.queues)
         return [task for queue_result in results for task in queue_result]

@@ -1,3 +1,4 @@
+import json
 import typing
 from typing_extensions import deprecated
 from lammps import shapes
@@ -117,7 +118,7 @@ class NanoparticleBuilder:
 
     def build(self, seeds=None, **kwargs):
         seeds = self.seed_values if seeds is None else seeds
-        nano = Nanoparticle({'title': self.title, **kwargs})
+        nano = Nanoparticle({'title': self.title, 'seeds': json.dumps(seeds), **kwargs})
         nano.regions = self.regions
         nano.atom_manipulation = self.atom_manipulation
         nano.region_name_map = self.region_name_map

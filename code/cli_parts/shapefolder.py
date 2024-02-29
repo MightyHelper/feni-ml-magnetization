@@ -166,8 +166,8 @@ def parseshapes(
     elif sort_by == "errors":
         df = df.sort_values(by=[ratio_ok_col, count_ok_col, "title"], ignore_index=True, ascending=[False, False, True])
     # if all df['mag'] == (None, None) don't show the column
-    if all(df['mag'] == (None, None)):
-        df.drop(columns=["mag"], inplace=True)
+    if all(df['tmg'] == (None, None)):
+        df.drop(columns=["tmg"], inplace=True)
     for column in df.columns:
         full_names = {
             "ratio_fe": "Fe Ratio",
@@ -175,7 +175,7 @@ def parseshapes(
             "total": "Total atoms",
             "fe": "Fe atoms",
             "ni": "Ni atoms",
-            "mag": "Magnetism",
+            "tmg": "Magnetism",
             "title": "Title",
             "ok": "OK",
             "key": "Simulation folder",
@@ -186,7 +186,7 @@ def parseshapes(
             "total": "T",
             "fe": "Fe",
             "ni": "Ni",
-            "mag": "Mag",
+            "tmg": "Mag",
             "title": "Title",
             "ok": "OK",
             "key": "Folder",

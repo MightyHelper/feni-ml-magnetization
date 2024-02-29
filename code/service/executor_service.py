@@ -1,13 +1,16 @@
 # Execute nanoparticle simulations in batch, with configurable execution queue
-
+import logging
 import random
 from pathlib import Path
 from typing import cast
+
+from rich.progress import Progress, SpinnerColumn, MofNCompleteColumn, TimeElapsedColumn, TaskID
 
 from remote.execution_queue import local_execution_queue, execution_queue, slurm_execution_queue, mixed_execution_queue
 from lammps import nanoparticle, poorly_coded_parser as parser, nanoparticlebuilder
 from config.config import MACHINES
 from lammps.nanoparticle import Nanoparticle
+from remote.execution_queue.execution_queue import ExecutionQueue
 from remote.machine.local_machine import LocalMachine
 from remote.machine.machine import Machine
 from remote.machine.slurm_machine import SLURMMachine
@@ -53,6 +56,12 @@ def get_executor(at: str) -> execution_queue.ExecutionQueue:
             return get_execution_queue(machine, n_threads, machines["local"])
     raise ValueError(f"Unknown queue {at} (known queues: {list(machines.keys())})")
 
+def _handle_update(prog: Progress, task_id: TaskID):
+    def inner(progress: int, total: int, task: tuple[SimulationTask, str | None], sender: ExecutionQueue):
+        prog.update(task_id, completed=progress, total=total, task=task[0].nanoparticle.local_path)
+    return inner
+
+
 
 def execute_nanoparticles(
         nanoparticles: list[tuple[str, Nanoparticle]],
@@ -70,7 +79,18 @@ def execute_nanoparticles(
     queue: execution_queue.ExecutionQueue = get_executor(at)
     for path, np in nanoparticles:
         np.schedule_execution(execution_queue=queue, test_run=test)
-    tasks: list[SimulationTask] = queue.run()
+    with Progress(
+        SpinnerColumn(),
+        *Progress.get_default_columns(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        expand=True,
+        refresh_per_second=20
+    ) as prog:
+        task_id = prog.add_task("Executing", total=len(nanoparticles))
+        queue.listen(ExecutionQueue.PROGRESS, _handle_update(prog, task_id))
+        tasks: list[SimulationTask] = queue.run()
+        prog.remove_task(task_id)
     out_nanos: list[tuple[str, Nanoparticle]] = [(task.nanoparticle.local_path, task.nanoparticle) for task in tasks]
     return out_nanos
 

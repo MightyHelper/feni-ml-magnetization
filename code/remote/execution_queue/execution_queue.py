@@ -2,9 +2,11 @@ import logging
 from abc import ABC, abstractmethod
 from lammps.simulation_task import SimulationTask
 from remote.machine.machine import Machine
+from pydispatch import dispatcher
 
 
 class ExecutionQueue(ABC):
+    PROGRESS = "PROGRESS"
     queue: list[SimulationTask]
     parallelism_count: int
     remote: Machine
@@ -32,7 +34,17 @@ class ExecutionQueue(ABC):
         """
         pass
 
-    def run_callback(self, simulation_task: SimulationTask, result: str | None):
+    def dispatch_message(self, signal: str, **kwargs) -> None:
+        dispatcher.send(**kwargs, signal=signal, sender=self)
+
+    def listen(self, signal: str, callback: callable) -> None:
+        dispatcher.connect(callback, signal=signal, sender=self, weak=False)
+
+    def unlisten(self, signal: str, callback: callable) -> None:
+        dispatcher.disconnect(callback, signal=signal, sender=self, weak=False)
+
+    @staticmethod
+    def run_callback(simulation_task: SimulationTask, result: str | None):
         for callback in simulation_task.callbacks:
             try:
                 callback(result)
@@ -71,6 +83,7 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
         logging.error("ERROR:" + str(e) + " " + params, extra={"markup": True})
 
     def run(self) -> list[SimulationTask]:
+        total: int = len(self.queue)
         while len(self.queue) > 0:
             task: SimulationTask | None = self._get_next_task()
             result: tuple[SimulationTask, str | None] = (task, None)
@@ -83,7 +96,8 @@ class SingleExecutionQueue(ExecutionQueue, ABC):
                 logging.debug(f"Error in {type(self)}: {e}", exc_info=e, stack_info=True)
             finally:
                 self.completed.append(result[0])
-                self.run_callback(result[0], result[1])
+                ExecutionQueue.run_callback(result[0], result[1])
+                self.dispatch_message(ExecutionQueue.PROGRESS, progress=len(self.completed), total=total, task=result)
         return self.completed
 
     @abstractmethod

@@ -102,6 +102,11 @@ def ls(
                 plt.show()
 
 
+def _format_pair(pair: tuple[float | None, float | None]) -> str:
+    new_pair: tuple[str, str] = f"{pair[0]:.3f}" if pair[0] is not None else "None", f"{pair[0]:.3f}" if pair[1] is not None else "None"
+    return f"{new_pair[0]} {new_pair[1]}"
+
+
 def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | str], tuple[str, str, str, str, str, str]]:
     try:
         info: Nanoparticle = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
@@ -110,8 +115,8 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | st
             f"[cyan]{folder}[/cyan]",
             f"[blue]{info.title}[/blue]",
             f"[yellow]{datetime.utcfromtimestamp(int(info.get_simulation_date))}[/yellow]",
-            f"[magenta]{info.run_magnetism[0]:.3f} {info.run_magnetism[1]:.3f}[/magenta]",
-            f"[gold1]{info.run_total_energy[0]:.3f} {info.run_total_energy[1]:.3f}[/gold1]",
+            f"[magenta]{_format_pair(info.run_magnetism)}[/magenta]",
+            f"[gold1]{_format_pair(info.run_total_energy)}[/gold1]",
         )
         out = utils.assign_nanoparticle_name(info.title)
         data = {
@@ -121,7 +126,7 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | st
         }
         return data, row
     except Exception as e:
-        logging.debug(f"Error parsing {folder}: {e}")
+        logging.debug(f"Error parsing {folder}: {e}", exc_info=e)
 
 
 @executions.command()
@@ -313,7 +318,7 @@ def find(names: Annotated[list[str], typer.Argument(help="Parts of the name of t
     """
     execs = os.listdir(config.LOCAL_EXECUTION_PATH)
     relative: Path = Path(os.path.join("..", config.LOCAL_EXECUTION_PATH.relative_to(Path.cwd().parent)))
-    le: int = len(str(relative)) + 35 # Length to pad the folder name to
+    le: int = len(str(relative)) + 35  # Length to pad the folder name to
     for folder in execs:
         if folder.startswith("batch"):
             continue
