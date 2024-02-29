@@ -30,8 +30,8 @@ def get_full_function(path: Path) -> tuple[list, Callable]:
             test=True
         )
         result = executed_nano.asdict()
-        atom_count = result['total']
-        ratio = result['ratio_ni']
+        atom_count = executed_nano.total_atoms()
+        ratio = executed_nano.atom_type_ratio(config.NI_ATOM)
         return atom_count, ratio, nanoparticle
 
     return keys, fuzz

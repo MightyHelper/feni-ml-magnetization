@@ -1,75 +1,67 @@
 # {{title}}
+# {{json_description}}
 # bcc iron in a 3d periodic box
 
-clear 
-units 		metal
-atom_style 	spin
-
-# dimension 	3
-boundary 	p p p
-
-# necessary for the serial algorithm (sametag)
-atom_modify 	map array 
-
-region 		box block -25 25 -25 25 -25 25 units box
-create_box	2 box
-
-group		Fe type 1
-group		Ni type 2
+clear
+units          metal
+atom_style     spin
+boundary       p p p
+atom_modify    map array      # necessary for the serial algorithm (sametag)
+region         box block -25 25 -25 25 -25 25 units box
+create_box     2 box
+group          Fe type 1
+group          Ni type 2
 
 
+## BEGIN region
 {{region}}
+## END region
 
 
+mass      1   55.845       # Fe
+mass      2   58.693       # Ni
+set group Fe  spin 2.2  0 0 1  # Fe
+set group Ni  spin 0.61 0 0 1  # Ni
 
-mass		1 55.845 #Fe
-mass		2 58.693 #Ni
+pair_style    hybrid/overlay eam/alloy spin/exchange 3.5
+pair_coeff    * * eam/alloy ../../FeCuNi.eam.alloy Fe Ni
+pair_coeff    1 1 spin/exchange exchange 3.5 0.05452 0.2171 1.841 #FeFe
+pair_coeff    1 2 spin/exchange exchange 3.5 0.0241146 0.01 1.21416 #FeNi
+pair_coeff    2 2 spin/exchange exchange 3.5 0.000416 0.09 1.7 #NiNi
 
-set group Fe spin 2.2 0 0 1 #Fe
-set group Ni spin 0.61 0 0 1 #Ni
+neighbor     0.5 bin
+# neigh_modify every 10 check yes delay 10          # No need for frozen lattice
+comm_style   tiled
+balance      0.1 rcb
 
-pair_style 	hybrid/overlay eam/alloy spin/exchange 3.5
-pair_coeff 	* * eam/alloy ../../FeCuNi.eam.alloy Fe Ni
-pair_coeff 	1 1 spin/exchange exchange 3.5 0.05452 0.2171 1.841 #FeFe
-pair_coeff	1 2 spin/exchange exchange 3.5 0.0241146 0.01 1.21416 #FeNi
-pair_coeff	2 2 spin/exchange exchange 3.5 0.000416 0.09 1.7 #NiNi
+timestep     0.001
 
-neighbor 	0.5 bin
-# neigh_modify every 10 check yes delay 10 # No need for frozen lattice
+velocity     all create 0 4928459 rot yes dist gaussian
 
-comm_style tiled
-balance 0.1 rcb
+compute      out_mag    all spin
+compute      out_pe     all pe
+compute      out_ke     all ke
+compute      out_temp   all temp
+compute      keAtom     all ke/atom
+compute      peAtom     all pe/atom
+compute      outsp      all property/atom spx spy spz sp fmx fmy fmz
 
-timestep 0.001
+variable     magx      equal c_out_mag[1]
+variable     magy      equal c_out_mag[2]
+variable     magz      equal c_out_mag[3]
+variable     magnorm   equal c_out_mag[4]
+variable     emag      equal c_out_mag[5]
+variable     tmag      equal c_out_mag[6]
 
-velocity 	all create 0 4928459 rot yes dist gaussian
+thermo_style custom step temp v_tmag v_magx v_magy v_magz v_magnorm v_emag ke pe etotal press # v_tmagFe v_tmagNi v_magnormFe v_magnormNi
+thermo       500
 
-compute 	out_mag    all spin
-compute 	out_pe     all pe
-compute 	out_ke     all ke
-compute 	out_temp   all temp
-compute     keAtom  all ke/atom
-compute     peAtom  all pe/atom
-compute     outsp all property/atom spx spy spz sp fmx fmy fmz
+fix          temperatura     all langevin      0 0 1    23136
+fix          b               all langevin/spin 300 0.01 29481
+fix          c               all nve/spin      lattice frozen
+# fix          d               all momentum      10 linear 1 1 1 angular rescale   # No need for frozen lattice
+# fix          centrar         all recenter      INIT INIT INIT                    # No need for frozen lattice
 
-variable 	magx 	  equal c_out_mag[1]
-variable	magy	  equal c_out_mag[2]
-variable 	magz      equal c_out_mag[3]
-variable 	magnorm   equal c_out_mag[4]
-variable 	emag      equal c_out_mag[5]
-variable 	tmag      equal c_out_mag[6]
+dump         dumpRun         all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
 
-                     #v_tmagFe #v_tmagNi v_magnorm v_magnormFe v_magnormNi v_emag ke pe etotal press
-thermo_style    custom step temp v_tmag v_magx v_magy v_magz v_magnorm ke pe etotal press
-thermo          500
-
-fix temperatura all langevin 0 0 1 23136
-fix b all langevin/spin 300 0.01 29481
-fix c all nve/spin lattice frozen
-# fix d all momentum 10 linear 1 1 1 angular rescale # No need for frozen lattice
-# fix centrar all recenter INIT INIT INIT # No need for frozen lattice
-
-
-dump 		dumpRun all custom 100000 iron.*.dump type id x y z c_outsp[1] c_outsp[2] c_outsp[3] c_peAtom c_keAtom
-
-run     {{run_steps}}
+run          {{run_steps}}

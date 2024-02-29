@@ -150,6 +150,15 @@ class Nanoparticle:
         except FileNotFoundError:
             return None, None
 
+    @property
+    def run_magnetic_energy(self) -> tuple[float | None, float | None]:
+        if self.lammps_log.step_count == 0:
+            return None, None
+        try:
+            return self.lammps_log.magnetic_energy['mean'], self.lammps_log.magnetic_energy['std']
+        except FileNotFoundError:
+            return None, None
+
     @staticmethod
     def _get_pivoted_df(df, name, expected_row_count=100):
         row_count = df.shape[0]
@@ -297,12 +306,12 @@ class Nanoparticle:
         return dumps, lammps_run
 
     def _build_lammps_code(self, test_run):
-        return template.TemplateUtils.replace_templates(template.TemplateUtils.get_lammps_template(), {
+        return template.TemplateUtils.replace_with_doc(template.TemplateUtils.get_lammps_template(), {
             "region": self.get_region(),
             "run_steps": str(0 if test_run else FULL_RUN_DURATION),
             "title": f"{self.title}",
             **self.extra_replacements
-        })
+        }, 'json_description')
 
     def _gen_identifier(self):
         return f"simulation_{time.time()}_{self.rid}"
@@ -377,9 +386,11 @@ class Nanoparticle:
                     "fe": self.count_atoms_of_type(FE_ATOM),
                     "ni": self.count_atoms_of_type(NI_ATOM),
                     "total": self.total_atoms(),
-                    "ratio_fe": (self.count_atoms_of_type(FE_ATOM) / self.total_atoms()),
-                    "ratio_ni": (self.count_atoms_of_type(NI_ATOM) / self.total_atoms()),
-                    "mag": self.magnetism
+                    "ratio_fe": self.atom_type_ratio(FE_ATOM),
+                    "ratio_ni": self.atom_type_ratio(NI_ATOM),
+                    "emag": self.run_magnetic_energy,
+                    "teng": self.run_total_energy,
+                    "tmg": self.run_magnetism
                 }
             else:
                 return {
@@ -387,11 +398,6 @@ class Nanoparticle:
                     "key": self.id,
                     "title": self.title,
                     "np": self,
-                    "fe": -1,
-                    "ni": -1,
-                    "total": -1,
-                    "ratio_fe": -1,
-                    "ratio_ni": -1,
                     "mag": self.magnetism
                 }
         except Exception as e:
@@ -401,13 +407,11 @@ class Nanoparticle:
                 "key": self.id,
                 "title": self.title,
                 "np": self,
-                "fe": -1,
-                "ni": -1,
-                "total": -1,
-                "ratio_fe": -1,
-                "ratio_ni": -1,
                 "mag": float('nan')
             }
+
+    def atom_type_ratio(self, atom_type: int) -> float:
+        return self.count_atoms_of_type(atom_type) / self.total_atoms()
 
     def is_ok(self):
         return len(self.run.dumps) > 0

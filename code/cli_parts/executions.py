@@ -315,6 +315,8 @@ def find(names: Annotated[list[str], typer.Argument(help="Parts of the name of t
     relative: Path = Path(os.path.join("..", config.LOCAL_EXECUTION_PATH.relative_to(Path.cwd().parent)))
     le: int = len(str(relative)) + 35 # Length to pad the folder name to
     for folder in execs:
+        if folder.startswith("batch"):
+            continue
         input_path = Path(config.LOCAL_EXECUTION_PATH / folder / "nanoparticle.in").absolute().resolve()
         sim_nano: str | None = utils.read_local_file(input_path)
         if sim_nano is None:
