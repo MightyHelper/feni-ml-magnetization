@@ -76,6 +76,17 @@ class SSHMachine(Machine):
     def run_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
         return asyncio.create_task(self.connection.run(cmd))
 
+    def run_retryable_cmd(self, cmd: str) -> Task[SSHCompletedProcess]:
+        return asyncio.create_task(self.run_retryable_cmd_async(cmd))
+
+    async def run_retryable_cmd_async(self, cmd: str) -> SSHCompletedProcess:
+        try:
+            return await self.run_cmd(cmd)
+        except asyncssh.misc.ChannelOpenError:
+            logging.warning("Reconnecting to toko")
+            await self.connect(self.sftp is not None)
+            return await self.run_retryable_cmd(cmd)
+
     def cp_put(self, local_path: Path, remote_path: PurePosixPath, ignore_errors: bool = False) -> Coroutine[Any, Any, None]:
         logging.debug(f"Copying {local_path} to {remote_path}...")
         error_handler: None | Callable = (lambda: 0) if ignore_errors else None

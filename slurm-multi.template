@@ -2,6 +2,8 @@
 #SBATCH --ntasks={{tasks}}
 #SBATCH --partition={{partition}}
 #SBATCH --time={{time}}
+#SBATCH --job-name={{job_name}}
+
 . /etc/profile
 module load openmpi-2.1.6 gcc-9.2.0
 cd {{cwd}}

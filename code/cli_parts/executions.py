@@ -46,7 +46,8 @@ def ls(
         bool, typer.Option(help="Whether to plot the magnetism of the executions", show_default=True)] = False,
     save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None,
     by: Annotated[str, typer.Option(help="Parameter to sort the executions by", show_default=True)] = "Shape",
-    full_only: Annotated[bool, typer.Option(help="Whether to only list full executions", show_default=True)] = False
+    full_only: Annotated[bool, typer.Option(help="Whether to only list full executions", show_default=True)] = False,
+    plot_tpas: Annotated[bool, typer.Option(help="Whether to plot the TPAS of the executions", show_default=True)] = False
 ):
     """
     List available nanoparticle executions
@@ -59,6 +60,7 @@ def ls(
     table.add_column("Date")
     table.add_column("Magnetism")
     table.add_column("Total Energy")
+    table.add_column("TPAS")
     df_rows = []
     if not count:
         with (config.EXEC_LS_POOL_TYPE() as pool):
@@ -100,14 +102,24 @@ def ls(
                 fig.savefig(os.path.join(str(save), f"exec_result_scatter_{by_value}.png"))
             else:
                 plt.show()
+    if plot_tpas:
+        fig: plt.Figure = ui_utils.multi_plots(
+            df,
+            "Execution result",
+            (by, 'tpas', None, None)
+        )
+        if save is not None:
+            fig.savefig(os.path.join(str(save), f"exec_result_tpas_{by}.png"))
+        else:
+            plt.show()
 
 
 def _format_pair(pair: tuple[float | None, float | None]) -> str:
-    new_pair: tuple[str, str] = f"{pair[0]:.3f}" if pair[0] is not None else "None", f"{pair[0]:.3f}" if pair[1] is not None else "None"
+    new_pair: tuple[str, str] = f"{pair[0]:.3f}" if pair[0] is not None else "None", f"{pair[1]:.3f}" if pair[1] is not None else "None"
     return f"{new_pair[0]} {new_pair[1]}"
 
 
-def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | str], tuple[str, str, str, str, str, str]]:
+def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | str], tuple[str, str, str, str, str, str, str]]:
     try:
         info: Nanoparticle = nanoparticle.Nanoparticle.from_executed(config.LOCAL_EXECUTION_PATH / folder)
         row = (
@@ -117,12 +129,14 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | st
             f"[yellow]{datetime.utcfromtimestamp(int(info.get_simulation_date))}[/yellow]",
             f"[magenta]{_format_pair(info.run_magnetism)}[/magenta]",
             f"[gold1]{_format_pair(info.run_total_energy)}[/gold1]",
+            f"[pink]{info.lammps_log.tpas:.2f}[/pink]",
         )
         out = utils.assign_nanoparticle_name(info.title)
         data = {
             **out,
             "magnetism_val": float(info.magnetism[0]),
-            "magnetism_std": float(info.magnetism[1])
+            "magnetism_std": float(info.magnetism[1]),
+            "tpas": float(info.lammps_log.tpas),
         }
         return data, row
     except Exception as e:

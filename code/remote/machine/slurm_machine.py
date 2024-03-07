@@ -73,7 +73,7 @@ class SLURMMachine(SSHMachine):
 
     async def wait_for_slurm_execution(self, jobid: int):
         logging.info("Waiting for execution to finish in remote...")
-        return await self.run_cmd(f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'")
+        return await self.run_retryable_cmd(f"sh -c 'while [ \"$({self.squeue_path} -hj {jobid})\" != \"\" ]; do sleep 1; done'")
 
     async def get_slurm_jobids(self, of_user: str | None) -> list[int]:
         """
@@ -82,7 +82,7 @@ class SLURMMachine(SSHMachine):
         :return:
         """
         of_user = f"-u {of_user}" if of_user is not None else ""
-        return [int(jobid) for jobid in (await self.run_cmd(f"sh -c '{self.squeue_path} {of_user} -h -o %i'")).stdout.split("\n") if jobid]
+        return [int(jobid) for jobid in (await self.run_retryable_cmd(f"sh -c '{self.squeue_path} {of_user} -h -o %i'")).stdout.split("\n") if jobid]
 
     async def get_slurm_executing_job_submit_code(self, job_id: int) -> str:
         """
@@ -91,7 +91,7 @@ class SLURMMachine(SSHMachine):
         :param job_id:
         :return:
         """
-        return (await self.run_cmd(
+        return (await self.run_retryable_cmd(
             f"sh -c '{self.scontrol_path} write batch_script {job_id} -'"
         )).stdout
 

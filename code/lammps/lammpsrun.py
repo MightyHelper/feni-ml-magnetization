@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -106,6 +107,20 @@ class LammpsRun:
             pass
         return step
 
+    @cached_property
+    def extra_replacements(self) -> dict[str, str]:
+        """
+        Read the 2nd comment line of the lammps file to get the replacements
+        """
+        try:
+            return json.loads(self.code.split("\n")[1][1:].strip())
+        except json.JSONDecodeError:
+            return {}
+
+    @cached_property
+    def title(self) -> str:
+        return self.code.split("\n")[0][1:].strip()
+
     def get_current_step(self) -> int:
         """
         Get the current step of a lammps log file
@@ -139,7 +154,7 @@ class LammpsRun:
         logging.debug(f"Lammps run {self} done with {len(self.dumps)} dumps")
 
     def _parse_dump(self, index: int):
-        return LammpsDump(self.expect_dumps[index])
+        return LammpsDump(self.expect_dumps[index // 100000])
 
     @staticmethod
     def from_path(path: Path):

@@ -89,6 +89,7 @@ class SlurmBatchedExecutionQueue(SSHBatchedExecutionQueue):
                 "partition": self.remote.partition_to_use,
                 "output": str(remote_batch_path / "batch_run.out"),
                 "file_tag": str(remote_batch_path / config.RUN_SH),
+                "job_name": f"'{simulation_count} np {id(self)}'",
             }
         )
         assert "{{" not in script_code, f"Not all templates were replaced in {script_code} for {self}"

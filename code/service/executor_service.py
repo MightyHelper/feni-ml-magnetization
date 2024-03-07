@@ -17,6 +17,7 @@ from remote.machine.slurm_machine import SLURMMachine
 from remote.machine.ssh_machine import SSHMachine, SSHBatchedExecutionQueue
 from lammps.simulation_task import SimulationTask
 
+
 def get_execution_queue(machine: Machine, n_threads: int, local_machine: LocalMachine):
     if isinstance(machine, LocalMachine):
         if n_threads is None:
@@ -56,17 +57,18 @@ def get_executor(at: str) -> execution_queue.ExecutionQueue:
             return get_execution_queue(machine, n_threads, machines["local"])
     raise ValueError(f"Unknown queue {at} (known queues: {list(machines.keys())})")
 
+
 def _handle_update(prog: Progress, task_id: TaskID):
     def inner(progress: int, total: int, task: tuple[SimulationTask, str | None], sender: ExecutionQueue):
         prog.update(task_id, completed=progress, total=total, task=task[0].nanoparticle.local_path)
+
     return inner
 
 
-
 def execute_nanoparticles(
-        nanoparticles: list[tuple[str, Nanoparticle]],
-        at: str = "local",
-        test: bool = False
+    nanoparticles: list[tuple[str, Nanoparticle]],
+    at: str = "local",
+    test: bool = False
 ) -> list[tuple[str, Nanoparticle]]:
     """
     Executes a list of nanoparticles using the specified execution queue.
@@ -96,9 +98,9 @@ def execute_nanoparticles(
 
 
 def execute_single_nanoparticle(
-        np: tuple[str, Nanoparticle],
-        at: str = "local",
-        test: bool = False
+    np: tuple[str, Nanoparticle],
+    at: str = "local",
+    test: bool = False
 ) -> tuple[str, Nanoparticle]:
     """
     Executes a single nanoparticle using the specified execution queue.
@@ -115,9 +117,9 @@ def execute_single_nanoparticle(
 
 
 def add_extra_nanoparticles(
-        nano_builders: list[tuple[str, nanoparticlebuilder.NanoparticleBuilder]],
-        seed: int,
-        seed_count: int
+    nano_builders: list[tuple[str, nanoparticlebuilder.NanoparticleBuilder]],
+    seed: int,
+    seed_count: int
 ) -> list[tuple[str, nanoparticle.Nanoparticle]]:
     """
     Adds extra nanoparticles with different seed values to the list of nanoparticles.

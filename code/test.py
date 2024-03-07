@@ -1,5 +1,7 @@
 import asyncio
+import logging
 
+import asyncssh
 from rich.progress import MofNCompleteColumn, Progress, SpinnerColumn, TimeElapsedColumn
 
 import config.config_base
@@ -103,39 +105,44 @@ async def main2():
         base_remaining_time, simulations = await get_remaining_time(toko)
         remaining_time = base_remaining_time
         total_simulations = sum(simulations.values())
-        task_id = p.add_task("Running simulations", total=total_simulations*300000)
+        task_id = p.add_task("Running simulations", total=total_simulations * config.config.FULL_RUN_DURATION)
         timer_task = p.add_task("Time remaining", total=base_remaining_time)
         while remaining_time > 0:
             remaining_time, simulations = await get_remaining_time(toko)
             simulations[0] += simulations[-1]
             del simulations[-1]
             result: int = sum([k * v for k, v in simulations.items()])
-            p.update(task_id, completedn_f=result)
-            p.update(timer_task, completed=base_remaining_time-remaining_time)
+            p.update(task_id, completed=result)
+            p.update(timer_task, completed=base_remaining_time - remaining_time)
             p.refresh()
             await asyncio.sleep(5)
     await toko.disconnect()
 
 
+semaphore = asyncio.Semaphore(7)
+
+
+async def get_simulations(toko, name):
+    async with semaphore:
+        return int((await toko.run_retryable_cmd(f"find ~/scratch/projects/magnetism/simulations -name {name} | wc -l")).stdout.strip())
+
+
 async def get_remaining_time(toko):
-    steps = [0, 100000, 200000, 300000]
+    steps = [*range(0, config.config.FULL_RUN_DURATION + 1, 100000)]
     tests = [*[f"iron.{i}.dump" for i in steps], "nanoparticle.in"]
-    result = await asyncio.gather(*[toko.run_cmd(f"find ~/scratch/projects/magnetism/simulations -name {i} | wc -l") for i in tests])
+    result = await asyncio.gather(*[get_simulations(toko, i) for i in tests])
     simulations: dict[int, int] = {}
-    simulations[-1] = int(result[-1].stdout.strip())
-    for item, step in zip(result[:4], steps):
-        simulations[step] = int(item.stdout.strip())
+    simulations[-1] = result[-1]
+    for item, step in zip(result[:-1], steps):
+        simulations[step] = item
     simulations[-1] -= simulations[0]
-    simulations[0] -= simulations[100000]
-    simulations[100000] -= simulations[200000]
-    simulations[200000] -= simulations[300000]
+    for i in range(len(steps) - 1):
+        simulations[steps[i]] -= simulations[steps[i + 1]]
     simulation_time = toko.single_core_completion_time
-    remaining_time = 0
-    remaining_time += simulations[-1] * simulation_time * (3 / 3)
-    remaining_time += simulations[000000] * simulation_time * (3 / 3)
-    remaining_time += simulations[100000] * simulation_time * (2 / 3)
-    remaining_time += simulations[200000] * simulation_time * (1 / 3)
-    remaining_time += simulations[300000] * simulation_time * (0 / 3)
+    remaining_time = 0.0
+    remaining_time += simulations[-1] * simulation_time * 1
+    for step, count in simulations.items():
+        remaining_time += count * simulation_time * ((config.config.FULL_RUN_DURATION - step) / config.config.FULL_RUN_DURATION)
     remaining_time /= 128
     return remaining_time, simulations
 

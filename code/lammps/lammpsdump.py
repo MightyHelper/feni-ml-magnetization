@@ -12,7 +12,7 @@ from utils import get_index, opt, column_values_as_float, read_local_file, write
 
 DATA_START_PATTERN = re.compile("Step\\s+Temp")
 DATA_END_PATTERN = re.compile("Loop time")
-LAST_N_MAGNETISM_AVG = (config.config_local.FULL_RUN_DURATION * 3) // 4
+LAST_N_MAGNETISM_AVG = (config.config_local.FULL_RUN_DURATION * 2) // 4
 
 
 class LammpsDump:
@@ -154,6 +154,14 @@ class LammpsLog:
     def magnetic_energy(self) -> pd.Series:
         new_index: int = self.step_count - LAST_N_MAGNETISM_AVG
         return (self.log.loc[new_index:self.step_count]['v_emag'] / self.exec_atoms).agg(['mean', 'std'])
+
+    @cached_property
+    def timesteps_sec(self) -> float:
+        return self.exec_steps / self.exec_time
+
+    @cached_property
+    def tpas(self) -> float:
+        return self.exec_steps / (self.exec_time * self.exec_procs * self.exec_atoms)
 
     def save_mag_to_file(self, out_mag: Path, digits=2):
         mag_stats: str = f"{self.magnetism['mean']:.{digits}f} {self.magnetism['std']:.{digits}f}"

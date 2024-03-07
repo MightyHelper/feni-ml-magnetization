@@ -77,13 +77,11 @@ class Nanoparticle:
         n.id = n.local_path.name
         n.regions = []
         n.atom_manipulation = []
-        n.extra_replacements = {
-            'in_toko': os.path.isfile(n.local_path / config.SLURM_SH)
-        }
         n.run = lr.LammpsRun.from_path(n.local_path)
+        n.extra_replacements = n.run.extra_replacements
         n.region_name_map = {}
         n.magnetism = n.get_magnetism()
-        n.title = n.run.code.split("\n")[0][1:].strip()
+        n.title = n.run.title
         n.coord = n.read_coordination(feni_ovito.COORD_FILENAME)
         n.coord_fe = n.read_coordination(feni_ovito.COORD_FE_FILENAME)
         n.coord_ni = n.read_coordination(feni_ovito.COORD_NI_FILENAME)
@@ -134,9 +132,9 @@ class Nanoparticle:
         try:
             tentative_values = self.lammps_log.magnetism['mean'], self.lammps_log.magnetism['std']
             if abs(tentative_values[0] - self.magnetism[0]) > 0.0001:
-                logging.warning(f"The magnetism for {self.title} has been computed incorrectly")
+                logging.warning(f"The magnetism val for {self.title} has been computed incorrectly, {tentative_values[0]} != {self.magnetism[0]}")
             if abs(tentative_values[1] - self.magnetism[1]) > 0.0001:
-                logging.warning(f"The magnetism for {self.title} has been computed incorrectly")
+                logging.warning(f"The magnetism std for {self.title} has been computed incorrectly, {tentative_values[1]} != {self.magnetism[1]}")
             return tentative_values
         except FileNotFoundError:
             return None, None
