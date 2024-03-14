@@ -12,7 +12,7 @@ from utils import get_index, opt, column_values_as_float, read_local_file, write
 
 DATA_START_PATTERN = re.compile("Step\\s+Temp")
 DATA_END_PATTERN = re.compile("Loop time")
-LAST_N_MAGNETISM_AVG = (config.config_local.FULL_RUN_DURATION * 2) // 4
+LAST_N_MAGNETISM_AVG = (config.config_local.FULL_RUN_DURATION * 3) // 4
 
 
 class LammpsDump:

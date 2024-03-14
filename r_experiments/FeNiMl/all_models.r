@@ -33,7 +33,6 @@ n_folds <- if (length(args) > 1) as.numeric(args[2]) else 2 # Number of folds fo
 dataset_path <- if (length(args) > 2) args[3] else "../new_dataset.csv" # Path to dataset
 clip_dataset <- if (length(args) > 3) as.logical(args[4]) else TRUE # Remove near-zero variance features
 split_data <- if (length(args) > 4) as.logical(args[5]) else FALSE # Split data into train and test (Or use all data for training)
-remote_weak_nps <- if (length(args) > 5) as.logical(args[6]) else TRUE # Remove nanoparticles where the variance is > 30% of the magnetism
 
 arguments <- data.frame(
   dataset_path = dataset_path,
@@ -62,12 +61,6 @@ if (split_data) {
   test_data <- dataset %>% as.data.frame()
 }
 
-# Filter out from train data rows that have tmg_std/tmg > 0.3
-if (remote_weak_nps){
-  train_data <- train_data %>% filter(tmg_std/tmg < 0.3)
-}
-train_data <- train_data %>% select(-tmg_std) # TODO: remove this
-test_data <- test_data %>% select(-tmg_std) # TODO: remove this
 ctrl <- trainControl(
   method = "cv",
   number = n_folds,
