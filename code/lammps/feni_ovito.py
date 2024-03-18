@@ -25,6 +25,7 @@ def _parse_worker(
     from ovito.io import import_file, export_file
     from ovito.modifiers import SelectTypeModifier, DeleteSelectedModifier, CoordinationAnalysisModifier, \
         HistogramModifier, ExpressionSelectionModifier
+    g_r_cutoff: float = 5.0  # TODO: change
     filenames = {
         'dump': f'iron.{config.FULL_RUN_DURATION}.dump',
         'xyz': XYZ_FILENAME,
@@ -55,13 +56,13 @@ def _parse_worker(
     datatemp = data.compute()
     natoms = datatemp.particles.count
     export_file(data, xyz, "xyz", columns=['Particle Type', 'Position.X', 'Position.Y', 'Position.Z'])
-    data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=100, partial=False))
+    data.modifiers.append(CoordinationAnalysisModifier(cutoff=g_r_cutoff, number_of_bins=100, partial=False))
     datasave = data.compute()
     numpy.savetxt(gr, datasave.tables['coordination-rdf'].xy(),
                   header="Radial distribution function:\n \"Pair separation distance\" g(r)")
 
     data = import_file(dump)
-    data.modifiers.append(CoordinationAnalysisModifier(cutoff=5.0, number_of_bins=100, partial=True))
+    data.modifiers.append(CoordinationAnalysisModifier(cutoff=g_r_cutoff, number_of_bins=100, partial=True))
     datasave = data.compute()
     numpy.savetxt(grp, datasave.tables['coordination-rdf'].xy(),
                   header="Radial distribution function:\n \"Pair separation distance\" 1-1 1-2 2-2")
