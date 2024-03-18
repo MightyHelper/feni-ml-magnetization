@@ -39,6 +39,8 @@ timestep     0.001
 velocity     all create 0 4928459 rot yes dist gaussian
 
 compute      out_mag    all spin
+compute      out_mag_fe Fe spin
+compute      out_mag_ni Ni spin
 compute      out_pe     all pe
 compute      out_ke     all ke
 compute      out_temp   all temp
@@ -46,14 +48,27 @@ compute      keAtom     all ke/atom
 compute      peAtom     all pe/atom
 compute      outsp      all property/atom spx spy spz sp fmx fmy fmz
 
-variable     magx      equal c_out_mag[1]
-variable     magy      equal c_out_mag[2]
-variable     magz      equal c_out_mag[3]
-variable     magnorm   equal c_out_mag[4]
-variable     emag      equal c_out_mag[5]
-variable     tmag      equal c_out_mag[6]
+variable     magx         equal c_out_mag[1]
+variable     magy         equal c_out_mag[2]
+variable     magz         equal c_out_mag[3]
+variable     magnorm      equal c_out_mag[4]
+variable     emag         equal c_out_mag[5]
+variable     tmag         equal c_out_mag[6]
+variable     fe_magx      equal c_out_mag_fe[1]
+variable     fe_magy      equal c_out_mag_fe[2]
+variable     fe_magz      equal c_out_mag_fe[3]
+variable     fe_magnorm   equal c_out_mag_fe[4]
+variable     fe_emag      equal c_out_mag_fe[5]
+variable     fe_tmag      equal c_out_mag_fe[6]
+variable     ni_magx      equal c_out_mag_ni[1]
+variable     ni_magy      equal c_out_mag_ni[2]
+variable     ni_magz      equal c_out_mag_ni[3]
+variable     ni_magnorm   equal c_out_mag_ni[4]
+variable     ni_emag      equal c_out_mag_ni[5]
+variable     ni_tmag      equal c_out_mag_ni[6]
 
-thermo_style custom step temp v_tmag v_magx v_magy v_magz v_magnorm v_emag ke pe etotal press # v_tmagFe v_tmagNi v_magnormFe v_magnormNi
+
+thermo_style custom step temp v_fe_magx v_fe_magy v_fe_magz v_fe_magnorm v_fe_emag v_fe_tmag v_ni_magx v_ni_magy v_ni_magz v_ni_magnorm v_ni_emag v_ni_tmag v_magx v_magy v_magz v_magnorm v_emag v_tmag ke pe etotal press
 thermo       500
 
 fix          temperatura     all langevin      0 0 1    23136
