@@ -48,9 +48,10 @@ delete_atoms 	region s4 compress yes
 
 
 group		Fe type 1
+set group Fe type/ratio 2 0.30 300
 group		Ni type 2
 
-set group Fe type/ratio 2 0.30 300
+
 
 # setting mass, mag. moments, and interactions for bcc iron
 
