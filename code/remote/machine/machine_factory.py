@@ -27,9 +27,9 @@ class MachineFactory:
             cores=get_toko_cores(partition),
             partition_to_use=partition,
             execution_path=PurePosixPath(f"/scratch/{TOKO_USER}/projects/magnetism/simulations/"),
-            lammps_executable=PurePosixPath("/scratch/fwilliamson/lammps_compile/lammps/build1/lmp"),
+            lammps_executable=PurePosixPath("/scratch/fwilliamson/lammps_compile/lammps/build2/lmp"),
             user=user,
             node_id=node_id,
             launch_time=0.0,  # TODO: revise
-            single_core_completion_time=4 * 3155.91  # TODO: revise
+            single_core_completion_time=(4 * 3155.91) / (3.14 if partition == "mini" else 1)  # TODO: revise
         )

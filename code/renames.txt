@@ -1,0 +1,73 @@
+# Rename
+Flake_Multilayer.2.Y_Normal_Pores.4_0.in  Flake_Multilayer.7.Y_Normal_Pores.4_0.in
+Flake_Multilayer.2.Z_Normal_Full_1.in     Flake_Multilayer.7.Z_Normal_Full_1.in
+
+sed -re "s/Flake_Multilayer.2.Y_Normal_Pores.4_0.in/Flake_Multilayer.7.Y_Normal_Pores.4_0.in/g" 07_long_run_100K.csv > 07_r_long_run_100K.csv
+sed -re "s/Flake_Multilayer.2.Z_Normal_Full_1.in/Flake_Multilayer.7.Z_Normal_Full_1.in/g" -i 07_r_long_run_100K.csv
+
+sed -re "s/Flake_Multilayer.2.Y_Normal_Pores.4_0.in/Flake_Multilayer.7.Y_Normal_Pores.4_0.in/g" 08_long_run_600K.csv > 08_r_long_run_600K.csv
+sed -re "s/Flake_Multilayer.2.Z_Normal_Full_1.in/Flake_Multilayer.7.Z_Normal_Full_1.in/g" -i 08_r_long_run_600K.csv
+
+mv ../Shapes/a.in ../Shapes/b.in
+sed -re "s/a.in/b.in/g" -i ../dataset_versions/*
+find ../executions -type f -name "*.in" -exec sed -re "s/a.in/b.in/g" -i \{\} \;
+
+
+# Delete
+
+Cross_Multilayer.3.Z_Normal_Full_0.in
+Cross_Multilayer.9.X_Normal_Full_0.in
+Cross_Multilayer.9.Y_Normal_Full_0.in
+Cross_Onion.2_Normal_Full_0.in
+Cross_Onion.2_Normal_Pores.1_0.in
+Cross_Onion.2_Normal_Pores.2_0.in
+Cross_Onion.2_Normal_Pores.3_0.in
+Cross_Onion.2_Normal_Pores.4_0.in
+Cross_Random_Normal_Full_0.in
+Cross_Random_Normal_Pores.1_0.in
+Cross_Random_Normal_Pores.2_0.in
+Cross_Random_Normal_Pores.3_0.in
+Cross_Random_Normal_Pores.4_0.in
+Cross_Sandwich.X_Normal_Full_0.in
+Cross_Sandwich.Y_Normal_Full_0.in
+Cross_Sandwich.Z_Normal_Full_0.in
+Cross_Sandwich.Z_Normal_Pores.1_0.in
+
+Toroid_Multilayer.1.Y_Normal_Pores.4_0.in
+Toroid_Multilayer.1.Z_Normal_Pores.2_0.in
+Toroid_Multilayer.1.Z_Normal_Pores.3_0.in
+Toroid_Multilayer.1.Z_Normal_Pores.4_0.in
+Toroid_Multilayer.3.X_Normal_Full_0.in
+Toroid_Multilayer.3.X_Normal_Pores.2_0.in
+Toroid_Multilayer.3.X_Normal_Pores.3_0.in
+Toroid_Multilayer.3.X_Normal_Pores.4_0.in
+Toroid_Multilayer.8.Z_Normal_Full_0.in
+Toroid_Multilayer.8.Z_Normal_Pores.1_0.in
+Toroid_Multilayer.9.Y_Normal_Full_0.in
+Toroid_Multilayer.9.Y_Normal_Pores.2_0.in
+Toroid_Multilayer.9.Y_Normal_Pores.3_0.in
+Toroid_Onion.2_Normal_Full_0.in
+Toroid_Onion.2_Normal_Pores.1_0.in
+Toroid_Onion.2_Normal_Pores.2_0.in
+Toroid_Onion.2_Normal_Pores.3_0.in
+Toroid_Onion.2_Normal_Pores.4_0.in
+Toroid_Onion_Normal_Full_0.in
+Toroid_Onion_Normal_Pores.1_0.in
+Toroid_Onion_Normal_Pores.2_0.in
+Toroid_Onion_Normal_Pores.3_0.in
+Toroid_Onion_Normal_Pores.4_0.in
+Toroid_Sandwich.X_Normal_Full_0.in
+Toroid_Sandwich.X_Normal_Pores.1_0.in
+Toroid_Sandwich.X_Normal_Pores.2_0.in
+Toroid_Sandwich.X_Normal_Pores.3_0.in
+Toroid_Sandwich.X_Normal_Pores.4_0.in
+Toroid_Sandwich.Y_Normal_Full_0.in
+Toroid_Sandwich.Y_Normal_Pores.1_0.in
+Toroid_Sandwich.Y_Normal_Pores.2_0.in
+Toroid_Sandwich.Y_Normal_Pores.3_0.in
+Toroid_Sandwich.Y_Normal_Pores.4_0.in
+Toroid_Sandwich.Z_Normal_Full_0.in
+
+mv ../Shapes/a.in ../Shapes/a.in.disabled
+# Delete lines that contain a.in from dataset_versions
+sed -re "/a.in/d" -i ../dataset_versions/*

@@ -138,11 +138,14 @@ def render_boolean(value: bool) -> str:
 
 def lerp_green_red(value: float) -> str:
     # Return hex of color
-    green = int(value * 255)
-    red = int((1 - value) * 255)
-    green_hex = hex(green)[2:]
-    red_hex = hex(red)[2:]
-    return f"#{red_hex:0>2}{green_hex:0>2}00".upper()
+    try:
+        green = int(value * 255)
+        red = int((1 - value) * 255)
+        green_hex = hex(green)[2:]
+        red_hex = hex(red)[2:]
+        return f"#{red_hex:0>2}{green_hex:0>2}00".upper()
+    except ValueError:
+        return "white"
 
 
 def add_task(execution: LiveExecution, progress: Progress, tasks: dict[str, TaskID]) -> None:
