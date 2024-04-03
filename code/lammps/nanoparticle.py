@@ -130,12 +130,7 @@ class Nanoparticle:
         if self.lammps_log.step_count == 0:
             return None, None
         try:
-            tentative_values = self.lammps_log.magnetism['mean'], self.lammps_log.magnetism['std']
-            if abs(tentative_values[0] - self.magnetism[0]) > 0.0001:
-                logging.warning(f"The magnetism val for {self.title} has been computed incorrectly, {tentative_values[0]} != {self.magnetism[0]}")
-            if abs(tentative_values[1] - self.magnetism[1]) > 0.0001:
-                logging.warning(f"The magnetism std for {self.title} has been computed incorrectly, {tentative_values[1]} != {self.magnetism[1]}")
-            return tentative_values
+            return self.lammps_log.magnetism['mean'], self.lammps_log.magnetism['std']
         except FileNotFoundError:
             return None, None
 
@@ -319,13 +314,7 @@ class Nanoparticle:
         return float(self.id.split("_")[1])
 
     def get_magnetism(self):
-        try:
-            with open(self.local_path / "magnetism.txt", "r") as f:
-                lines = f.readlines()
-            result = [float(x) for x in lines[1].split(" ")]
-            return result[0], result[1]
-        except (FileNotFoundError, IndexError):
-            return float('nan'), float('nan')
+        return self.run_magnetism
 
     def get_region(self):
         out = ""

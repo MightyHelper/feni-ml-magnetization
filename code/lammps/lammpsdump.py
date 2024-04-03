@@ -143,7 +143,7 @@ class LammpsLog:
     @cached_property
     def magnetism(self) -> pd.Series:
         new_index: int = self.step_count - LAST_N_MAGNETISM_AVG
-        return self.log.loc[new_index:self.step_count]['v_magnorm'].agg(['mean', 'std'])
+        return self.log.loc[new_index:self.step_count]['v_mag_all_sq'].agg(['mean', 'std'])
 
     @cached_property
     def total_energy(self) -> pd.Series:
