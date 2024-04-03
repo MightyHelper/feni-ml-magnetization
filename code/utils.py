@@ -4,6 +4,8 @@ import logging
 import os
 import random
 import re
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import TypeVar, Callable, Any, cast
 
@@ -44,22 +46,42 @@ def filter_empty(l: list) -> list:
     return [x for x in l if x != ""]
 
 
+@dataclass
+class NanoparticleName:
+    shape: str
+    distribution: str
+    interface: str
+    pores: str
+    index: str
+
+    @staticmethod
+    def parse(key: str | Path) -> 'NanoparticleName':
+        shape, distribution, interface, pores, index = None, None, None, None, None
+        # noinspection PyBroadException
+        try:
+            filename = os.path.basename(key)
+            if filename.endswith(".in"):
+                filename = filename[:-3]
+            parts = filename.split("_")
+            shape = parts[0]
+            distribution = parts[1]
+            interface = parts[2]
+            pores = parts[3]
+            index = parts[4]
+        except Exception:
+            pass
+        return NanoparticleName(shape, distribution, interface, pores, index)
+
+    @cached_property
+    def distribution_type(self) -> str:
+        return self.distribution.split(".")[0]
+
+    def as_tuple(self):
+        return self.shape, self.distribution, self.interface, self.pores, self.index
+
+
 def parse_nanoparticle_name(key: str | Path) -> tuple[str, str, str, str, str]:
-    shape, distribution, interface, pores, index = None, None, None, None, None
-    # noinspection PyBroadException
-    try:
-        filename = os.path.basename(key)
-        if filename.endswith(".in"):
-            filename = filename[:-3]
-        parts = filename.split("_")
-        shape = parts[0]
-        distribution = parts[1]
-        interface = parts[2]
-        pores = parts[3]
-        index = parts[4]
-    except Exception:
-        pass
-    return shape, distribution, interface, pores, index
+    return NanoparticleName.parse(key).as_tuple()
 
 
 def get_path_elements(path: str, f: int, t: int) -> str:
@@ -163,7 +185,9 @@ def assert_type(typ: type[T], item: T) -> T:
     assert isinstance(item, typ), f"item must be of type {typ}, got {item} ({type(item)})"
     return item
 
+
 def ssh_task(func):
     def wrapper(conn: SSHClientConnection, *args, **kwargs) -> asyncio.Task:
         return asyncio.create_task(conn.run(func(*args, **kwargs)))
+
     return wrapper

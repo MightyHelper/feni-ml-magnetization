@@ -6,6 +6,7 @@ from cli_parts.executions import executions
 from cli_parts.fuzzer import fuzzer
 from cli_parts.scheduler import sched
 from cli_parts.shapefolder import shapefolder
+from cli_parts.plot import plot
 
 setup_logging.setup_logging()
 
@@ -16,6 +17,7 @@ main.add_typer(executions, name="exec", help="Commands for nanoparticle executio
 main.add_typer(fuzzer, name="fuz", help="Commands for nanoparticle fuzzing")
 main.add_typer(dat, name="dat", help="Commands for nanoparticle renaming")
 main.add_typer(sched, name="sched", help="Commands for nanoparticle multicomputer execution scheduling")
+main.add_typer(plot, name="plot", help="Plot various things")
 
 
 if __name__ == "__main__":
