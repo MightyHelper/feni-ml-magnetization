@@ -58,7 +58,6 @@ class Nanoparticle:
         self.id = self._gen_identifier() if id_x is None else id_x
         self.local_path = (LOCAL_EXECUTION_PATH / self.id).resolve()
         self.run = None
-        self.magnetism = (None, None)
 
     @staticmethod
     def from_executed(path: Path):
@@ -71,8 +70,7 @@ class Nanoparticle:
         n.local_path = path.resolve()
         if not os.path.isdir(n.local_path):
             raise Exception(f"Path {n.local_path} is not a directory")
-        lammps_log = n.lammps_log_path
-        if not os.path.isfile(lammps_log):
+        if not os.path.isfile(n.lammps_log_path):
             raise Exception(f"Path {n.local_path} does not contain a log.lammps file")
         n.id = n.local_path.name
         n.regions = []
@@ -80,21 +78,56 @@ class Nanoparticle:
         n.run = lr.LammpsRun.from_path(n.local_path)
         n.extra_replacements = n.run.extra_replacements
         n.region_name_map = {}
-        n.magnetism = n.get_magnetism()
         n.title = n.run.title
-        n.coord = n.read_coordination(feni_ovito.COORD_FILENAME)
-        n.coord_fe = n.read_coordination(feni_ovito.COORD_FE_FILENAME)
-        n.coord_ni = n.read_coordination(feni_ovito.COORD_NI_FILENAME)
-        n.psd_p = n.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME)
-        n.psd = n.read_psd(feni_ovito.G_R_FILENAME)
-        n.pec = n.read_peh(feni_ovito.PEH_FILENAME)
-        surf = n.read_surface_atoms(feni_ovito.SURFACE_FILENAME)
-        n.total = surf[0] if len(surf) > 0 else 0
-        n.fe_s = surf[1] if len(surf) > 1 else 0
-        n.ni_s = surf[2] if len(surf) > 2 else 0
-        n.fe_c = surf[3] if len(surf) > 3 else 0
-        n.ni_c = surf[4] if len(surf) > 4 else 0
         return n
+
+    @cached_property
+    def coord(self):
+        return self.read_coordination(feni_ovito.COORD_FILENAME)
+
+    @cached_property
+    def coord_fe(self):
+        return self.read_coordination(feni_ovito.COORD_FE_FILENAME)
+
+    @cached_property
+    def coord_ni(self):
+        return self.read_coordination(feni_ovito.COORD_NI_FILENAME)
+
+    @cached_property
+    def psd_p(self):
+        return self.read_psd_p(feni_ovito.PARTIAL_G_R_FILENAME)
+
+    @cached_property
+    def psd(self):
+        return self.read_psd(feni_ovito.G_R_FILENAME)
+
+    @cached_property
+    def pec(self):
+        return self.read_peh(feni_ovito.PEH_FILENAME)
+
+    @cached_property
+    def _surface(self):
+        return self.read_surface_atoms(feni_ovito.SURFACE_FILENAME)
+
+    @cached_property
+    def total(self):
+        return self._surface[0] if len(self._surface) > 0 else 0
+
+    @cached_property
+    def fe_s(self):
+        return self._surface[1] if len(self._surface) > 1 else 0
+
+    @cached_property
+    def ni_s(self):
+        return self._surface[2] if len(self._surface) > 2 else 0
+
+    @cached_property
+    def fe_c(self):
+        return self._surface[3] if len(self._surface) > 3 else 0
+
+    @cached_property
+    def ni_c(self):
+        return self._surface[4] if len(self._surface) > 4 else 0
 
     def columns_for_dataset(self):
         # col_order = ["psd", "psd11", "psd12", "psd22", "coordc", "coordc_fe", "coordc_ni", "pec", "fe_s", "ni_s", "fe_c", "ni_c", "n_fe", "n_ni", "tmg"]
@@ -274,7 +307,6 @@ class Nanoparticle:
                     'dump': os.path.basename(self.run.dumps[FULL_RUN_DURATION].path)
                 }
             )
-            self.magnetism = self.get_magnetism()
 
     @cached_property
     def lammps_log_path(self) -> Path:
@@ -313,7 +345,8 @@ class Nanoparticle:
     def get_simulation_date(self) -> float:
         return float(self.id.split("_")[1])
 
-    def get_magnetism(self):
+    @cached_property
+    def magnetism(self):
         return self.run_magnetism
 
     def get_region(self):
@@ -409,6 +442,9 @@ class Nanoparticle:
     def plot_teng_hist(self):
         self.lammps_log.plot_teng_hist(self.title)
 
+    def is_weak(self):
+        return self.magnetism[1] / self.magnetism[0] > config.MAX_MAGNETISM_VARIANCE
+
 
 class RunningExecutionLocator:
     @staticmethod
@@ -442,7 +478,7 @@ class RunningExecutionLocator:
 
     @staticmethod
     async def get_running_executions(machine: Machine) -> AsyncGenerator[LiveExecution, None]:
-        async for item in await machine.get_running_tasks(): # TODO: Fixme if live exec not working
+        async for item in await machine.get_running_tasks():  # TODO: Fixme if live exec not working
             yield item
 
     @staticmethod

@@ -56,6 +56,9 @@ class LazyDict(Generic[T, V]):
     def keys(self):
         return self.v_keys
 
+
+STEP_ID_RE = re.compile(r"iron.(\d+).dump")
+
 class LammpsRun:
     """
     Functions to execute a lammps run
@@ -76,9 +79,7 @@ class LammpsRun:
         self.expect_dumps = [] if expect_dumps is None else expect_dumps
         self.cwd = Path(sim_params['cwd']).resolve() if 'cwd' in sim_params and sim_params['cwd'] is not None else Path.cwd().resolve()
         self.expect_dumps = [self.cwd / dump for dump in self.expect_dumps]
-        # "iron.123123.dump"
-        step_id_re = re.compile(r"iron.(\d+).dump")
-        self.dump_ids: list[int] = [int(step_id_re.match(dump.name).group(1)) for dump in self.expect_dumps]
+        self.dump_ids: list[int] = [int(STEP_ID_RE.match(dump.name).group(1)) for dump in self.expect_dumps]
 
     @cached_property
     def dumps(self) -> LazyDict:
