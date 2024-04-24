@@ -28,18 +28,18 @@ options(error = traceback, ragg.max_dim = c(500000, 500000))
 
 args <- commandArgs(trailingOnly = TRUE)
 # Default command line: Rscript all_movels.r catboost 10 ../new_dataset.csv TRUE FALSE
-model_name <- if (length(args) > 0) args[1] else "catboost" # Allowed values: catboost, svm, glmnet, ranger
-n_folds <- if (length(args) > 1) as.numeric(args[2]) else 2 # Number of folds for cross-validation
+model_name   <- if (length(args) > 0) args[1] else "catboost" # Allowed values: catboost, svm, glmnet, ranger
+n_folds      <- if (length(args) > 1) as.numeric(args[2]) else 2 # Number of folds for cross-validation
 dataset_path <- if (length(args) > 2) args[3] else "../new_dataset.csv" # Path to dataset
 clip_dataset <- if (length(args) > 3) as.logical(args[4]) else TRUE # Remove near-zero variance features
-split_data <- if (length(args) > 4) as.logical(args[5]) else FALSE # Split data into train and test (Or use all data for training)
+split_data   <- if (length(args) > 4) as.logical(args[5]) else FALSE # Split data into train and test (Or use all data for training)
 
 arguments <- data.frame(
   dataset_path = dataset_path,
   clip_dataset = clip_dataset,
-  model_name = model_name,
-  split_data = split_data,
-  n_folds = n_folds
+  model_name   = model_name,
+  split_data   = split_data,
+  n_folds      = n_folds
 )
 
 print("Arguments:")
@@ -50,7 +50,7 @@ if (clip_dataset) {
   nzv <- nearZeroVar(dataset, saveMetrics = FALSE)
   dataset <- dataset[, -nzv]
 }
-dataset <- dataset %>% select(-name, -tmg_std) # TODO: remove this
+dataset <- dataset %>% select(-name, -tmg_std)
 set.seed(123123) # for reproducibility
 if (split_data) {
   splitIndex <- createDataPartition(dataset$tmg, p = 0.7, list = FALSE)
@@ -62,92 +62,72 @@ if (split_data) {
 }
 
 ctrl <- trainControl(
-  method = "cv",
-  number = n_folds,
-  returnResamp = 'final',
+  method          = "cv",
+  number          = n_folds,
+  returnResamp    = 'final',
   savePredictions = 'final',
-  classProbs = FALSE,
-  verboseIter = F,
-  allowParallel = T
+  classProbs      = FALSE,
+  verboseIter     = F,
+  allowParallel   = T
 )
 
 train_catboost <- function() {
-  # catboostgrid <- expand.grid(
-  #   depth = c(2, 6, 8, 10),          # Maximum depth of trees. Deeper trees can model more complex relationships, but risk overfitting and require more data and time to train.
-  #   learning_rate = c(0.01, 0.1), # Learning rate, or shrinkage factor. This parameter scales the contribution of each tree. Lower values can achieve better performance but require more trees.
-  #   iterations = c(100, 200),     # Maximum number of trees to be built, or the number of boosting steps. More iterations lead to a more complex model, but also increase the risk of overfitting and the time to train the model.
-  #   l2_leaf_reg = c(1e-6, 1, 3),        # L2 regularization term for the cost function. This parameter applies a penalty for complexity in the structure of the individual trees. Higher values make the model more conservative.
-  #   rsm = c(0.8, 0.9, 1),              # Fraction of features to be used for each tree, a technique to reduce overfitting and speed up training.
-  #   border_count = c(10, 20, 255)      # Number of splits considered for each feature. Higher values can lead to finer splits, but are more computationally expensive.
-  # )
   model <- caret::train(
     x = train_data %>% select(-tmg),
     y = train_data$tmg,
     method = catboost.caret,
     trControl = ctrl,
-    # tuneGrid = catboostgrid, # for catboost
     # tunelength = 2,
-    # tuneLength = 100,
+    tuneLength = 100,
     logging_level = "Silent",
+    savePredictions = "final",   # to save predictions of the final model
+    classProbs = TRUE,
     preProcess = c("center", "scale") # Standardization
   )
   return(model)
 }
 
 train_svm <- function() {
-  svm_grid <- expand.grid(
-    C = 10^seq(0, 4, length = 20),
-    sigma = 10^seq(-7, -1, length = 20)
-  )
   model <- caret::train(
-    # x = train_data %>% select(-tmg),
-    # y = as.factor(train_data$tmg),
     tmg ~ .,
     data = train_data,
     method = "svmRadial",
     trControl = ctrl,
     tuneLength = 100,
-    # tuneGrid = svm_grid,
-    # preProcess = c("center", "scale"), # Standardization
+    savePredictions = "final",   # to save predictions of the final model
+    classProbs = TRUE,
     verbose = 100
   )
   return(model)
 }
 
 train_glment <- function() {
-  # glmnet_grid <- expand.grid(
-  #   alpha = 0.1 + seq(-0.5, 0.5, length = 20),
-  #   lambda = 0.0001168715 + seq(-0.0005, 0.0005, length = 20)
-  # )
   model <- caret::train(
     x = train_data %>% select(-tmg),
     y = train_data$tmg,
     method = "glmnet",
     trControl = ctrl,
-    # tuneGrid = glmnet_grid,
     tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
+    savePredictions = "final",   # to save predictions of the final model
+    classProbs = TRUE,
     verbose = 100
   )
   return(model)
 }
 
 train_ranger <- function() {
-  # ranger_grid <- expand.grid(
-  #   mtry = c(2, 3, 4, 5, 6, 7, 8, 9, 10),
-  #   min.node.size = c(1, 3, 5, 7, 9, 11, 13, 15),
-  #   splitrule = c("variance", "extratrees")
-  # )
   model <- caret::train(
     x = train_data %>% select(-tmg),
     y = train_data$tmg,
     method = "ranger",
     trControl = ctrl,
-    # tuneGrid = ranger_grid,
     tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
     importance = "impurity", # permutation
     verbose = 100,
+    savePredictions = "final",   # to save predictions of the final model
+    classProbs = TRUE,
     num.thread = 16
   )
   return(model)
