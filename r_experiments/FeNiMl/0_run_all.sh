@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+NFOLD=10
 DATASET=$1
-N_FOLDS=10
-Rscript all_models.r glmnet $N_FOLDS $DATASET
-Rscript all_models.r svm $N_FOLDS $DATASET
-Rscript all_models.r ranger $N_FOLDS $DATASET
-Rscript all_models.r catboost $N_FOLDS $DATASET
+cp $DATASET ./dataset.csv
+Rscript all_models.r glmnet $NFOLD dataset.csv
+Rscript all_models.r svm $NFOLD dataset.csv
+Rscript all_models.r ranger $NFOLD dataset.csv
+Rscript all_models.r catboost $NFOLD dataset.csv
