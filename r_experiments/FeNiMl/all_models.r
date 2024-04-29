@@ -60,7 +60,7 @@ if (split_data) {
   train_data <- dataset %>% as.data.frame()
   test_data <- dataset %>% as.data.frame()
 }
-
+verbosity <- FALSE
 ctrl <- trainControl(
   method          = "cv",
   number          = n_folds,
@@ -68,7 +68,7 @@ ctrl <- trainControl(
   savePredictions = 'final',
   classProbs      = FALSE,
   verboseIter     = F,
-  allowParallel   = T
+  allowParallel   = T,
 )
 
 train_catboost <- function() {
@@ -80,8 +80,9 @@ train_catboost <- function() {
     # tunelength = 2,
     tuneLength = 100,
     logging_level = "Silent",
+    loggingLevel = "Silent",
     savePredictions = "final",   # to save predictions of the final model
-    classProbs = TRUE,
+    # classProbs = TRUE,
     preProcess = c("center", "scale") # Standardization
   )
   return(model)
@@ -94,9 +95,9 @@ train_svm <- function() {
     method = "svmRadial",
     trControl = ctrl,
     tuneLength = 100,
-    savePredictions = "final",   # to save predictions of the final model
-    classProbs = TRUE,
-    verbose = 100
+    # savePredictions = "final",   # to save predictions of the final model
+    # classProbs = TRUE,
+    verbose = verbosity
   )
   return(model)
 }
@@ -109,9 +110,9 @@ train_glment <- function() {
     trControl = ctrl,
     tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
-    savePredictions = "final",   # to save predictions of the final model
-    classProbs = TRUE,
-    verbose = 100
+    # savePredictions = "final",   # to save predictions of the final model
+    # classProbs = TRUE,
+    verbose = verbosity
   )
   return(model)
 }
@@ -125,16 +126,16 @@ train_ranger <- function() {
     tuneLength = 100,
     preProcess = c("center", "scale"), # Standardization
     importance = "impurity", # permutation
-    verbose = 100,
-    savePredictions = "final",   # to save predictions of the final model
-    classProbs = TRUE,
+    verbose = verbosity,
+    # savePredictions = "final",   # to save predictions of the final model
+    # classProbs = TRUE,
     num.thread = 16
   )
   return(model)
 }
 
 
-save_hyperparameters_plot <- function() {
+save_hyperparameters_plot <- function(model, hyper, model_name) {
   plot <- model$results %>%
     tidyr::unite(col = a_l, hyper, sep = "_") %>%
     ggplot(aes(x = a_l, y = RMSE)) +
@@ -150,7 +151,7 @@ save_hyperparameters_plot <- function() {
   ggsave(paste0(model_name, "_hyperparameters.png"), plot, width = 1000 + 20 * num_rows, height = 2000, units = "px", limitsize = FALSE)
 }
 
-save_hyperparameter_heatmap <- function() {
+save_hyperparameter_heatmap <- function(model, hyper, model_name) {
   print(paste0("Plotting hyperparameters grid for ", model_name, " because it has ", length(hyper), " hyperparameters", "(", hyper[[1]], ", ", hyper[[2]], ")"))
   x <- model$results[[hyper[[1]]]]
   y <- model$results[[hyper[[2]]]]
@@ -176,7 +177,7 @@ save_hyperparameter_heatmap <- function() {
   ggsave(paste0(model_name, "_hyperparameters_grid.png"), plot, width = 1000 + 30 * unique_count_hyper1, height = 1000 + 30 * unique_count_hyper2, units = "px", limitsize = FALSE)
 }
 
-save_importance <- function() {
+save_importance <- function(model, model_name) {
   importance_results <- as.data.frame(varImp(model, scale = FALSE)$importance)
   print(importance_results)
   plot <- importance_results %>%
@@ -192,8 +193,9 @@ save_importance <- function() {
   write.csv(importance_results, paste0(model_name, "_importance.csv"))
 }
 
-save_execution_result <- function() {
+save_execution_result <- function(model, model_name, test_data, train_data) {
   predictions <- predict(model, test_data)
+  predictions_train <- predict(model, train_data)
   RMSE_full <- caret::RMSE(predictions, test_data$tmg)
   RMSE_fold <- mean(model$resample$RMSE)
   print("Hyperparameters:")
@@ -205,6 +207,9 @@ save_execution_result <- function() {
   print(hyperparameters_rmse)
   write.csv(hyperparameters_rmse, paste0(model_name, "_hyperparameters_rmse.csv"), row.names = FALSE)
   results <- data.frame(Reference = test_data$tmg, Predicted = as.vector(predictions))
+  results_train <- data.frame(Reference = train_data$tmg, Predicted = as.vector(predictions_train))
+  write.csv(results, paste0(model_name, "_results.csv"), row.names = FALSE)
+  write.csv(results_train, paste0(model_name, "_results_train.csv"), row.names = FALSE)
   plot <- ggplot(results, aes(x = Reference, y = Predicted)) +
     geom_point(color = 'blue') +
     geom_abline(intercept = 0, slope = 1, color = 'red') +
@@ -243,20 +248,22 @@ print("Model:")
 
 print(model)
 
+stopifnot(model)
+
 num_rows <- model$results %>% nrow()
 print(paste0("Saving results... (", num_rows, " rows)"))
 
-save_hyperparameters_plot()
+save_hyperparameters_plot(model, hyper, model_name)
 
 print("Considering heatmap... ")
 # If only 2 hyperparameters, plot the results in a grid, as a heatmap
 if (length(hyper) == 2) {
-  save_hyperparameter_heatmap()
+  save_hyperparameter_heatmap(model, hyper, model_name)
 } else {
   print(paste0("Not plotting hyperparameters grid for ", model_name, " because it has ", length(hyper), " hyperparameters"))
 }
 
 
-save_importance()
+save_importance(model, model_name)
 
-save_execution_result()
+save_execution_result(model, model_name, test_data, train_data)
