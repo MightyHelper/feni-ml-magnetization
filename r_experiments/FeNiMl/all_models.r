@@ -210,7 +210,7 @@ save_execution_result <- function(model, model_name, test_data, train_data) {
 
   results_train <- train_data %>%
     rename(Reference = tmg) %>%
-    mutate(Predicted = as.vector(predictions))
+    mutate(Predicted = as.vector(predictions_train))
   write.csv(results, paste0(model_name, "_results.csv"), row.names = FALSE)
   write.csv(results_train, paste0(model_name, "_results_train.csv"), row.names = FALSE)
   plot <- ggplot(results, aes(x = Reference, y = Predicted)) +
