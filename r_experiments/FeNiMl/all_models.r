@@ -66,7 +66,7 @@ ctrl <- trainControl(
   number          = n_folds,
   returnResamp    = 'final',
   savePredictions = 'final',
-  classProbs      = FALSE,
+  classProbs      = TRUE,
   verboseIter     = F,
   allowParallel   = T,
 )
@@ -78,10 +78,8 @@ train_catboost <- function() {
     method = catboost.caret,
     trControl = ctrl,
     # tunelength = 2,
-    tuneLength = 100,
+    # tuneLength = 100,
     logging_level = "Silent",
-    loggingLevel = "Silent",
-    savePredictions = "final",   # to save predictions of the final model
     # classProbs = TRUE,
     preProcess = c("center", "scale") # Standardization
   )
@@ -94,8 +92,6 @@ train_svm <- function() {
     data = train_data,
     method = "svmRadial",
     trControl = ctrl,
-    tuneLength = 100,
-    # savePredictions = "final",   # to save predictions of the final model
     # classProbs = TRUE,
     verbose = verbosity
   )
@@ -206,8 +202,15 @@ save_execution_result <- function(model, model_name, test_data, train_data) {
   )
   print(hyperparameters_rmse)
   write.csv(hyperparameters_rmse, paste0(model_name, "_hyperparameters_rmse.csv"), row.names = FALSE)
-  results <- data.frame(Reference = test_data$tmg, Predicted = as.vector(predictions))
-  results_train <- data.frame(Reference = train_data$tmg, Predicted = as.vector(predictions_train))
+  # results <- data.frame(Reference = test_data$tmg, Predicted = as.vector(predictions))
+  # results_train <- data.frame(Reference = train_data$tmg, Predicted = as.vector(predictions_train))
+  results <- test_data %>%
+    rename(Reference = tmg) %>%
+    mutate(Predicted = as.vector(predictions))
+
+  results_train <- train_data %>%
+    rename(Reference = tmg) %>%
+    mutate(Predicted = as.vector(predictions))
   write.csv(results, paste0(model_name, "_results.csv"), row.names = FALSE)
   write.csv(results_train, paste0(model_name, "_results_train.csv"), row.names = FALSE)
   plot <- ggplot(results, aes(x = Reference, y = Predicted)) +
