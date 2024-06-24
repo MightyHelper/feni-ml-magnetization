@@ -1,9 +1,9 @@
+#!/bin/bash
 NFOLD=10
 DATASET=$1
 CLIP=TRUE
-SPLIT=FALSE
+SPLIT=TRUE
 cp $DATASET ./dataset.csv
-Rscript all_models.r glmnet $NFOLD dataset.csv $CLIP $SPLIT
-Rscript all_models.r svm $NFOLD dataset.csv $CLIP $SPLIT
-Rscript all_models.r ranger $NFOLD dataset.csv $CLIP $SPLIT
-Rscript all_models.r catboost $NFOLD dataset.csv $CLIP $SPLIT
+for model in glmnet svm ranger catboost; do
+    /usr/bin/time -o $model.time bash -c "Rscript all_models.r $model $NFOLD dataset.csv $CLIP $SPLIT 2>&1 | tee $model.out"
+done
