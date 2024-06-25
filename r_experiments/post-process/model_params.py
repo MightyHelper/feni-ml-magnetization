@@ -17,13 +17,14 @@ def generate_path(path: Path):
     def format_value(value):
         if isinstance(value, float):
             return str(round_to_n(value, 3))
+        return str(value)
 
     def gen_for_algos(algo_names):
         algorithms = " & ".join([
             rf"\multicolumn{{2}}{{|c|}}{{\textbf{{{name}}}}}" for name in algo_names
         ])
         parameters = [
-            dict(pd.read_csv(path / "FeNiMl" / f"{name}_hyperparameters_rmse.csv").iloc[0]) for name in algo_names
+            {key: value for  key, value in dict(pd.read_csv(path / "FeNiMl" / f"{name}_hyperparameters_rmse.csv").iloc[0]).items() if key in ["RMSE_fold", "RMSE_full"]} for name in algo_names
         ]
 
         longest_param = max([len(params) for params in parameters])
@@ -64,7 +65,7 @@ def generate_path(path: Path):
 
 
 def main():
-    for path in Path(__file__).parent.iterdir():
+    for path in Path(__file__).parent.parent.iterdir():
         if (path / "FeNiMl").is_dir():
             generate_path(path)
 
