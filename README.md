@@ -1,3 +1,7 @@
+This repository contains **extended** code and data for  "Machine learning-based prediction of FeNi nanoparticle magnetization", F. Williamson et al., Journal of Materials Research and Technology (2024). [https://doi.org/10.1016/j.jmrt.2024.10.142](https://doi.org/10.1016/j.jmrt.2024.10.142).
+
+You may find a short version in [this repository](https://github.com/MightyHelper/feni-nanoparticle-magnetization-ml).
+
 # Fe Ni Nanoparticle Simulator
 
 Run a nanoparticle simulation with configurable parametes and execution location.
