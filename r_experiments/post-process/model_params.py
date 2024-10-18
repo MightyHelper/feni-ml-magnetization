@@ -24,7 +24,7 @@ def generate_path(path: Path):
             rf"\multicolumn{{2}}{{|c|}}{{\textbf{{{name}}}}}" for name in algo_names
         ])
         parameters = [
-            {key: value for  key, value in dict(pd.read_csv(path / "FeNiMl" / f"{name}_hyperparameters_rmse.csv").iloc[0]).items() if key in ["RMSE_fold", "RMSE_full"]} for name in algo_names
+            {key: value for  key, value in dict(pd.read_csv(path / "FeNiMl" / f"{name}_hyperparameters_rmse.csv").iloc[0]).items() if key in ["RMSE_fold", "RMSE_full", "Rsquared_full", "Rsquared_fold"]} for name in algo_names
         ]
 
         longest_param = max([len(params) for params in parameters])
@@ -66,7 +66,7 @@ def generate_path(path: Path):
 
 def main():
     for path in Path(__file__).parent.parent.iterdir():
-        if (path / "FeNiMl").is_dir():
+        if path.name == "70-30" and (path / "FeNiMl").is_dir():
             generate_path(path)
 
 

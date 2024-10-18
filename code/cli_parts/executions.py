@@ -46,7 +46,8 @@ def ls(
     save: Annotated[Path, typer.Option(help="Path to save the plot", show_default=True)] = None,
     by: Annotated[str, typer.Option(help="Parameter to sort the executions by", show_default=True)] = "Shape",
     full_only: Annotated[bool, typer.Option(help="Whether to only list full executions", show_default=True)] = False,
-    plot_tpas: Annotated[bool, typer.Option(help="Whether to plot the TPAS of the executions", show_default=True)] = False
+    plot_tpas: Annotated[bool, typer.Option(help="Whether to plot the TPAS of the executions", show_default=True)] = False,
+    plot_duration: Annotated[bool, typer.Option(help="Whether to plot the duration of the executions", show_default=True)] = False
 ):
     """
     List available nanoparticle executions
@@ -111,6 +112,18 @@ def ls(
             fig.savefig(os.path.join(str(save), f"exec_result_tpas_{by}.png"))
         else:
             plt.show()
+    if plot_duration:
+        fig: plt.Figure = ui_utils.multi_plots(
+            df,
+            "Execution result",
+            (by, 'duration', None, None)
+        )
+        total_runtime = df['duration'].sum()
+        rprint(f"Total runtime: {total_runtime}")
+        if save is not None:
+            fig.savefig(os.path.join(str(save), f"exec_result_duration_{by}.png"))
+        else:
+            plt.show()
 
 
 def _format_pair(pair: tuple[float | None, float | None]) -> str:
@@ -136,6 +149,7 @@ def _load_single_nanoparticle(i: int, folder: str) -> tuple[dict[str, float | st
             "magnetism_val": float(info.magnetism[0]),
             "magnetism_std": float(info.magnetism[1]),
             "tpas": float(info.lammps_log.tpas),
+            "duration": float(info.lammps_log.exec_time)
         }
         return data, row
     except Exception as e:

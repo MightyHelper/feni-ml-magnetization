@@ -34,4 +34,5 @@ for split in splits:
 
 df = DataFrame(items)
 df.to_csv("time_spent.csv", index=False)
-print(df)
+print(df.drop(columns=["swaps", "minor_faults", "major_faults", "inputs", "outputs"]).to_latex(index=False))
+
